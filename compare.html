@@ -498,9 +498,13 @@
                 if (isEmpty) return;
                 if (hideSame && row1 && row2 && allSame) return;
                 let source = '';
-                if (row1 && row2) source = 'Both files';
-                else if (row1) source = fileName1 || 'File 1';
-                else source = fileName2 || 'File 2';
+                if (row1 && row2) {
+                    source = 'Both files';
+                } else if (row1) {
+                    source = fileName1 || 'File 1';
+                } else {
+                    source = fileName2 || 'File 2';
+                }
                 
                 // Улучшенная логика классов строк
                 let rowClass = '';
@@ -511,7 +515,12 @@
                 else rowClass = 'row-default';
                 
                 bodyHtml += `<tr class="${rowClass}">`;
-                bodyHtml += `<td>${source}</td>`;
+                // Format source column similar to diff cells when there are differences
+                if (row1 && row2 && (hasWarn || !allSame)) {
+                    bodyHtml += `<td><div>${fileName1 || 'File 1'}</div><div style='border-top:1px solid #eee;color:#555;font-size:90%'>${fileName2 || 'File 2'}</div></td>`;
+                } else {
+                    bodyHtml += `<td>${source}</td>`;
+                }
                 for (let c = 0; c < allCols; c++) {
                     let v1 = row1 ? (row1[c] !== undefined ? row1[c] : '') : '';
                     let v2 = row2 ? (row2[c] !== undefined ? row2[c] : '') : '';
@@ -642,9 +651,13 @@
                 if (hideSame && row1 && row2 && allSame) return;
                 
                 let source = '';
-                if (row1 && row2) source = 'Both files';
-                else if (row1) source = fileName1 || 'File 1';
-                else source = fileName2 || 'File 2';
+                if (row1 && row2) {
+                    source = 'Both files';
+                } else if (row1) {
+                    source = fileName1 || 'File 1';
+                } else {
+                    source = fileName2 || 'File 2';
+                }
                 
                 let rowClass = '';
                 if (hasDiff) rowClass = 'row-diff';
@@ -653,7 +666,12 @@
                 else rowClass = 'row-default'; // Добавляем класс по умолчанию
                 
                 bodyHtml += `<tr class="${rowClass}">`;
-                bodyHtml += `<td>${source}</td>`;
+                // Format source column similar to diff cells when there are differences
+                if (row1 && row2 && (hasWarn || !allSame)) {
+                    bodyHtml += `<td><div>${fileName1 || 'File 1'}</div><div style='border-top:1px solid #eee;color:#555;font-size:90%'>${fileName2 || 'File 2'}</div></td>`;
+                } else {
+                    bodyHtml += `<td>${source}</td>`;
+                }
                 for (let c = 0; c < allCols; c++) {
                     let v1 = row1 ? (row1[c] !== undefined ? row1[c] : '') : '';
                     let v2 = row2 ? (row2[c] !== undefined ? row2[c] : '') : '';

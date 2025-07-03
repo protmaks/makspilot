@@ -1012,60 +1012,46 @@ button.compare-btn:hover {
     background: #f8f9fa;
 }
 
-/* Responsive design for comparison tool */
-@media (max-width: 768px) {
-    .comparison-container {
-        flex-direction: column;
-        gap: 20px;
-    }
-    
-    .table-container {
-        max-width: 100%;
-    }
-    
-    .controls-container {
-        flex-direction: row;
-        justify-content: center;
-        padding-top: 10px;
-        min-width: auto;
-        gap: 20px;
-    }
-    
-    .preview-container {
-        margin: 15px 0;
-        padding: 0 10px;
-    }
-    
-    .preview-wrapper {
-        width: 100%;
-        max-width: 100%;
-        overflow-x: auto;
-        margin-bottom: 15px;
-    }
-    
-    .diff-table-header th, .diff-table-header td,
-    .diff-table-body td {
-        min-width: 100px;
-        max-width: 200px;
-        font-size: 0.8rem;
-        padding: 6px 8px;
-    }
-    
-    #diffTable {
-        padding: 0 10px;
-    }
-    
-    .placeholder-message {
-        padding: 40px 15px;
-        margin: 15px 0;
-    }
-    
-    .placeholder-icon {
-        font-size: 36px;
-        margin-bottom: 12px;
-    }
-    
-    .placeholder-text {
-        font-size: 16px;
-    }
+/* Sticky first column styles */
+.diff-table-header th:first-child,
+.diff-table-body td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 15;
+    background: #f8f9fa;
+    border-right: 2px solid #dee2e6;
+    min-width: 180px;
+    max-width: 180px;
+    font-weight: 600;
+}
+
+.diff-table-header th:first-child {
+    background: #e9ecef;
+    z-index: 20;
+}
+
+/* Ensure proper layering for first column */
+.diff-table-body tr.row-diff td:first-child {
+    background: #ffeaa7;
+}
+
+.diff-table-body tr.row-warn td:first-child {
+    background: #fdcb6e;
+}
+
+.diff-table-body tr.row-identical td:first-child {
+    background: #81ecec;
+}
+
+.diff-table-body tr.row-default td:first-child {
+    background: #f8f9fa;
+}
+
+/* Adjust filter row first cell */
+.filter-row td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 16;
+    background: #f8f9fa;
+    border-right: 2px solid #dee2e6;
 }
