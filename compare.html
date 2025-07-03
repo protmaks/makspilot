@@ -160,19 +160,34 @@
         return value;
     }
 
-    // Function to round decimal numbers to 2 decimal places
+    // Function to round decimal numbers to 2 decimal places and remove .0 for integers
     function roundDecimalNumbers(value) {
-        // If it's a number and has decimal places, round to 2 decimal places
-        if (typeof value === 'number' && !Number.isInteger(value)) {
-            return Math.round(value * 100) / 100;
+        // If it's a number, process it
+        if (typeof value === 'number') {
+            // Round to 2 decimal places to fix floating point issues
+            let rounded = Math.round(value * 100) / 100;
+            
+            // If it's an integer after rounding, return as integer
+            if (Number.isInteger(rounded)) {
+                return rounded;
+            }
+            
+            return rounded;
         }
         
-        // If it's a string that represents a decimal number, convert and round
+        // If it's a string that represents a number, convert and process
         if (typeof value === 'string' && !isNaN(value) && !isNaN(parseFloat(value))) {
             const numValue = parseFloat(value);
-            if (!Number.isInteger(numValue)) {
-                return Math.round(numValue * 100) / 100;
+            
+            // Round to 2 decimal places to fix floating point issues
+            let rounded = Math.round(numValue * 100) / 100;
+            
+            // If it's an integer after rounding, return as integer
+            if (Number.isInteger(rounded)) {
+                return rounded;
             }
+            
+            return rounded;
         }
         
         return value;
