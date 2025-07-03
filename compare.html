@@ -265,6 +265,62 @@
                 }
             }
             
+            // Handle Excel text dates like "1-May-2025", "15-Dec-2024"
+            dateMatch = value.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/);
+            if (dateMatch) {
+                const day = parseInt(dateMatch[1]);
+                const monthName = dateMatch[2].toLowerCase();
+                const year = parseInt(dateMatch[3]);
+                
+                const monthMap = {
+                    'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+                    'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
+                };
+                
+                const month = monthMap[monthName];
+                if (month && day <= 31 && year >= 1900 && year <= 2100) {
+                    return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+                }
+            }
+            
+            // Handle Excel text dates like "May-1-2025", "Dec-15-2024"
+            dateMatch = value.match(/^([A-Za-z]{3})-(\d{1,2})-(\d{4})$/);
+            if (dateMatch) {
+                const monthName = dateMatch[1].toLowerCase();
+                const day = parseInt(dateMatch[2]);
+                const year = parseInt(dateMatch[3]);
+                
+                const monthMap = {
+                    'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+                    'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
+                };
+                
+                const month = monthMap[monthName];
+                if (month && day <= 31 && year >= 1900 && year <= 2100) {
+                    return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+                }
+            }
+            
+            // Handle full month names like "1 May 2025", "15 December 2024"
+            dateMatch = value.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/);
+            if (dateMatch) {
+                const day = parseInt(dateMatch[1]);
+                const monthName = dateMatch[2].toLowerCase();
+                const year = parseInt(dateMatch[3]);
+                
+                const monthMap = {
+                    'january': 1, 'february': 2, 'march': 3, 'april': 4, 'may': 5, 'june': 6,
+                    'july': 7, 'august': 8, 'september': 9, 'october': 10, 'november': 11, 'december': 12,
+                    'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+                    'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
+                };
+                
+                const month = monthMap[monthName];
+                if (month && day <= 31 && year >= 1900 && year <= 2100) {
+                    return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+                }
+            }
+            
             // Handle cases where Excel might have parsed "2025-05-01" as a calculation
             // Look for patterns like "2019" or "2020" etc that might be date calculations
             if (value.includes('-') && !isoDateMatch) {
