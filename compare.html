@@ -564,8 +564,8 @@
             value = value.slice(1, -1);
         }
         
-        // Handle empty values
-        if (value === '' || value === null || value === undefined) {
+        // Handle empty values and 'null' strings
+        if (value === '' || value === null || value === undefined || value.toLowerCase() === 'null') {
             return '';
         }
         
