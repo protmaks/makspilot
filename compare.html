@@ -135,6 +135,15 @@
     function renderPreview(data, elementId, title) {
         let html = '';
         if (data.length > 0) {
+            // Добавляем заголовок для превью
+            let previewTitle = '';
+            if (elementId === 'preview1') {
+                previewTitle = fileName1 ? `Preview: ${fileName1}` : 'Preview: File 1';
+            } else {
+                previewTitle = fileName2 ? `Preview: ${fileName2}` : 'Preview: File 2';
+            }
+            
+            html += `<div class="preview-title">${previewTitle}</div>`;
             html += '<div class="preview-wrapper">';
             html += '<table class="preview-table">';
             // Заголовки

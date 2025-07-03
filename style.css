@@ -656,7 +656,6 @@ button.compare-btn:hover {
 
 .table-body-scrollable {
     max-height: 500px;
-    overflow-y: auto;
     border: 1px solid #e0e0e0;
     border-radius: 0 0 8px 8px;
     background: #fff;
@@ -844,18 +843,23 @@ button.compare-btn:hover {
 
 .preview-container {
     display: flex;
+    flex-direction: column;
     gap: 20px;
-    justify-content: space-between;
     margin: 12px 0;
     width: 100%;
-    max-width: 1200px;
+    max-width: none;
     margin-left: auto;
     margin-right: auto;
     padding: 0 20px;
 }
 
 .preview-wrapper {
-    flex: 1;
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background: white;
+    position: relative;
 }
 
 .preview-table {
@@ -863,9 +867,11 @@ button.compare-btn:hover {
     background: #fff;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(44, 62, 80, 0.06);
-    overflow: hidden;
-    width: 100%;
-    border: 1px solid #e0e0e0;
+    overflow: visible;
+    width: max-content;
+    min-width: 100%;
+    border: none;
+    margin: 0;
 }
 
 .preview-table th, .preview-table td {
@@ -876,9 +882,9 @@ button.compare-btn:hover {
     word-break: break-word;
     border-right: 1px solid #e0e0e0;
     border-bottom: 1px solid #e0e0e0;
-    max-width: none;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    min-width: 120px;
+    white-space: nowrap;
+    overflow: visible;
 }
 
 .preview-table th:last-child, .preview-table td:last-child {
@@ -900,11 +906,27 @@ button.compare-btn:hover {
 }
 
 .preview-title {
-    text-align: center;
+    text-align: left;
     font-weight: 600;
-    color: #3a4a5d;
-    margin-bottom: 12px;
-    font-size: 1.1rem;
+    color: #2d3a4a;
+    margin-bottom: 8px;
+    font-size: 1rem;
+    padding-left: 4px;
+}
+
+/* Улучшенные стили для горизонтальной прокрутки */
+.preview-wrapper::-webkit-scrollbar {
+    height: 8px;
+    background: #f8f9fa;
+}
+
+.preview-wrapper::-webkit-scrollbar-thumb {
+    background: #dee2e6;
+    border-radius: 4px;
+}
+
+.preview-wrapper::-webkit-scrollbar-thumb:hover {
+    background: #adb5bd;
 }
 
 /* Custom scrollbar for comparison tool */
@@ -939,13 +961,14 @@ button.compare-btn:hover {
     
     .preview-container {
         flex-direction: column;
-        gap: 20px;
+        gap: 15px;
         padding: 0 10px;
     }
     
     .preview-wrapper {
         width: 100%;
         max-width: 100%;
+        overflow-x: auto;
     }
     
     .diff-table-header th, .diff-table-header td,
