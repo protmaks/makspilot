@@ -101,6 +101,18 @@
         
         // Check if value is already a date string in various formats
         if (typeof value === 'string') {
+            // First check if it's already in YYYY-MM-DD format - keep it as is
+            let isoDateMatch = value.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+            if (isoDateMatch) {
+                const year = parseInt(isoDateMatch[1]);
+                const month = parseInt(isoDateMatch[2]);
+                const day = parseInt(isoDateMatch[3]);
+                if (day <= 31 && month <= 12 && year >= 1900 && year <= 2100) {
+                    // Already in correct format, just normalize
+                    return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+                }
+            }
+            
             // Try to parse common date formats
             let dateMatch;
             
@@ -126,14 +138,20 @@
                 }
             }
             
-            // YYYY-MM-DD format (already correct)
-            dateMatch = value.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-            if (dateMatch) {
-                const year = parseInt(dateMatch[1]);
-                const month = parseInt(dateMatch[2]);
-                const day = parseInt(dateMatch[3]);
-                if (day <= 31 && month <= 12 && year >= 1900 && year <= 2100) {
-                    return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+            // Handle cases where Excel might have parsed "2025-05-01" as a calculation
+            // Look for patterns like "2019" or "2020" etc that might be date calculations
+            if (value.includes('-') && !isoDateMatch) {
+                // Try to parse as potential date calculation result
+                let parts = value.split('-');
+                if (parts.length === 3) {
+                    let year = parseInt(parts[0]);
+                    let month = parseInt(parts[1]);
+                    let day = parseInt(parts[2]);
+                    
+                    // Check if this could be a valid date
+                    if (year >= 1900 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+                        return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+                    }
                 }
             }
         }
@@ -142,11 +160,37 @@
         return value;
     }
 
-    // Function to process data and convert dates
+    // Function to round decimal numbers to 2 decimal places
+    function roundDecimalNumbers(value) {
+        // If it's a number and has decimal places, round to 2 decimal places
+        if (typeof value === 'number' && !Number.isInteger(value)) {
+            return Math.round(value * 100) / 100;
+        }
+        
+        // If it's a string that represents a decimal number, convert and round
+        if (typeof value === 'string' && !isNaN(value) && !isNaN(parseFloat(value))) {
+            const numValue = parseFloat(value);
+            if (!Number.isInteger(numValue)) {
+                return Math.round(numValue * 100) / 100;
+            }
+        }
+        
+        return value;
+    }
+
+    // Function to process data and convert dates and round decimals
     function processDataWithDates(data) {
         return data.map(row => {
             if (!Array.isArray(row)) return row;
-            return row.map(cell => convertExcelDate(cell));
+            return row.map(cell => {
+                // First try to convert dates
+                let processedCell = convertExcelDate(cell);
+                // Then round decimal numbers (only if it wasn't converted to a date)
+                if (processedCell === cell) {
+                    processedCell = roundDecimalNumbers(cell);
+                }
+                return processedCell;
+            });
         });
     }
 
