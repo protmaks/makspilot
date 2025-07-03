@@ -137,7 +137,21 @@
             // This can happen when CSV parsing creates Date objects that get stringified
             if (value.includes('T') || value.includes('GMT') || value.includes('UTC')) {
                 try {
-                    // Parse as Date and extract just the date part in local timezone
+                    // For ISO strings, extract date part directly to avoid timezone conversion
+                    if (value.includes('T')) {
+                        const datePart = value.split('T')[0];
+                        const dateMatch = datePart.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+                        if (dateMatch) {
+                            const year = parseInt(dateMatch[1]);
+                            const month = parseInt(dateMatch[2]);
+                            const day = parseInt(dateMatch[3]);
+                            if (year >= 1900 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+                                return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+                            }
+                        }
+                    }
+                    
+                    // Fallback: Parse as Date and extract just the date part in local timezone
                     const dateObj = new Date(value);
                     if (!isNaN(dateObj.getTime())) {
                         // Use local date components to avoid timezone shifts
@@ -156,8 +170,8 @@
             // Try to parse common date formats
             let dateMatch;
             
-            // DD/MM/YYYY or DD.MM.YYYY format
-            dateMatch = value.match(/^(\d{1,2})[\/\.](\d{1,2})[\/\.](\d{4})$/);
+            // DD.MM.YYYY format (точки как разделители)
+            dateMatch = value.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
             if (dateMatch) {
                 const day = parseInt(dateMatch[1]);
                 const month = parseInt(dateMatch[2]);
@@ -167,13 +181,86 @@
                 }
             }
             
-            // MM/DD/YYYY format
+            // DD/MM/YYYY format (слэши как разделители)
             dateMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
             if (dateMatch) {
-                const month = parseInt(dateMatch[1]);
-                const day = parseInt(dateMatch[2]);
+                const day = parseInt(dateMatch[1]);
+                const month = parseInt(dateMatch[2]);
                 const year = parseInt(dateMatch[3]);
                 if (day <= 31 && month <= 12 && year >= 1900 && year <= 2100) {
+                    return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+                }
+            }
+            
+            // MM/DD/YYYY format (американский формат)
+            dateMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+            if (dateMatch) {
+                const first = parseInt(dateMatch[1]);
+                const second = parseInt(dateMatch[2]);
+                const year = parseInt(dateMatch[3]);
+                
+                // Smart interpretation: if first > 12, it's likely DD/MM, not MM/DD
+                if (first > 12 && second <= 12 && year >= 1900 && year <= 2100) {
+                    // Definitely DD/MM format
+                    const day = first;
+                    const month = second;
+                    return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+                } else if (first <= 12 && second <= 12 && year >= 1900 && year <= 2100) {
+                    // Ambiguous - could be either MM/DD or DD/MM
+                    // For European context, assume DD/MM is more likely
+                    const day = first;
+                    const month = second;
+                    return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+                } else {
+                    // Standard MM/DD interpretation
+                    const month = first;
+                    const day = second;
+                    if (day <= 31 && month <= 12 && year >= 1900 && year <= 2100) {
+                        return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+                    }
+                }
+            }
+            
+            // MM/DD/YY format (короткий американский формат) - часто результат чтения Excel
+            dateMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
+            if (dateMatch) {
+                const first = parseInt(dateMatch[1]);
+                const second = parseInt(dateMatch[2]);
+                let year = parseInt(dateMatch[3]);
+                // Assume years 00-30 are 2000-2030, years 31-99 are 1931-1999
+                year = year <= 30 ? 2000 + year : 1900 + year;
+                
+                // Smart interpretation: if first > 12, it's likely DD/MM, not MM/DD
+                if (first > 12 && second <= 12) {
+                    // Definitely DD/MM format
+                    const day = first;
+                    const month = second;
+                    return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+                } else if (first <= 12 && second <= 12) {
+                    // Ambiguous - could be either MM/DD or DD/MM
+                    // For European context, assume DD/MM is more likely
+                    const day = first;
+                    const month = second;
+                    return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+                } else {
+                    // Standard MM/DD interpretation
+                    const month = first;
+                    const day = second;
+                    if (day <= 31 && month <= 12) {
+                        return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+                    }
+                }
+            }
+            
+            // DD.MM.YY format (короткий год)
+            dateMatch = value.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2})$/);
+            if (dateMatch) {
+                const day = parseInt(dateMatch[1]);
+                const month = parseInt(dateMatch[2]);
+                let year = parseInt(dateMatch[3]);
+                // Assume years 00-30 are 2000-2030, years 31-99 are 1931-1999
+                year = year <= 30 ? 2000 + year : 1900 + year;
+                if (day <= 31 && month <= 12) {
                     return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
                 }
             }
@@ -290,6 +377,127 @@
         });
     }
 
+    // Function to normalize row lengths (ensure all rows have same number of columns)
+    function normalizeRowLengths(data) {
+        if (!data || data.length === 0) return data;
+        
+        // Find the maximum number of columns
+        const maxCols = Math.max(...data.map(row => row ? row.length : 0));
+        
+        // Pad all rows to have the same number of columns
+        return data.map(row => {
+            if (!row) return new Array(maxCols).fill('');
+            while (row.length < maxCols) {
+                row.push('');
+            }
+            return row;
+        });
+    }
+
+    // Function to detect CSV delimiter
+    function detectCSVDelimiter(csvText) {
+        const firstLine = csvText.split(/\r?\n/)[0];
+        const delimiters = [',', ';', '\t', '|'];
+        let maxCount = 0;
+        let bestDelimiter = ',';
+        
+        for (let delimiter of delimiters) {
+            const count = firstLine.split(delimiter).length - 1;
+            if (count > maxCount) {
+                maxCount = count;
+                bestDelimiter = delimiter;
+            }
+        }
+        
+        return bestDelimiter;
+    }
+
+    // Function to parse CSV manually to avoid timezone issues
+    function parseCSV(csvText) {
+        const lines = csvText.split(/\r?\n/);
+        const result = [];
+        
+        // Detect delimiter from first line
+        const delimiter = detectCSVDelimiter(csvText);
+        
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            if (line.trim() === '') continue;
+            
+            const row = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let j = 0; j < line.length; j++) {
+                const char = line[j];
+                
+                if (char === '"') {
+                    if (inQuotes && line[j + 1] === '"') {
+                        // Escaped quote
+                        current += '"';
+                        j++; // Skip next quote
+                    } else {
+                        // Toggle quote state
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === delimiter && !inQuotes) {
+                    // End of field
+                    row.push(parseCSVValue(current.trim()));
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            
+            // Add the last field
+            row.push(parseCSVValue(current.trim()));
+            
+            // Only add non-empty rows
+            if (row.some(cell => cell !== null && cell !== undefined && cell.toString().trim() !== '')) {
+                result.push(row);
+            }
+        }
+        
+        return result;
+    }
+    
+    // Function to parse CSV value while preserving dates as strings
+    function parseCSVValue(value) {
+        // Remove surrounding quotes if present
+        if (value.startsWith('"') && value.endsWith('"')) {
+            value = value.slice(1, -1);
+        }
+        
+        // Handle empty values
+        if (value === '' || value === null || value === undefined) {
+            return '';
+        }
+        
+        // Clean up encoding issues - replace ? with common date separators
+        if (value.includes('?')) {
+            // Try to detect if this might be a date with encoding issues
+            const cleanValue = value.replace(/\?/g, '.');
+            value = cleanValue;
+        }
+        
+        // Check if it looks like a date - if so, keep it as string
+        if (value.match(/^\d{4}-\d{1,2}-\d{1,2}$/) || 
+            value.match(/^\d{1,2}[\/\.]\d{1,2}[\/\.]\d{4}$/) ||
+            value.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/) ||
+            value.match(/^\d{1,2}\.\d{1,2}\.\d{4}$/)) {
+            return value; // Keep dates as strings
+        }
+        
+        // Try to parse as number (handle both . and , as decimal separators)
+        let numValue = value.replace(',', '.'); // Convert comma to dot for parsing
+        if (numValue !== '' && !isNaN(numValue) && !isNaN(parseFloat(numValue))) {
+            const num = parseFloat(numValue);
+            return Number.isInteger(num) ? parseInt(numValue) : num;
+        }
+        
+        return value;
+    }
+
     function handleFile(file, num) {
         if (!file) return;
         if (num === 1) {
@@ -297,41 +505,73 @@
         } else {
             fileName2 = file.name;
         }
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            let data = new Uint8Array(e.target.result);
-            // Use cellDates option to preserve date formatting and avoid timezone issues
-            let workbook = XLSX.read(data, {
-                type: 'array',
-                cellDates: true,
-                UTC: false  // Use local timezone to avoid shifts
-            });
-            let firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            let json = XLSX.utils.sheet_to_json(firstSheet, {
-                header: 1, 
-                defval: '',
-                raw: false,  // Don't use raw values, process them
-                dateNF: 'yyyy-mm-dd'  // Prefer this date format
-            });
-            
-            // Удаляем полностью пустые строки
-            json = json.filter(row => Array.isArray(row) && row.some(cell => (cell !== null && cell !== undefined && cell.toString().trim() !== '')));
-            
-            // Удаляем полностью пустые столбцы
-            json = removeEmptyColumns(json);
-            
-            // Convert Excel dates to proper format
-            json = processDataWithDates(json);
-            
-            if (num === 1) {
-                data1 = json;
-                renderPreview(json, 'preview1');
-            } else {
-                data2 = json;
-                renderPreview(json, 'preview2');
-            }
-        };
-        reader.readAsArrayBuffer(file);
+        
+        // Check if it's a CSV file
+        const isCSV = file.name.toLowerCase().endsWith('.csv');
+        
+        if (isCSV) {
+            // Handle CSV files with text reading to avoid timezone issues
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const csvText = e.target.result;
+                const json = parseCSV(csvText);
+                
+                // Normalize row lengths first
+                const normalizedJson = normalizeRowLengths(json);
+                
+                // Remove empty columns (parseCSV already filtered empty rows)
+                const cleanedJson = removeEmptyColumns(normalizedJson);
+                
+                // Convert Excel dates to proper format
+                const processedJson = processDataWithDates(cleanedJson);
+                
+                if (num === 1) {
+                    data1 = processedJson;
+                    renderPreview(processedJson, 'table1');
+                } else {
+                    data2 = processedJson;
+                    renderPreview(processedJson, 'table2');
+                }
+            };
+            reader.readAsText(file, 'UTF-8');
+        } else {
+            // Handle Excel files with XLSX library
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                let data = new Uint8Array(e.target.result);
+                // Use cellDates option to preserve date formatting and avoid timezone issues
+                let workbook = XLSX.read(data, {
+                    type: 'array',
+                    cellDates: true,
+                    UTC: false  // Use local timezone to avoid shifts
+                });
+                let firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                let json = XLSX.utils.sheet_to_json(firstSheet, {
+                    header: 1, 
+                    defval: '',
+                    raw: false,  // Don't use raw values, process them
+                    dateNF: 'yyyy-mm-dd'  // Prefer this date format
+                });
+                
+                // Удаляем полностью пустые строки
+                json = json.filter(row => Array.isArray(row) && row.some(cell => (cell !== null && cell !== undefined && cell.toString().trim() !== '')));
+                
+                // Удаляем полностью пустые столбцы
+                json = removeEmptyColumns(json);
+                
+                // Convert Excel dates to proper format
+                json = processDataWithDates(json);
+                
+                if (num === 1) {
+                    data1 = json;
+                    renderPreview(json, 'table1');
+                } else {
+                    data2 = json;
+                    renderPreview(json, 'table2');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
     }
 
     function renderTable(data, elementId, diffRowsSet) {
@@ -360,7 +600,7 @@
         if (data.length > 0) {
             // Добавляем заголовок для превью
             let previewTitle = '';
-            if (elementId === 'preview1') {
+            if (elementId === 'table1') {
                 previewTitle = fileName1 ? `Preview: ${fileName1}` : 'Preview: File 1';
             } else {
                 previewTitle = fileName2 ? `Preview: ${fileName2}` : 'Preview: File 2';
@@ -852,4 +1092,4 @@
     <!-- Load the shared header -->
     <script src="script.js"></script>
 </body>
-</html> 
+</html>
