@@ -639,9 +639,37 @@ button.compare-btn:hover {
 }
 
 #diffTable {
-    max-width: 1200px;
     margin: 20px auto;
     padding: 0 20px;
+    width: 100%;
+    overflow-x: auto;
+}
+
+.placeholder-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+    color: #666;
+    background: #f9f9f9;
+    border: 2px dashed #ddd;
+    border-radius: 12px;
+    margin: 20px 0;
+}
+
+.placeholder-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.7;
+}
+
+.placeholder-text {
+    font-size: 18px;
+    font-weight: 500;
+    color: #666;
+    max-width: 300px;
 }
 
 .table-header-fixed {
@@ -650,8 +678,8 @@ button.compare-btn:hover {
     border-bottom: none;
     border-radius: 8px 8px 0 0;
     position: sticky;
-    top: 70px;
     z-index: 10;
+    overflow: hidden;
 }
 
 .table-body-scrollable {
@@ -659,11 +687,15 @@ button.compare-btn:hover {
     border: 1px solid #e0e0e0;
     border-radius: 0 0 8px 8px;
     background: #fff;
+    overflow-x: auto;
+    overflow-y: auto;
 }
 
 .diff-table-header, .diff-table-body {
-    width: 100%;
+    width: auto;
+    min-width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
 }
 
 .diff-table-header th, .diff-table-header td,
@@ -672,10 +704,11 @@ button.compare-btn:hover {
     text-align: left;
     border-right: 1px solid #e0e0e0;
     border-bottom: 1px solid #e0e0e0;
-    min-width: 80px;
-    max-width: 320px;
-    word-break: break-word;
+    min-width: 150px;
     font-size: 1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .diff-table-header th {
@@ -730,6 +763,16 @@ button.compare-btn:hover {
 }
 
 /* Color first column (Source) based on row type */
+.diff-table-body td:first-child {
+    background: #f8f9fa !important;
+    font-weight: 600;
+    border-right: 2px solid #e0e0e0 !important;
+}
+
+.diff-table-body tr.row-default td:first-child {
+    background: #f8f9fa !important;
+}
+
 .diff-table-body tr.rowwarn td:first-child {
     background: #fff3e0 !important;
 }
@@ -842,12 +885,10 @@ button.compare-btn:hover {
 }
 
 .preview-container {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    margin: 12px 0;
+    display: block;
+    margin: 20px 0;
     width: 100%;
-    max-width: none;
+    max-width: 1200px;
     margin-left: auto;
     margin-right: auto;
     padding: 0 20px;
@@ -860,6 +901,7 @@ button.compare-btn:hover {
     border-radius: 8px;
     background: white;
     position: relative;
+    margin-bottom: 20px;
 }
 
 .preview-table {
@@ -872,6 +914,11 @@ button.compare-btn:hover {
     min-width: 100%;
     border: none;
     margin: 0;
+    table-layout: auto;
+}
+
+.preview-table td[title] {
+    cursor: help;
 }
 
 .preview-table th, .preview-table td {
@@ -879,12 +926,13 @@ button.compare-btn:hover {
     border: none;
     text-align: left;
     font-size: 0.8rem;
-    word-break: break-word;
     border-right: 1px solid #e0e0e0;
     border-bottom: 1px solid #e0e0e0;
     min-width: 120px;
+    max-width: 250px;
     white-space: nowrap;
-    overflow: visible;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .preview-table th:last-child, .preview-table td:last-child {
@@ -909,8 +957,8 @@ button.compare-btn:hover {
     text-align: left;
     font-weight: 600;
     color: #2d3a4a;
-    margin-bottom: 8px;
-    font-size: 1rem;
+    margin-bottom: 6px;
+    font-size: 0.9rem;
     padding-left: 4px;
 }
 
@@ -940,6 +988,30 @@ button.compare-btn:hover {
     border-radius: 6px;
 }
 
+/* Стили горизонтальной прокрутки для итоговой таблицы */
+.table-header-fixed::-webkit-scrollbar,
+.table-body-scrollable::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+    background: #f8f9fa;
+}
+
+.table-header-fixed::-webkit-scrollbar-thumb,
+.table-body-scrollable::-webkit-scrollbar-thumb {
+    background: #dee2e6;
+    border-radius: 4px;
+}
+
+.table-header-fixed::-webkit-scrollbar-thumb:hover,
+.table-body-scrollable::-webkit-scrollbar-thumb:hover {
+    background: #adb5bd;
+}
+
+.table-header-fixed::-webkit-scrollbar-corner,
+.table-body-scrollable::-webkit-scrollbar-corner {
+    background: #f8f9fa;
+}
+
 /* Responsive design for comparison tool */
 @media (max-width: 768px) {
     .comparison-container {
@@ -960,8 +1032,7 @@ button.compare-btn:hover {
     }
     
     .preview-container {
-        flex-direction: column;
-        gap: 15px;
+        margin: 15px 0;
         padding: 0 10px;
     }
     
@@ -969,12 +1040,32 @@ button.compare-btn:hover {
         width: 100%;
         max-width: 100%;
         overflow-x: auto;
+        margin-bottom: 15px;
     }
     
     .diff-table-header th, .diff-table-header td,
     .diff-table-body td {
-        max-width: 100px;
+        min-width: 100px;
+        max-width: 200px;
         font-size: 0.8rem;
         padding: 6px 8px;
+    }
+    
+    #diffTable {
+        padding: 0 10px;
+    }
+    
+    .placeholder-message {
+        padding: 40px 15px;
+        margin: 15px 0;
+    }
+    
+    .placeholder-icon {
+        font-size: 36px;
+        margin-bottom: 12px;
+    }
+    
+    .placeholder-text {
+        font-size: 16px;
     }
 }

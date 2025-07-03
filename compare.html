@@ -85,6 +85,40 @@
         handleFile(e.target.files[0], 2);
     });
 
+    function removeEmptyColumns(data) {
+        if (!data || data.length === 0) return data;
+        
+        // Определяем максимальное количество столбцов
+        let maxCols = Math.max(...data.map(row => row ? row.length : 0));
+        if (maxCols === 0) return data;
+        
+        // Находим столбцы, которые полностью пустые
+        let columnsToKeep = [];
+        for (let col = 0; col < maxCols; col++) {
+            let hasContent = false;
+            for (let row = 0; row < data.length; row++) {
+                if (data[row] && col < data[row].length) {
+                    let cellValue = data[row][col];
+                    if (cellValue !== null && cellValue !== undefined && cellValue.toString().trim() !== '') {
+                        hasContent = true;
+                        break;
+                    }
+                }
+            }
+            if (hasContent) {
+                columnsToKeep.push(col);
+            }
+        }
+        
+        // Создаем новые строки только с непустыми столбцами
+        return data.map(row => {
+            if (!row) return [];
+            return columnsToKeep.map(colIndex => 
+                colIndex < row.length ? row[colIndex] : ''
+            );
+        });
+    }
+
     function handleFile(file, num) {
         if (!file) return;
         if (num === 1) {
@@ -98,8 +132,13 @@
             let workbook = XLSX.read(data, {type: 'array'});
             let firstSheet = workbook.Sheets[workbook.SheetNames[0]];
             let json = XLSX.utils.sheet_to_json(firstSheet, {header: 1, defval: ''});
+            
             // Удаляем полностью пустые строки
             json = json.filter(row => Array.isArray(row) && row.some(cell => (cell !== null && cell !== undefined && cell.toString().trim() !== '')));
+            
+            // Удаляем полностью пустые столбцы
+            json = removeEmptyColumns(json);
+            
             if (num === 1) {
                 data1 = json;
                 renderPreview(json, 'preview1');
@@ -150,7 +189,11 @@
             if (data[0] && data[0].length > 0) {
                 html += '<tr>';
                 for (let j = 0; j < data[0].length; j++) {
-                    html += `<th>${data[0][j]}</th>`;
+                    let headerValue = data[0][j];
+                    headerValue = (headerValue !== null && headerValue !== undefined) ? headerValue.toString() : '';
+                    let displayValue = headerValue.length > 20 ? headerValue.substring(0, 20) + '...' : headerValue;
+                    let titleAttr = headerValue.length > 20 ? ` title="${headerValue.replace(/"/g, '&quot;')}"` : '';
+                    html += `<th${titleAttr}>${displayValue}</th>`;
                 }
                 html += '</tr>';
             }
@@ -158,7 +201,11 @@
             for (let i = 1; i < Math.min(4, data.length); i++) {
                 html += '<tr>';
                 for (let j = 0; j < data[i].length; j++) {
-                    html += `<td>${data[i][j]}</td>`;
+                    let cellValue = data[i][j];
+                    cellValue = (cellValue !== null && cellValue !== undefined) ? cellValue.toString() : '';
+                    let displayValue = cellValue.length > 25 ? cellValue.substring(0, 25) + '...' : cellValue;
+                    let titleAttr = cellValue.length > 25 ? ` title="${cellValue.replace(/"/g, '&quot;')}"` : '';
+                    html += `<td${titleAttr}>${displayValue}</td>`;
                 }
                 html += '</tr>';
             }
@@ -173,13 +220,43 @@
         return JSON.stringify(row);
     }
 
+    function showPlaceholderMessage() {
+        document.getElementById('result').innerHTML = '';
+        document.getElementById('summary').innerHTML = '';
+        document.getElementById('diffTable').innerHTML = `
+            <div class="placeholder-message">
+                <div class="placeholder-icon">📊</div>
+                <div class="placeholder-text">Choose files on your computer and click Compare</div>
+            </div>
+        `;
+    }
+
+    function restoreTableStructure() {
+        document.getElementById('diffTable').innerHTML = `
+            <div class="table-header-fixed">
+                <table class="diff-table-header">
+                    <thead></thead>
+                    <tbody class="filter-row"></tbody>
+                </table>
+            </div>
+            <div class="table-body-scrollable">
+                <table class="diff-table-body">
+                    <tbody></tbody>
+                </table>
+            </div>
+        `;
+    }
+
     function compareTables() {
         if (!data1.length || !data2.length) {
             document.getElementById('result').innerText = 'Please, load both files.';
             document.getElementById('summary').innerHTML = '';
-            document.getElementById('diffTable').innerHTML = '';
+            showPlaceholderMessage();
             return;
         }
+        
+        // Restore table structure for comparison results
+        restoreTableStructure();
         // --- Статистика ---
         let header1 = data1[0] || [];
         let header2 = data2[0] || [];
@@ -290,7 +367,15 @@
                 if (row1 && row2) source = 'Both files';
                 else if (row1) source = fileName1 || 'File 1';
                 else source = fileName2 || 'File 2';
-                let rowClass = hasWarn ? 'rowwarn' : '';
+                
+                // Улучшенная логика классов строк
+                let rowClass = '';
+                let hasDiff = !row1 || !row2;
+                if (hasDiff) rowClass = 'row-diff';
+                else if (hasWarn) rowClass = 'row-warn';
+                else if (allSame) rowClass = 'row-identical';
+                else rowClass = 'row-default';
+                
                 bodyHtml += `<tr class="${rowClass}">`;
                 bodyHtml += `<td>${source}</td>`;
                 for (let c = 0; c < allCols; c++) {
@@ -429,8 +514,9 @@
                 
                 let rowClass = '';
                 if (hasDiff) rowClass = 'row-diff';
-                else if (hasWarn) rowClass = 'rowwarn row-warn';
+                else if (hasWarn) rowClass = 'row-warn';
                 else if (hasIdentical && allSame) rowClass = 'row-identical';
+                else rowClass = 'row-default'; // Добавляем класс по умолчанию
                 
                 bodyHtml += `<tr class="${rowClass}">`;
                 bodyHtml += `<td>${source}</td>`;
@@ -454,6 +540,9 @@
                 bodyHtml += '</tr>';
             });
             document.querySelector('.diff-table-body tbody').innerHTML = bodyHtml;
+            
+            // Устанавливаем правильную ширину таблицы после рендеринга
+            setTimeout(adjustTableWidth, 50);
         } else {
             document.querySelector('.diff-table-header thead').innerHTML = '';
             document.querySelector('.filter-row').innerHTML = '';
@@ -501,6 +590,61 @@
             row.style.display = show ? '' : 'none';
         }
     }
+
+    // Функция для установки правильной ширины таблицы
+    function adjustTableWidth() {
+        const headerTable = document.querySelector('.diff-table-header');
+        const bodyTable = document.querySelector('.diff-table-body');
+        
+        if (headerTable && bodyTable) {
+            // Вычисляем общую ширину всех колонок
+            const headerCells = headerTable.querySelectorAll('th, td');
+            let totalWidth = 0;
+            
+            headerCells.forEach(cell => {
+                totalWidth += Math.max(150, cell.scrollWidth + 20); // минимум 150px + отступы
+            });
+            
+            // Устанавливаем ширину таблиц
+            const widthStyle = totalWidth + 'px';
+            headerTable.style.width = widthStyle;
+            bodyTable.style.width = widthStyle;
+            headerTable.style.minWidth = widthStyle;
+            bodyTable.style.minWidth = widthStyle;
+        }
+    }
+
+    // Синхронизация прокрутки заголовка и тела таблицы
+    function syncTableScroll() {
+        const headerContainer = document.querySelector('.table-header-fixed');
+        const bodyContainer = document.querySelector('.table-body-scrollable');
+        
+        if (headerContainer && bodyContainer) {
+            bodyContainer.addEventListener('scroll', function() {
+                headerContainer.scrollLeft = bodyContainer.scrollLeft;
+            });
+            
+            headerContainer.addEventListener('scroll', function() {
+                bodyContainer.scrollLeft = headerContainer.scrollLeft;
+            });
+        }
+    }
+
+    // Инициализируем синхронизацию и placeholder при загрузке страницы
+    window.addEventListener('load', function() {
+        syncTableScroll();
+        showPlaceholderMessage(); // Show placeholder message on page load
+    });
+    
+    // Переопределяем функцию compareTables для добавления синхронизации
+    const originalCompareTables = compareTables;
+    compareTables = function() {
+        originalCompareTables();
+        setTimeout(() => {
+            adjustTableWidth();
+            syncTableScroll();
+        }, 100); // Небольшая задержка для завершения рендеринга
+    };
     </script>
     
     <!-- Load the shared header -->
