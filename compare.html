@@ -78,6 +78,78 @@
     let data1 = [], data2 = [];
     let fileName1 = '', fileName2 = '';
 
+    // Function to convert Excel serial date to proper date format
+    function convertExcelDate(value) {
+        // Check if value is a number that could be an Excel date serial number
+        if (typeof value === 'number' && value > 1 && value < 100000) {
+            // Excel epoch starts from January 1, 1900 (but Excel incorrectly treats 1900 as a leap year)
+            const excelEpoch = new Date(1899, 11, 30); // December 30, 1899
+            const date = new Date(excelEpoch.getTime() + value * 24 * 60 * 60 * 1000);
+            
+            // More strict validation: only convert if the number is in a reasonable date range
+            // and the number is large enough to be a plausible Excel date
+            if (value >= 25567 && // January 1, 1970 (Unix epoch start)
+                value <= 73050 && // Approximately year 2100
+                date.getFullYear() >= 1970 && 
+                date.getFullYear() <= 2100) {
+                // Format as YYYY-MM-DD
+                return date.getFullYear() + '-' + 
+                       String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+                       String(date.getDate()).padStart(2, '0');
+            }
+        }
+        
+        // Check if value is already a date string in various formats
+        if (typeof value === 'string') {
+            // Try to parse common date formats
+            let dateMatch;
+            
+            // DD/MM/YYYY or DD.MM.YYYY format
+            dateMatch = value.match(/^(\d{1,2})[\/\.](\d{1,2})[\/\.](\d{4})$/);
+            if (dateMatch) {
+                const day = parseInt(dateMatch[1]);
+                const month = parseInt(dateMatch[2]);
+                const year = parseInt(dateMatch[3]);
+                if (day <= 31 && month <= 12 && year >= 1900 && year <= 2100) {
+                    return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+                }
+            }
+            
+            // MM/DD/YYYY format
+            dateMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+            if (dateMatch) {
+                const month = parseInt(dateMatch[1]);
+                const day = parseInt(dateMatch[2]);
+                const year = parseInt(dateMatch[3]);
+                if (day <= 31 && month <= 12 && year >= 1900 && year <= 2100) {
+                    return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+                }
+            }
+            
+            // YYYY-MM-DD format (already correct)
+            dateMatch = value.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+            if (dateMatch) {
+                const year = parseInt(dateMatch[1]);
+                const month = parseInt(dateMatch[2]);
+                const day = parseInt(dateMatch[3]);
+                if (day <= 31 && month <= 12 && year >= 1900 && year <= 2100) {
+                    return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+                }
+            }
+        }
+        
+        // Return original value if it's not a date
+        return value;
+    }
+
+    // Function to process data and convert dates
+    function processDataWithDates(data) {
+        return data.map(row => {
+            if (!Array.isArray(row)) return row;
+            return row.map(cell => convertExcelDate(cell));
+        });
+    }
+
     document.getElementById('file1').addEventListener('change', function(e) {
         handleFile(e.target.files[0], 1);
     });
@@ -138,6 +210,9 @@
             
             // Удаляем полностью пустые столбцы
             json = removeEmptyColumns(json);
+            
+            // Convert Excel dates to proper format
+            json = processDataWithDates(json);
             
             if (num === 1) {
                 data1 = json;
