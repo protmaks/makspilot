@@ -82,20 +82,27 @@
     function convertExcelDate(value) {
         // Check if value is a number that could be an Excel date serial number
         if (typeof value === 'number' && value > 1 && value < 100000) {
-            // Excel epoch starts from January 1, 1900 (but Excel incorrectly treats 1900 as a leap year)
-            const excelEpoch = new Date(1899, 11, 30); // December 30, 1899
-            const date = new Date(excelEpoch.getTime() + value * 24 * 60 * 60 * 1000);
-            
             // More strict validation: only convert if the number is in a reasonable date range
             // and the number is large enough to be a plausible Excel date
             if (value >= 25567 && // January 1, 1970 (Unix epoch start)
-                value <= 73050 && // Approximately year 2100
-                date.getFullYear() >= 1970 && 
-                date.getFullYear() <= 2100) {
-                // Format as YYYY-MM-DD
-                return date.getFullYear() + '-' + 
-                       String(date.getMonth() + 1).padStart(2, '0') + '-' + 
-                       String(date.getDate()).padStart(2, '0');
+                value <= 73050) { // Approximately year 2100
+                
+                // Excel epoch starts from January 1, 1900 (but Excel incorrectly treats 1900 as a leap year)
+                // Use UTC to avoid timezone issues
+                const excelEpochUTC = Date.UTC(1899, 11, 30); // December 30, 1899 UTC
+                const dateUTC = new Date(excelEpochUTC + value * 24 * 60 * 60 * 1000);
+                
+                // Ensure we're working with UTC values
+                const year = dateUTC.getUTCFullYear();
+                const month = dateUTC.getUTCMonth() + 1;
+                const day = dateUTC.getUTCDate();
+                
+                if (year >= 1970 && year <= 2100) {
+                    // Format as YYYY-MM-DD
+                    return year + '-' + 
+                           String(month).padStart(2, '0') + '-' + 
+                           String(day).padStart(2, '0');
+                }
             }
         }
         
