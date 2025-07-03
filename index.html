@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,38 +9,43 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Header -->
+    <!-- Header will be loaded here -->
     <header>
-        <div class="header-container">
-            <a href="#hero" class="logo">
-                <img src="maxpilot.png" alt="MaxPilot Logo">
-            </a>
-            <nav>
-                <ul class="nav-menu">
-                    <li><a href="#hero">Home</a></li>
-                    <li><a href="#block-1">Problems</a></li>
-                    <li><a href="#block-4">Security</a></li>
-                    <li><a href="#hero" class="nav-cta">Start</a></li>
-                    <li><a href="https://medium.com/@protmaks" target="_blank">My Blog</a></li>
-                    <li><a href="https://www.linkedin.com/in/protmaks/" class="social-link" title="linkedin" target="_blank">
-                        <img src="linkedin.png" alt="linkedin">
-                    </a></li>
-                </ul>
-                <div class="mobile-menu-toggle">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </div>
-            </nav>
-        </div>
-    </header>
-
+    <div class="header-container">
+        <a href="index.html" class="logo">
+            <img src="img/maxpilot.png" alt="MaxPilot Logo">
+        </a>
+        <nav>
+            <ul class="nav-menu">
+                <li><a href="index.html#block-1">Problems</a></li>
+                <li><a href="index.html#block-4">Security</a></li>
+                <li><a href="compare.html" class="nav-cta">Start Comparison</a></li>
+                <li><a href="https://medium.com/@protmaks" target="_blank">My Blog</a></li>
+                <li><a href="https://www.linkedin.com/in/protmaks/" class="social-link" title="linkedin" target="_blank">
+                    <img src="img/linkedin.png" alt="linkedin">
+                </a></li>
+            </ul>
+            <div class="mobile-menu-toggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </nav>
+    </div>
+</header>
+    
+    <div class="main-content">
     <!-- Hero Section -->
     <section id="hero">
         <div class="container">
-            <h1>STOP STRUGGLING WITH EXCEL</h1>
-            <p class="subtext">Compare files quickly and easily without complex tools and programming</p>
-            <a href="#block-1" class="cta-button">Start Comparison</a>
+            <div class="hero-image">
+                <img src="img/main.png" alt="File comparison illustration">
+            </div>
+            <div class="hero-content">
+                <h1>STOP STRUGGLING WITH EXCEL</h1>
+                <p class="subtext">Compare files quickly and easily without complex tools or programming</p>
+                <a href="compare.html" class="cta-button">Start Comparison</a>
+            </div>
         </div>
     </section>
 
@@ -53,7 +58,7 @@
                     <p>Spending hours looking for differences between tables? Afraid of missing important changes? Forget about manual comparison - there's a better way!</p>
                 </div>
                 <div class="section-image">
-                    <img id="nerd-img" src="nerd.png" alt="Tired programmer comparing Excel files manually">
+                    <img id="nerd-img" src="img/nerd.png" alt="Tired programmer manually comparing Excel files">
                 </div>
             </div>
         </div>
@@ -64,11 +69,11 @@
         <div class="container">
             <div class="section-grid reverse">
                 <div class="section-content">
-                    <h2>Do you need to learn Duck DB to compare two files?</h2>
-                    <p>Complex SQL queries, database setup, studying documentation... Why spend weeks learning tools when you can solve the task in minutes?</p>
+                    <h2>Do you need to learn DuckDB to compare two files?</h2>
+                    <p>Complex SQL queries, database setup, studying documentation... Why spend weeks learning tools when you can solve the problem in minutes?</p>
                 </div>
                 <div class="section-image">
-                    <img id="duck-img" src="duck.png" alt="Duck with glasses studying complex Duck DB documentation">
+                    <img id="duck-img" src="img/duck.png" alt="Duck with glasses studying complex DuckDB documentation">
                 </div>
             </div>
         </div>
@@ -83,7 +88,7 @@
                     <p>Pandas, NumPy, Excel libraries... Not everyone wants to become a programmer just to compare two files!</p>
                 </div>
                 <div class="section-image">
-                    <img id="python-img" src="python.png" alt="Python snake wrapping around programming books">
+                    <img id="python-img" src="img/python.png" alt="Python snake wrapped around a stack of programming books">
                 </div>
             </div>
         </div>
@@ -95,10 +100,10 @@
             <div class="section-grid reverse">
                 <div class="section-content">
                     <h2>Worried about file security? No registration required, all files stay on your PC</h2>
-                    <p>Your data stays only with you. No server uploads, no registration, no risk of confidential information leaks.</p>
+                    <p>Your data stays only with you. No uploads to the server, no registration, no risks of confidential information leakage.</p>
                 </div>
                 <div class="section-image">
-                    <img id="shiba-img" src="shiba.png" alt="Shiba Inu dog as a guard protecting files">
+                    <img id="shiba-img" src="img/shiba.png" alt="Shiba Inu dog as a guard protecting files">
                 </div>
             </div>
         </div>
@@ -108,7 +113,7 @@
         <div class="container">
             <h2>FILE COMPARISON APPLICATION</h2>
             <p class="subtext">Compare files quickly and easily without complex tools and programming</p>
-            <a href="#block-1" class="cta-button">Start Comparison</a>
+            <a href="compare.html" class="cta-button">Start Comparison</a>
         </div>
     </section>
 
@@ -117,16 +122,17 @@
         <div class="container">
             <div class="footer-social">
                 <a href="https://www.linkedin.com/in/protmaks/" class="social-link" title="LinkedIn" target="_blank">
-                    <img src="linkedin.png" alt="LinkedIn">
+                    <img src="img\linkedin.png" alt="LinkedIn">
                 </a>
                 <a href="https://medium.com/@protmaks" class="social-link" title="My blog" target="_blank">
-                    <img src="blog.png" alt="My blog">
+                    <img src="img\blog.png" alt="My blog">
                 </a>
             </div>
             <p class="copyright">© 2025 File Comparison. All rights reserved.</p>
         </div>
     </footer>
 
+    <!-- Load the shared header and scripts -->
     <script src="script.js"></script>
 </body>
 </html>

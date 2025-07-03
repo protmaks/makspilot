@@ -3,32 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Excel and CSV File Comparison</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <title>Excel and CSV File Comparison - MaxPilot</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
-    <h1>Excel and CSV File Comparison</h1>
-    <div class="fixed-header">
-    <div id="summary"></div>
-    <div class="container">
-        <div class="table-container">
-            <label class="file-label">File 1 (Excel or CSV):</label><br>
-            <input type="file" id="file1" accept=".xlsx,.xls,.csv" onchange="handleFile1(event)"><br>
-            <div id="table1"></div>
-            <div id="preview1"></div>
+    <!-- Header will be loaded here -->
+    <header>
+    <div class="header-container">
+        <a href="index.html" class="logo">
+            <img src="img/maxpilot.png" alt="MaxPilot Logo">
+        </a>
+        <nav>
+            <ul class="nav-menu">
+                <li><a href="index.html#block-1">Problems</a></li>
+                <li><a href="index.html#block-4">Security</a></li>
+                <li><a href="compare.html" class="nav-cta">Start Comparison</a></li>
+                <li><a href="https://medium.com/@protmaks" target="_blank">My Blog</a></li>
+                <li><a href="https://www.linkedin.com/in/protmaks/" class="social-link" title="linkedin" target="_blank">
+                    <img src="img/linkedin.png" alt="linkedin">
+                </a></li>
+            </ul>
+            <div class="mobile-menu-toggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </nav>
+    </div>
+</header>
+    
+    <div class="main-content" style="padding-top: 80px;"><!-- Account for fixed header -->
+        <h1>Excel and CSV File Comparison</h1>
+        <div id="summary"></div>
+        <div class="comparison-container">
+            <div class="table-container">
+                <label class="file-label">File 1:</label>
+                <input type="file" id="file1" accept=".xlsx,.xls,.csv"><br>
+                <div id="table1"></div>
+            </div>
+            <div class="table-container">
+                <label class="file-label">File 2:</label>
+                <input type="file" id="file2" accept=".xlsx,.xls,.csv"><br>
+                <div id="table2"></div>
+            </div>
+            <div class="controls-container">
+                <button class="compare-btn" onclick="compareTables()">Compare</button>
+                <label><input type="checkbox" id="hideSameRows" onchange="compareTables()"> hide same rows</label>
+            </div>
         </div>
-        <div class="table-container">
-            <label class="file-label">File 2 (Excel or CSV):</label><br>
-            <input type="file" id="file2" accept=".xlsx,.xls,.csv" onchange="handleFile2(event)"><br>
-            <div id="table2"></div>
+        <div class="preview-container">
+            <div id="preview1"></div>
             <div id="preview2"></div>
         </div>
-        <div class="controls-container">
-            <button class="compare-btn" onclick="compareTables()">Compare</button>
-            <label style="margin-left:20px;"><input type="checkbox" id="hideSameRows" onchange="compareTables()"> Hide identical rows below</label>
-        </div>
-    </div>
     </div>
     <div id="result"></div>
     <div id="diffTable">
@@ -106,6 +135,7 @@
     function renderPreview(data, elementId, title) {
         let html = '';
         if (data.length > 0) {
+            html += '<div class="preview-wrapper">';
             html += '<table class="preview-table">';
             // Заголовки
             if (data[0] && data[0].length > 0) {
@@ -124,6 +154,7 @@
                 html += '</tr>';
             }
             html += '</table>';
+            html += '</div>';
         }
         document.getElementById(elementId).innerHTML = html;
     }
@@ -357,25 +388,41 @@
                 let isEmpty = true;
                 let hasWarn = false;
                 let allSame = true;
+                let hasDiff = false;
+                let hasIdentical = false;
+                
                 for (let c = 0; c < allCols; c++) {
                     let v1 = row1 ? (row1[c] !== undefined ? row1[c] : '') : '';
                     let v2 = row2 ? (row2[c] !== undefined ? row2[c] : '') : '';
                     if ((v1 && v1.toString().trim() !== '') || (v2 && v2.toString().trim() !== '')) {
                         isEmpty = false;
                     }
-                    if (row1 && row2 && v1 !== v2) {
-                        hasWarn = true;
+                    if (row1 && row2) {
+                        if (v1 !== v2) {
+                            hasWarn = true;
+                            allSame = false;
+                        } else {
+                            hasIdentical = true;
+                        }
+                    } else {
+                        hasDiff = true;
                         allSame = false;
                     }
-                    if (row1 && row2 && v1 !== v2) allSame = false;
                 }
+                
                 if (isEmpty) return;
                 if (hideSame && row1 && row2 && allSame) return;
+                
                 let source = '';
                 if (row1 && row2) source = 'Both files';
                 else if (row1) source = fileName1 || 'File 1';
                 else source = fileName2 || 'File 2';
-                let rowClass = hasWarn ? 'rowwarn' : '';
+                
+                let rowClass = '';
+                if (hasDiff) rowClass = 'row-diff';
+                else if (hasWarn) rowClass = 'rowwarn row-warn';
+                else if (hasIdentical && allSame) rowClass = 'row-identical';
+                
                 bodyHtml += `<tr class="${rowClass}">`;
                 bodyHtml += `<td>${source}</td>`;
                 for (let c = 0; c < allCols; c++) {
@@ -446,5 +493,8 @@
         }
     }
     </script>
+    
+    <!-- Load the shared header -->
+    <script src="script.js"></script>
 </body>
 </html> 
