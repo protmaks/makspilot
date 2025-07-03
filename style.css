@@ -501,6 +501,87 @@ footer {
     max-width: 400px;
 }
 
+/* Preview table styles */
+.preview-wrapper {
+    margin-top: 10px;
+    overflow-x: auto;
+    border: 1px solid #e2e5e9;
+    border-radius: 6px;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.preview-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    min-width: 300px;
+}
+
+.preview-table th {
+    background-color: #f8f9fa;
+    color: #495057;
+    font-weight: 600;
+    padding: 10px 8px;
+    text-align: left;
+    border-bottom: 2px solid #dee2e6;
+    border-right: 1px solid #dee2e6;
+    position: sticky;
+    top: 0;
+    white-space: nowrap;
+    font-size: 12px;
+}
+
+.preview-table th:last-child {
+    border-right: none;
+}
+
+.preview-table td {
+    padding: 8px;
+    border-bottom: 1px solid #dee2e6;
+    border-right: 1px solid #dee2e6;
+    color: #495057;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
+}
+
+.preview-table td:last-child {
+    border-right: none;
+}
+
+.preview-table tr:hover {
+    background-color: #f8f9fa;
+}
+
+.preview-table tr:last-child td {
+    border-bottom: none;
+}
+
+/* Table container improvements */
+#table1, #table2 {
+    margin-top: 10px;
+}
+
+#table1 h3, #table2 h3 {
+    margin: 10px 0 5px 0;
+    color: #495057;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* Base table styles */
+table {
+    color: #495057;
+    font-family: inherit;
+}
+
+table th,
+table td {
+    color: #495057;
+}
+
 .controls-container {
     flex-shrink: 0;
     display: flex;
@@ -679,7 +760,15 @@ button.compare-btn:hover {
     border-radius: 8px 8px 0 0;
     position: sticky;
     z-index: 10;
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: hidden;
+    /* Hide scrollbar for header */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+}
+
+.table-header-fixed::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
 }
 
 .table-body-scrollable {
@@ -692,8 +781,8 @@ button.compare-btn:hover {
 }
 
 .diff-table-header, .diff-table-body {
-    width: auto;
-    min-width: 100%;
+    width: 100%;
+    min-width: 800px; /* Ensure minimum width for proper alignment */
     border-collapse: collapse;
     table-layout: fixed;
 }
@@ -705,10 +794,21 @@ button.compare-btn:hover {
     border-right: 1px solid #e0e0e0;
     border-bottom: 1px solid #e0e0e0;
     min-width: 150px;
+    width: 150px; /* Fixed width for consistent alignment */
+    max-width: 150px; /* Prevent expanding beyond this width */
     font-size: 1rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    box-sizing: border-box; /* Include padding and border in width calculation */
+}
+
+/* First column (Source) should be narrower */
+.diff-table-header th:first-child,
+.diff-table-body td:first-child {
+    min-width: 120px;
+    width: 120px;
+    max-width: 120px; /* Prevent expanding beyond this width */
 }
 
 .diff-table-header th {
@@ -792,8 +892,7 @@ button.compare-btn:hover {
 .diff-table-body td > div:first-child {
     min-height: 1.5em;
     font-weight: 500;
-    color: #2d3a4a;
-    color: #ff7900 !important;
+    color: #ff7900;
 }
 
 .diff-table-body td > div:last-child {
@@ -816,242 +915,81 @@ button.compare-btn:hover {
     background: #fff;
 }
 
-/* Table text color fixes */
-.diff-table-header th,
-.diff-table-header td,
-.diff-table-body td,
-.preview-table th,
-.preview-table td,
-#summary th,
-#summary td {
-    color: #2d3a4a !important;
+/* Filter options styling */
+
+/* Exclude columns and compare button layout */
+.exclude-compare-row {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    margin-bottom: 15px;
 }
 
-.diff-table-body td > div {
-    color: #2d3a4a !important;
-}
-
-.diff-table-body td > div:last-child {
-    color: #555 !important;
-}
-
-/* Ensure filter inputs have proper text color */
-.filter-row input[type="text"] {
-    color: #2d3a4a !important;
-}
-
-/* Comparison container text color */
-.comparison-container {
-    color: #2d3a4a;
-}
-
-.file-label {
-    color: #3a4a5d !important;
-}
-
-.controls-container label {
-    color: #3a4a5d !important;
-}
-
-.cell-red {
-    background-color: #ffcccc !important;
-    color: #dc2626;
-}
-
-.cell-green {
-    background-color: #d4edda !important;
-    color: #16a34a;
-}
-
-.diff-table-header th:last-child, .diff-table-header td:last-child,
-.diff-table-body td:last-child {
-    border-right: none;
-}
-
-.diff-table-body tr:last-child td {
-    border-bottom: none;
-}
-
-#result {
-    text-align: center;
-    font-size: 1.1rem;
-    margin: 18px 0 0 0;
-    color: #2d3a4a;
-    margin-top: 20px;
-    max-width: 1200px;
-    margin-left: auto;
-    margin-right: auto;
-    padding: 0 20px;
-}
-
-.preview-container {
-    display: block;
-    margin: 20px 0;
-    width: 100%;
-    max-width: 1200px;
-    margin-left: auto;
-    margin-right: auto;
-    padding: 0 20px;
-}
-
-.preview-wrapper {
-    width: 100%;
-    overflow-x: auto;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    background: white;
-    position: relative;
-    margin-bottom: 20px;
-}
-
-.preview-table {
-    border-collapse: collapse;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(44, 62, 80, 0.06);
-    overflow: visible;
-    width: max-content;
-    min-width: 100%;
-    border: none;
-    margin: 0;
-    table-layout: auto;
-}
-
-.preview-table td[title] {
-    cursor: help;
-}
-
-.preview-table th, .preview-table td {
-    padding: 8px 12px;
-    border: none;
-    text-align: left;
-    font-size: 0.8rem;
-    border-right: 1px solid #e0e0e0;
-    border-bottom: 1px solid #e0e0e0;
-    min-width: 120px;
-    max-width: 250px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.preview-table th:last-child, .preview-table td:last-child {
-    border-right: none;
-}
-
-.preview-table tr:last-child td {
-    border-bottom: none;
-}
-
-.preview-table th {
-    background: #f0f4fa;
-    color: #2d3a4a;
-    font-weight: 600;
-}
-
-.preview-table td {
-    background: #fff;
-}
-
-.preview-title {
-    text-align: left;
-    font-weight: 600;
-    color: #2d3a4a;
-    margin-bottom: 6px;
-    font-size: 0.9rem;
-    padding-left: 4px;
-}
-
-/* Улучшенные стили для горизонтальной прокрутки */
-.preview-wrapper::-webkit-scrollbar {
-    height: 8px;
-    background: #f8f9fa;
-}
-
-.preview-wrapper::-webkit-scrollbar-thumb {
-    background: #dee2e6;
-    border-radius: 4px;
-}
-
-.preview-wrapper::-webkit-scrollbar-thumb:hover {
-    background: #adb5bd;
-}
-
-/* Custom scrollbar for comparison tool */
-::-webkit-scrollbar {
-    width: 10px;
-    background: #f0f4fa;
-}
-
-::-webkit-scrollbar-thumb {
-    background: #dbeafe;
+.exclude-columns-container {
+    width: 70%;
+    margin-bottom: 0; /* Remove bottom margin since we're in flex */
+    padding: 12px;
+    background-color: #f8f9fa;
+    border: 1px solid #e2e5e9;
     border-radius: 6px;
 }
 
-/* Стили горизонтальной прокрутки для итоговой таблицы */
-.table-header-fixed::-webkit-scrollbar,
-.table-body-scrollable::-webkit-scrollbar {
-    height: 8px;
-    width: 8px;
-    background: #f8f9fa;
+.compare-button-container {
+    width: 30%;
+    display: flex;
+    align-items: flex-end;
+    padding-bottom: 12px; /* Align with the input field inside exclude container */
 }
 
-.table-header-fixed::-webkit-scrollbar-thumb,
-.table-body-scrollable::-webkit-scrollbar-thumb {
-    background: #dee2e6;
-    border-radius: 4px;
-}
-
-.table-header-fixed::-webkit-scrollbar-thumb:hover,
-.table-body-scrollable::-webkit-scrollbar-thumb:hover {
-    background: #adb5bd;
-}
-
-.table-header-fixed::-webkit-scrollbar-corner,
-.table-body-scrollable::-webkit-scrollbar-corner {
-    background: #f8f9fa;
-}
-
-/* Sticky first column styles */
-.diff-table-header th:first-child,
-.diff-table-body td:first-child {
-    position: sticky;
-    left: 0;
-    z-index: 15;
-    background: #f8f9fa;
-    border-right: 2px solid #dee2e6;
-    min-width: 180px;
-    max-width: 180px;
+.compare-button-container .compare-btn {
+    width: 100%;
+    height: 96px; /* Make button taller */
+    font-size: 16px;
     font-weight: 600;
 }
 
-.diff-table-header th:first-child {
-    background: #e9ecef;
-    z-index: 20;
+/* Make filter options horizontal */
+.filter-options {
+    display: flex;
+    flex-direction: row; /* Change from column to row */
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
+    gap: 20px; /* Increase gap for horizontal layout */
+    margin-top: 15px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
 }
 
-/* Ensure proper layering for first column */
-.diff-table-body tr.row-diff td:first-child {
-    background: #ffeaa7;
+.filter-options label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #495057;
+    cursor: pointer;
+    padding: 4px 0;
+    white-space: nowrap; /* Prevent text wrapping within label */
 }
 
-.diff-table-body tr.row-warn td:first-child {
-    background: #fdcb6e;
-}
-
-.diff-table-body tr.row-identical td:first-child {
-    background: #81ecec;
-}
-
-.diff-table-body tr.row-default td:first-child {
-    background: #f8f9fa;
-}
-
-/* Adjust filter row first cell */
-.filter-row td:first-child {
-    position: sticky;
-    left: 0;
-    z-index: 16;
-    background: #f8f9fa;
-    border-right: 2px solid #dee2e6;
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .exclude-compare-row {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .exclude-columns-container,
+    .compare-button-container {
+        width: 100%;
+    }
+    
+    .compare-button-container {
+        padding-bottom: 0;
+    }
+    
+    .filter-options {
+        flex-direction: column;
+        gap: 8px;
+    }
 }

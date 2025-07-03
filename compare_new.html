@@ -48,21 +48,19 @@
                 <div id="table2"></div>
             </div>
             <div class="controls-container">
-                <div class="exclude-compare-row">
-                    <div class="exclude-columns-container">
-                        <label for="excludeColumns" class="exclude-label">Exclude columns from comparison (comma-separated):</label>
-                        <input type="text" id="excludeColumns" placeholder="e.g., ID, Timestamp, CreatedDate" style="width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
-                    </div>
-                    <div class="compare-button-container">
-                        <button class="compare-btn" onclick="compareTables()">Compare</button>
-                    </div>
+                <div class="exclude-columns-container">
+                    <label for="excludeColumns" class="exclude-label">Exclude columns from comparison (comma-separated):</label>
+                    <input type="text" id="excludeColumns" placeholder="e.g., ID, Timestamp, CreatedDate" style="width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+                    <small style="color: #666; font-size: 12px;">Enter column names exactly as they appear in the files, separated by commas</small>
                 </div>
+                <button class="compare-btn" onclick="compareTables()">Compare</button>
                 <div class="filter-controls" style="display: none;">
+                    <h3>Filter Options</h3>
                     <div class="filter-options">
-                        <label><input type="checkbox" id="hideSameRows"> Hide COMMA rows</label>
-                        <label><input type="checkbox" id="hideDiffColumns"> Hide DIFF rows</label>
-                        <label><input type="checkbox" id="hideNewRows1"> Hide rows only in file 1</label>
-                        <label><input type="checkbox" id="hideNewRows2"> Hide rows only in file 2</label>
+                        <label><input type="checkbox" id="hideIdentical"> Hide identical rows (green)</label>
+                        <label><input type="checkbox" id="hideDifferent"> Hide different rows (orange)</label>
+                        <label><input type="checkbox" id="hideOnlyFile1"> Hide rows only in file 1</label>
+                        <label><input type="checkbox" id="hideOnlyFile2"> Hide rows only in file 2</label>
                     </div>
                 </div>
             </div>
