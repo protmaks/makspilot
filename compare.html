@@ -588,7 +588,7 @@
         let numValue = value.replace(',', '.'); // Convert comma to dot for parsing
         if (numValue !== '' && !isNaN(numValue) && !isNaN(parseFloat(numValue))) {
             const num = parseFloat(numValue);
-            return Number.isInteger(num) ? parseInt(numValue) : num;
+            return Number.isInteger(num) ? num : num;
         }
         
         return value;
