@@ -80,6 +80,19 @@
 
     // Function to convert Excel serial date to proper date format
     function convertExcelDate(value) {
+        // Handle Date objects that might be created by XLSX library
+        if (value instanceof Date) {
+            if (!isNaN(value.getTime())) {
+                // Use local date components to avoid timezone shifts
+                const year = value.getFullYear();
+                const month = value.getMonth() + 1;
+                const day = value.getDate();
+                if (year >= 1900 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+                    return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+                }
+            }
+        }
+        
         // Check if value is a number that could be an Excel date serial number
         if (typeof value === 'number' && value > 1 && value < 100000) {
             // More strict validation: only convert if the number is in a reasonable date range
@@ -117,6 +130,26 @@
                 if (day <= 31 && month <= 12 && year >= 1900 && year <= 2100) {
                     // Already in correct format, just normalize
                     return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+                }
+            }
+            
+            // Check if it's a Date object converted to string that might have timezone issues
+            // This can happen when CSV parsing creates Date objects that get stringified
+            if (value.includes('T') || value.includes('GMT') || value.includes('UTC')) {
+                try {
+                    // Parse as Date and extract just the date part in local timezone
+                    const dateObj = new Date(value);
+                    if (!isNaN(dateObj.getTime())) {
+                        // Use local date components to avoid timezone shifts
+                        const year = dateObj.getFullYear();
+                        const month = dateObj.getMonth() + 1;
+                        const day = dateObj.getDate();
+                        if (year >= 1900 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+                            return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+                        }
+                    }
+                } catch (e) {
+                    // If parsing fails, continue with other methods
                 }
             }
             
@@ -267,9 +300,19 @@
         const reader = new FileReader();
         reader.onload = function(e) {
             let data = new Uint8Array(e.target.result);
-            let workbook = XLSX.read(data, {type: 'array'});
+            // Use cellDates option to preserve date formatting and avoid timezone issues
+            let workbook = XLSX.read(data, {
+                type: 'array',
+                cellDates: true,
+                UTC: false  // Use local timezone to avoid shifts
+            });
             let firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            let json = XLSX.utils.sheet_to_json(firstSheet, {header: 1, defval: ''});
+            let json = XLSX.utils.sheet_to_json(firstSheet, {
+                header: 1, 
+                defval: '',
+                raw: false,  // Don't use raw values, process them
+                dateNF: 'yyyy-mm-dd'  // Prefer this date format
+            });
             
             // Удаляем полностью пустые строки
             json = json.filter(row => Array.isArray(row) && row.some(cell => (cell !== null && cell !== undefined && cell.toString().trim() !== '')));
