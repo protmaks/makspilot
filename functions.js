@@ -95,33 +95,40 @@ function processSelectedSheet(fileNum, selectedSheetName) {
     
     if (!workbook || !workbook.Sheets[selectedSheetName]) return;
     
-    const sheet = workbook.Sheets[selectedSheetName];
-    let json = XLSX.utils.sheet_to_json(sheet, {
-        header: 1, 
-        defval: '',
-        raw: false,
-        dateNF: 'yyyy-mm-dd'
-    });
+    // Show loading indicator for large files
+    const tableElement = document.getElementById(fileNum === 1 ? 'table1' : 'table2');
+    tableElement.innerHTML = '<div style="text-align: center; padding: 20px;">Loading sheet...</div>';
     
-    // Process the data same as before
-    json = json.filter(row => Array.isArray(row) && row.some(cell => (cell !== null && cell !== undefined && cell.toString().trim() !== '')));
-    json = removeEmptyColumns(json);
-    json = json.map(row => {
-        if (!Array.isArray(row)) return row;
-        return row.map(cell => roundDecimalNumbers(cell));
-    });
-    
-    // Update the data and preview
-    if (fileNum === 1) {
-        data1 = json;
-        renderPreview(json, 'table1');
-    } else {
-        data2 = json;
-        renderPreview(json, 'table2');
-    }
-    
-    // Update the sheet info
-    updateSheetInfo(fileName, workbook.SheetNames, selectedSheetName, fileNum);
+    // Use setTimeout to allow UI to update
+    setTimeout(() => {
+        const sheet = workbook.Sheets[selectedSheetName];
+        let json = XLSX.utils.sheet_to_json(sheet, {
+            header: 1, 
+            defval: '',
+            raw: false,
+            dateNF: 'yyyy-mm-dd'
+        });
+        
+        // Process the data efficiently
+        json = json.filter(row => Array.isArray(row) && row.some(cell => (cell !== null && cell !== undefined && cell.toString().trim() !== '')));
+        json = removeEmptyColumns(json);
+        json = json.map(row => {
+            if (!Array.isArray(row)) return row;
+            return row.map(cell => roundDecimalNumbers(cell));
+        });
+        
+        // Update the data and preview
+        if (fileNum === 1) {
+            data1 = json;
+            renderPreview(json, 'table1');
+        } else {
+            data2 = json;
+            renderPreview(json, 'table2');
+        }
+        
+        // Update the sheet info
+        updateSheetInfo(fileName, workbook.SheetNames, selectedSheetName, fileNum);
+    }, 10);
 }
 
 // Helper function to detect if a column likely contains dates
@@ -528,46 +535,76 @@ function removeEmptyColumns(data) {
     let maxCols = Math.max(...data.map(row => row ? row.length : 0));
     if (maxCols === 0) return data;
     
-    // Find columns that are completely empty
+    // Find columns that are completely empty (optimized for large files)
     let columnsToKeep = [];
-    for (let col = 0; col < maxCols; col++) {
-        let hasContent = false;
-        for (let row = 0; row < data.length; row++) {
+    
+    // For very large files (>1000 rows), use sampling approach
+    const isLargeFile = data.length > 1000;
+    const checkRows = isLargeFile ? Math.min(data.length, 100) : data.length;
+    
+    columnLoop: for (let col = 0; col < maxCols; col++) {
+        // Quick check: examine sample rows first
+        for (let row = 0; row < checkRows; row++) {
             if (data[row] && col < data[row].length) {
                 let cellValue = data[row][col];
                 if (cellValue !== null && cellValue !== undefined && cellValue.toString().trim() !== '') {
-                    hasContent = true;
-                    break;
+                    columnsToKeep.push(col);
+                    continue columnLoop;
                 }
             }
         }
-        if (hasContent) {
-            columnsToKeep.push(col);
+        
+        // For large files, if no data found in sample, check every 50th row
+        if (isLargeFile && data.length > checkRows) {
+            for (let row = checkRows; row < data.length; row += 50) {
+                if (data[row] && col < data[row].length) {
+                    let cellValue = data[row][col];
+                    if (cellValue !== null && cellValue !== undefined && cellValue.toString().trim() !== '') {
+                        columnsToKeep.push(col);
+                        continue columnLoop;
+                    }
+                }
+            }
         }
     }
     
-    // Create new rows with only non-empty columns, and normalize dates intelligently
-    let result = data.map(row => {
-        if (!row) return [];
-        return columnsToKeep.map(colIndex => 
-            colIndex < row.length ? row[colIndex] : ''
-        );
-    });
+    // Create new rows with only non-empty columns (use more efficient approach)
+    let result = new Array(data.length);
+    for (let i = 0; i < data.length; i++) {
+        const row = data[i];
+        if (!row) {
+            result[i] = [];
+            continue;
+        }
+        
+        result[i] = new Array(columnsToKeep.length);
+        for (let j = 0; j < columnsToKeep.length; j++) {
+            const colIndex = columnsToKeep[j];
+            result[i][j] = colIndex < row.length ? row[colIndex] : '';
+        }
+    }
     
-    // Now normalize dates column by column
+    // Optimize date normalization - only for columns that might contain dates
     if (result.length > 0) {
         const numCols = result[0].length;
         
         for (let col = 0; col < numCols; col++) {
-            // Extract column values for date detection
-            const columnValues = result.map(row => row[col]);
-            const columnHeader = result.length > 0 ? result[0][col] : ''; // Use first row as header
+            // Sample only small portion for date detection (max 20 rows)
+            const sampleSize = Math.min(result.length, 20);
+            const columnValues = [];
+            for (let i = 0; i < sampleSize; i++) {
+                columnValues.push(result[i][col]);
+            }
+            
+            const columnHeader = result.length > 0 ? result[0][col] : '';
             const isDateCol = isDateColumn(columnValues, columnHeader);
             
-            // Normalize each value in the column
-            for (let row = 0; row < result.length; row++) {
-                if (result[row][col] !== null && result[row][col] !== undefined && result[row][col] !== '') {
-                    result[row][col] = convertExcelDate(result[row][col], isDateCol);
+            // Only process dates if column is identified as date column
+            if (isDateCol) {
+                for (let row = 0; row < result.length; row++) {
+                    if (result[row][col] !== null && result[row][col] !== undefined && result[row][col] !== '') {
+                        result[row][col] = convertExcelDate(result[row][col], true);
+                    }
                 }
             }
         }
@@ -699,12 +736,26 @@ function parseCSVValue(value) {
 
 function handleFile(file, num) {
     if (!file) return;
+    
+    // Clear previous data for security
     if (num === 1) {
+        data1 = [];
         fileName1 = file.name;
-        workbook1 = null; // Clear previous workbook
+        workbook1 = null;
     } else {
+        data2 = [];
         fileName2 = file.name;
-        workbook2 = null; // Clear previous workbook
+        workbook2 = null;
+    }
+    
+    // Clear result tables
+    document.getElementById('result').innerHTML = '';
+    document.getElementById('summary').innerHTML = '';
+    
+    // Hide filter controls
+    const filterControls = document.querySelector('.filter-controls');
+    if (filterControls) {
+        filterControls.style.display = 'none';
     }
     
     // Clear any existing sheet info for this file slot
@@ -794,8 +845,30 @@ function handleFile(file, num) {
             // Populate sheet selector
             populateSheetSelector(workbook.SheetNames, num, workbook.SheetNames[0]);
             
-            // Process the first sheet initially
-            processSelectedSheet(num, workbook.SheetNames[0]);
+            // Process the first sheet directly (more efficient than calling processSelectedSheet)
+            let firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            let json = XLSX.utils.sheet_to_json(firstSheet, {
+                header: 1, 
+                defval: '',
+                raw: false,
+                dateNF: 'yyyy-mm-dd'
+            });
+            
+            // Process the data same as before
+            json = json.filter(row => Array.isArray(row) && row.some(cell => (cell !== null && cell !== undefined && cell.toString().trim() !== '')));
+            json = removeEmptyColumns(json);
+            json = json.map(row => {
+                if (!Array.isArray(row)) return row;
+                return row.map(cell => roundDecimalNumbers(cell));
+            });
+            
+            if (num === 1) {
+                data1 = json;
+                renderPreview(json, 'table1');
+            } else {
+                data2 = json;
+                renderPreview(json, 'table2');
+            }
         };
         reader.readAsArrayBuffer(file);
     }
@@ -827,6 +900,7 @@ function renderPreview(data, elementId, title) {
     if (data.length > 0) {
         html += '<div class="preview-wrapper">';
         html += '<table class="preview-table">';
+        
         // Headers
         if (data[0] && data[0].length > 0) {
             html += '<tr>';
@@ -839,8 +913,10 @@ function renderPreview(data, elementId, title) {
             }
             html += '</tr>';
         }
-        // First 3 data rows
-        for (let i = 1; i < Math.min(4, data.length); i++) {
+        
+        // Show only first 3 data rows for performance
+        const previewRows = Math.min(4, data.length);
+        for (let i = 1; i < previewRows; i++) {
             html += '<tr>';
             for (let j = 0; j < data[i].length; j++) {
                 let cellValue = data[i][j];
@@ -851,6 +927,14 @@ function renderPreview(data, elementId, title) {
             }
             html += '</tr>';
         }
+        
+        // Add info about total rows if file is large
+        if (data.length > 4) {
+            html += `<tr><td colspan="${data[0].length}" style="text-align: center; font-style: italic; color: #666;">
+                ... and ${data.length - 1} more rows (showing first 3 for preview)
+            </td></tr>`;
+        }
+        
         html += '</table>';
         html += '</div>';
     }
