@@ -803,12 +803,22 @@ button.compare-btn:hover {
     box-sizing: border-box; /* Include padding and border in width calculation */
 }
 
-/* First column (Source) should be narrower */
+/* First column (Source) should be narrower and sticky */
 .diff-table-header th:first-child,
 .diff-table-body td:first-child {
     min-width: 120px;
     width: 120px;
     max-width: 120px; /* Prevent expanding beyond this width */
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background: #f8f9fa !important;
+    box-shadow: 2px 0 4px rgba(0,0,0,0.1);
+}
+
+.diff-table-header th:first-child {
+    z-index: 6; /* Higher z-index for header */
+    background: #f0f4fa !important;
 }
 
 .diff-table-header th {
@@ -845,6 +855,20 @@ button.compare-btn:hover {
     color: #4f8cff;
 }
 
+/* Tooltip styles for column headers */
+.diff-table-header th[title] {
+    cursor: help;
+    transition: background-color 0.2s ease;
+}
+
+.diff-table-header th[title]:hover {
+    background: #e1e8f0 !important;
+}
+
+.diff-table-header th:first-child[title]:hover {
+    background: #e8ebef !important;
+}
+
 /* Table row and cell coloring for comparison results */
 .diff-table-body tr.rowwarn td {
     background: #fff3e0 !important;
@@ -862,9 +886,8 @@ button.compare-btn:hover {
     background: #d4edda !important;
 }
 
-/* Color first column (Source) based on row type */
+/* Color first column (Source) based on row type - enhanced for sticky column */
 .diff-table-body td:first-child {
-    background: #f8f9fa !important;
     font-weight: 600;
     border-right: 2px solid #e0e0e0 !important;
 }

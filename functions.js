@@ -976,9 +976,11 @@ function compareTables() {
     let html = '';
     if (pairs.length > 0) {
         // Table headers
-        let headerHtml = '<tr><th>Source</th>';
+        let headerHtml = '<tr><th title="Source file">Source</th>';
         for (let c = 0; c < finalAllCols; c++) {
-            headerHtml += `<th class="sortable" onclick="sortTable(${c})">${finalHeaders[c] !== undefined ? finalHeaders[c] : ''}</th>`;
+            let headerText = finalHeaders[c] !== undefined ? finalHeaders[c] : '';
+            let titleAttr = headerText ? ` title="${headerText.toString().replace(/"/g, '&quot;')}"` : '';
+            headerHtml += `<th class="sortable" onclick="sortTable(${c})"${titleAttr}>${headerText}</th>`;
         }
         headerHtml += '</tr>';
         document.querySelector('.diff-table-header thead').innerHTML = headerHtml;
@@ -1134,13 +1136,15 @@ function renderSortedTable() {
     
     if (currentPairs.length > 0) {
         // Table headers
-        let headerHtml = '<tr><th>Source</th>';
+        let headerHtml = '<tr><th title="Source file">Source</th>';
         for (let c = 0; c < currentFinalAllCols; c++) {
             let sortClass = 'sortable';
             if (c === currentSortColumn) {
                 sortClass += currentSortDirection === 'asc' ? ' sort-asc' : ' sort-desc';
             }
-            headerHtml += `<th class="${sortClass}" onclick="sortTable(${c})">${currentFinalHeaders[c] !== undefined ? currentFinalHeaders[c] : ''}</th>`;
+            let headerText = currentFinalHeaders[c] !== undefined ? currentFinalHeaders[c] : '';
+            let titleAttr = headerText ? ` title="${headerText.toString().replace(/"/g, '&quot;')}"` : '';
+            headerHtml += `<th class="${sortClass}" onclick="sortTable(${c})"${titleAttr}>${headerText}</th>`;
         }
         headerHtml += '</tr>';
         document.querySelector('.diff-table-header thead').innerHTML = headerHtml;
