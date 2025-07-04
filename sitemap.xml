@@ -6,7 +6,7 @@
 
   <!-- Main page -->
   <url>
-    <loc>https://maxpilot.github.io/compare/</loc>
+    <loc>https://makspilot.com/compare/</loc>
     <lastmod>2025-07-04</lastmod>
     <changefreq>monthly</changefreq>
     <priority>1.0</priority>
@@ -14,7 +14,7 @@
 
   <!-- Main page with index.html -->
   <url>
-    <loc>https://maxpilot.github.io/compare/index.html</loc>
+    <loc>https://makspilot.com/compare/index.html</loc>
     <lastmod>2025-07-04</lastmod>
     <changefreq>monthly</changefreq>
     <priority>1.0</priority>
@@ -22,7 +22,7 @@
 
   <!-- Comparison tool page -->
   <url>
-    <loc>https://maxpilot.github.io/compare/compare.html</loc>
+    <loc>https://makspilot.com/compare/compare.html</loc>
     <lastmod>2025-07-04</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
@@ -30,7 +30,7 @@
 
   <!-- Demo page -->
   <url>
-    <loc>https://maxpilot.github.io/compare/demo.html</loc>
+    <loc>https://makspilot.com/compare/demo.html</loc>
     <lastmod>2025-07-04</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
