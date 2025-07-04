@@ -1,0 +1,26 @@
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://maxpilot.github.io/compare/sitemap.xml
+
+# Allow indexing of main pages
+Allow: /index.html
+Allow: /compare.html
+Allow: /demo.html
+
+# Allow CSS and JS files for proper rendering
+Allow: /style.css
+Allow: /script.js
+Allow: /functions.js
+
+# Allow images for social media previews
+Allow: /img/
+
+# Block unnecessary files
+Disallow: /examples/
+Disallow: /*.md$
+Disallow: /MULTI_SHEETS_README.md
+
+# Crawl-delay to be respectful
+Crawl-delay: 1

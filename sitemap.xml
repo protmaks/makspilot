@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+
+  <!-- Main page -->
+  <url>
+    <loc>https://maxpilot.github.io/compare/</loc>
+    <lastmod>2025-07-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- Main page with index.html -->
+  <url>
+    <loc>https://maxpilot.github.io/compare/index.html</loc>
+    <lastmod>2025-07-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- Comparison tool page -->
+  <url>
+    <loc>https://maxpilot.github.io/compare/compare.html</loc>
+    <lastmod>2025-07-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Demo page -->
+  <url>
+    <loc>https://maxpilot.github.io/compare/demo.html</loc>
+    <lastmod>2025-07-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+</urlset>
