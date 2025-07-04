@@ -904,8 +904,8 @@ button.compare-btn:hover {
 .diff-table-header th:first-child,
 .diff-table-body td:first-child {
     min-width: 200px;
-    /*width: 200px;*/
-    max-width: 300px; /* Prevent expanding beyond this width */
+    width: 200px;
+    max-width: 200px; /* Fixed width for consistent layout */
     position: sticky;
     left: 0;
     z-index: 5;

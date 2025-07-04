@@ -1113,7 +1113,7 @@ function compareTables() {
     let html = '';
     if (pairs.length > 0) {
         // Table headers
-        let headerHtml = '<tr><th title="Source file">Source</th>';
+        let headerHtml = '<tr><th title="Source - shows which file the data comes from">Source</th>';
         for (let c = 0; c < finalAllCols; c++) {
             let headerText = finalHeaders[c] !== undefined ? finalHeaders[c] : '';
             let titleAttr = headerText ? ` title="${headerText.toString().replace(/"/g, '&quot;')}"` : '';
@@ -1273,7 +1273,7 @@ function renderSortedTable() {
     
     if (currentPairs.length > 0) {
         // Table headers
-        let headerHtml = '<tr><th title="Source file">Source</th>';
+        let headerHtml = '<tr><th title="Source - shows which file the data comes from">Source</th>';
         for (let c = 0; c < currentFinalAllCols; c++) {
             let sortClass = 'sortable';
             if (c === currentSortColumn) {
