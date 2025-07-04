@@ -9,8 +9,65 @@ let currentPairs = [];
 let currentFinalHeaders = [];
 let currentFinalAllCols = 0;
 
+// Helper function to detect if a column likely contains dates
+function isDateColumn(columnValues, columnHeader = '') {
+    if (!columnValues || columnValues.length === 0) return false;
+    
+    let dateCount = 0;
+    let numberCount = 0;
+    let totalCount = 0;
+    let potentialExcelDates = 0;
+    
+    // Check if column header suggests this is a date column
+    const headerLower = columnHeader.toString().toLowerCase();
+    const dateKeywords = ['date', 'time', 'created', 'modified', 'updated', 'birth', 'дата', 'время', 'создан', 'изменен', 'обновлен'];
+    const headerSuggestsDate = dateKeywords.some(keyword => headerLower.includes(keyword));
+    
+    for (let value of columnValues) {
+        if (value && value.toString().trim() !== '') {
+            totalCount++;
+            
+            // Check if value looks like a date
+            if (typeof value === 'string') {
+                // Check for date patterns
+                if (value.match(/^\d{4}-\d{1,2}-\d{1,2}$/) || // YYYY-MM-DD
+                    value.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/) || // MM/DD/YYYY
+                    value.match(/^\d{1,2}-\d{1,2}-\d{4}$/) || // MM-DD-YYYY
+                    value.match(/^\d{4}\/\d{1,2}\/\d{1,2}$/) || // YYYY/MM/DD
+                    value.includes('T') || value.includes('GMT') || value.includes('UTC')) {
+                    dateCount++;
+                }
+            } else if (value instanceof Date) {
+                dateCount++;
+            } else if (typeof value === 'number') {
+                numberCount++;
+                // Check if number could be an Excel date (1900-2100 range)
+                if (value >= 36000 && value <= 73050 && value === Math.floor(value)) {
+                    potentialExcelDates++;
+                }
+            }
+        }
+    }
+    
+    // Column is considered a date column if:
+    // 1. Header suggests dates AND more than 30% are potential dates, OR
+    // 2. More than 50% of values are explicit dates, OR
+    // 3. More than 70% of values are numbers that could be Excel dates, OR
+    // 4. Mix of dates and potential Excel dates makes up >60% of values
+    if (totalCount === 0) return false;
+    
+    const dateRatio = dateCount / totalCount;
+    const potentialDateRatio = potentialExcelDates / totalCount;
+    const combinedDateRatio = (dateCount + potentialExcelDates) / totalCount;
+    
+    return (headerSuggestsDate && combinedDateRatio > 0.3) ||
+           dateRatio > 0.5 || 
+           (potentialDateRatio > 0.7 && numberCount > 0) || 
+           combinedDateRatio > 0.6;
+}
+
 // Function to convert Excel serial date to proper date format
-function convertExcelDate(value) {
+function convertExcelDate(value, isInDateColumn = false) {
     // Handle Date objects that might be created by XLSX library
     if (value instanceof Date) {
         if (!isNaN(value.getTime())) {
@@ -26,10 +83,12 @@ function convertExcelDate(value) {
     
     // Check if value is a number that could be an Excel date serial number
     if (typeof value === 'number' && value > 1 && value < 100000) {
-        // More strict validation: only convert if the number is in a reasonable date range
-        // and the number is large enough to be a plausible Excel date
-        if (value >= 25567 && // January 1, 1970 (Unix epoch start)
-            value <= 73050) { // Approximately year 2100
+        // Only convert numbers to dates if we're in a date column context
+        // and the number is in a reasonable Excel date range
+        if (isInDateColumn && 
+            value >= 36000 && // Around 1998 - more reasonable starting point for dates
+            value <= 73050 && // Approximately year 2100
+            value === Math.floor(value)) { // Only whole numbers (dates don't have fractional parts)
             
             // Excel epoch starts from January 1, 1900 (but Excel incorrectly treats 1900 as a leap year)
             // Use UTC to avoid timezone issues
@@ -41,7 +100,7 @@ function convertExcelDate(value) {
             const month = dateUTC.getUTCMonth() + 1;
             const day = dateUTC.getUTCDate();
             
-            if (year >= 1970 && year <= 2100) {
+            if (year >= 1998 && year <= 2100) {
                 // Format as YYYY-MM-DD
                 return year + '-' + 
                        String(month).padStart(2, '0') + '-' + 
@@ -347,22 +406,6 @@ function roundDecimalNumbers(value) {
     return value;
 }
 
-// Function to process data and convert dates and round decimals
-function processDataWithDates(data) {
-    return data.map(row => {
-        if (!Array.isArray(row)) return row;
-        return row.map(cell => {
-            // First try to convert dates
-            let processedCell = convertExcelDate(cell);
-            // Then round decimal numbers (only if it wasn't converted to a date)
-            if (processedCell === cell) {
-                processedCell = roundDecimalNumbers(cell);
-            }
-            return processedCell;
-        });
-    });
-}
-
 function removeEmptyColumns(data) {
     if (!data || data.length === 0) return data;
     
@@ -388,13 +431,34 @@ function removeEmptyColumns(data) {
         }
     }
     
-    // Create new rows with only non-empty columns
-    return data.map(row => {
+    // Create new rows with only non-empty columns, and normalize dates intelligently
+    let result = data.map(row => {
         if (!row) return [];
         return columnsToKeep.map(colIndex => 
             colIndex < row.length ? row[colIndex] : ''
         );
     });
+    
+    // Now normalize dates column by column
+    if (result.length > 0) {
+        const numCols = result[0].length;
+        
+        for (let col = 0; col < numCols; col++) {
+            // Extract column values for date detection
+            const columnValues = result.map(row => row[col]);
+            const columnHeader = result.length > 0 ? result[0][col] : ''; // Use first row as header
+            const isDateCol = isDateColumn(columnValues, columnHeader);
+            
+            // Normalize each value in the column
+            for (let row = 0; row < result.length; row++) {
+                if (result[row][col] !== null && result[row][col] !== undefined && result[row][col] !== '') {
+                    result[row][col] = convertExcelDate(result[row][col], isDateCol);
+                }
+            }
+        }
+    }
+    
+    return result;
 }
 
 // Function to normalize row lengths (ensure all rows have same number of columns)
@@ -539,11 +603,14 @@ function handleFile(file, num) {
             // Normalize row lengths first
             const normalizedJson = normalizeRowLengths(json);
             
-            // Remove empty columns (parseCSV already filtered empty rows)
+            // Remove empty columns and normalize dates intelligently
             const cleanedJson = removeEmptyColumns(normalizedJson);
             
-            // Convert Excel dates to proper format
-            const processedJson = processDataWithDates(cleanedJson);
+            // Round decimal numbers
+            const processedJson = cleanedJson.map(row => {
+                if (!Array.isArray(row)) return row;
+                return row.map(cell => roundDecimalNumbers(cell));
+            });
             
             if (num === 1) {
                 data1 = processedJson;
@@ -576,11 +643,14 @@ function handleFile(file, num) {
             // Remove completely empty rows
             json = json.filter(row => Array.isArray(row) && row.some(cell => (cell !== null && cell !== undefined && cell.toString().trim() !== '')));
             
-            // Remove completely empty columns
+            // Remove completely empty columns and normalize dates intelligently
             json = removeEmptyColumns(json);
             
-            // Convert Excel dates to proper format
-            json = processDataWithDates(json);
+            // Round decimal numbers
+            json = json.map(row => {
+                if (!Array.isArray(row)) return row;
+                return row.map(cell => roundDecimalNumbers(cell));
+            });
             
             if (num === 1) {
                 data1 = json;
@@ -868,10 +938,10 @@ function compareTables() {
     function countMatches(rowA, rowB) {
         let matches = 0;
         for (let i = 0; i < finalAllCols; i++) {
-            // Convert both values to uppercase for case-insensitive comparison
-            let valueA = (rowA[i] || '').toString().toUpperCase();
-            let valueB = (rowB[i] || '').toString().toUpperCase();
-            if (valueA === valueB) matches++;
+            // Convert both values to uppercase for case-insensitive comparison (cache the conversion)
+            let valueA = (rowA[i] || '').toString();
+            let valueB = (rowB[i] || '').toString();
+            if (valueA.toUpperCase() === valueB.toUpperCase()) matches++;
         }
         return matches;
     }
@@ -927,6 +997,10 @@ function compareTables() {
             let row1 = pair.row1;
             let row2 = pair.row2;
             
+            // Pre-convert values to uppercase for performance
+            let row1Upper = row1 ? row1.map(val => (val !== undefined ? val.toString().toUpperCase() : '')) : null;
+            let row2Upper = row2 ? row2.map(val => (val !== undefined ? val.toString().toUpperCase() : '')) : null;
+            
             // Skip completely empty rows
             let isEmpty = true;
             let hasWarn = false;
@@ -938,10 +1012,8 @@ function compareTables() {
                     isEmpty = false;
                 }
                 if (row1 && row2) {
-                    // Convert to uppercase for case-insensitive comparison
-                    let v1Upper = v1.toString().toUpperCase();
-                    let v2Upper = v2.toString().toUpperCase();
-                    if (v1Upper !== v2Upper) {
+                    // Use pre-converted uppercase values
+                    if (row1Upper[c] !== row2Upper[c]) {
                         hasWarn = true;
                         allSame = false;
                     }
@@ -985,10 +1057,8 @@ function compareTables() {
                 let cellClass = '';
                 if (!row1 || !row2) cellClass = 'diff';
                 else {
-                    // Convert to uppercase for case-insensitive comparison
-                    let v1Upper = v1.toString().toUpperCase();
-                    let v2Upper = v2.toString().toUpperCase();
-                    if (v1Upper !== v2Upper) cellClass = 'warn';
+                    // Use pre-converted uppercase values for comparison
+                    if (row1Upper[c] !== row2Upper[c]) cellClass = 'warn';
                     else cellClass = 'identical';
                 }
                 if (!row1 && row2) {
@@ -996,10 +1066,8 @@ function compareTables() {
                 } else if (row1 && !row2) {
                     bodyHtml += `<td class="${cellClass}"><div>${v1}</div></td>`;
                 } else {
-                    // Compare using case-insensitive logic but display original values
-                    let v1Upper = v1.toString().toUpperCase();
-                    let v2Upper = v2.toString().toUpperCase();
-                    if (v1Upper !== v2Upper) {
+                    // Compare using pre-converted values but display original values
+                    if (row1Upper[c] !== row2Upper[c]) {
                         bodyHtml += `<td class="${cellClass}"><div>${v1}</div><div style='border-top:1px solid #eee;color:#555;font-size:90%'>${v2}</div></td>`;
                     } else {
                         bodyHtml += `<td class="${cellClass}"><div>${v1}</div></td>`;
@@ -1091,6 +1159,10 @@ function renderSortedTable() {
             let row1 = pair.row1;
             let row2 = pair.row2;
             
+            // Pre-convert values to uppercase for performance
+            let row1Upper = row1 ? row1.map(val => (val !== undefined ? val.toString().toUpperCase() : '')) : null;
+            let row2Upper = row2 ? row2.map(val => (val !== undefined ? val.toString().toUpperCase() : '')) : null;
+            
             let isEmpty = true;
             let hasWarn = false;
             let allSame = true;
@@ -1104,10 +1176,8 @@ function renderSortedTable() {
                     isEmpty = false;
                 }
                 if (row1 && row2) {
-                    // Convert to uppercase for case-insensitive comparison
-                    let v1Upper = v1.toString().toUpperCase();
-                    let v2Upper = v2.toString().toUpperCase();
-                    if (v1Upper !== v2Upper) {
+                    // Use pre-converted uppercase values
+                    if (row1Upper[c] !== row2Upper[c]) {
                         hasWarn = true;
                         allSame = false;
                     } else {
@@ -1155,10 +1225,8 @@ function renderSortedTable() {
                 let cellClass = '';
                 if (!row1 || !row2) cellClass = 'diff';
                 else {
-                    // Convert to uppercase for case-insensitive comparison
-                    let v1Upper = v1.toString().toUpperCase();
-                    let v2Upper = v2.toString().toUpperCase();
-                    if (v1Upper !== v2Upper) cellClass = 'warn';
+                    // Use pre-converted uppercase values for comparison
+                    if (row1Upper[c] !== row2Upper[c]) cellClass = 'warn';
                     else cellClass = 'identical';
                 }
                 if (!row1 && row2) {
@@ -1166,10 +1234,8 @@ function renderSortedTable() {
                 } else if (row1 && !row2) {
                     bodyHtml += `<td class="${cellClass}"><div>${v1}</div></td>`;
                 } else {
-                    // Compare using case-insensitive logic but display original values
-                    let v1Upper = v1.toString().toUpperCase();
-                    let v2Upper = v2.toString().toUpperCase();
-                    if (v1Upper !== v2Upper) {
+                    // Compare using pre-converted values but display original values
+                    if (row1Upper[c] !== row2Upper[c]) {
                         bodyHtml += `<td class="${cellClass}"><div>${v1}</div><div style='border-top:1px solid #eee;color:#555;font-size:90%'>${v2}</div></td>`;
                     } else {
                         bodyHtml += `<td class="${cellClass}"><div>${v1}</div></td>`;
