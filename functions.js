@@ -1,6 +1,7 @@
 // Excel and CSV File Comparison Functions
 let data1 = [], data2 = [];
 let fileName1 = '', fileName2 = '';
+let workbook1 = null, workbook2 = null; // Store workbooks for sheet selection
 
 // Global variables for sorting
 let currentSortColumn = -1;
@@ -8,6 +9,120 @@ let currentSortDirection = 'asc';
 let currentPairs = [];
 let currentFinalHeaders = [];
 let currentFinalAllCols = 0;
+
+// Function to update sheet information display
+function updateSheetInfo(fileName, sheetNames, selectedSheet, fileNum) {
+    const sheetInfoContainer = document.getElementById('sheetInfo');
+    if (!sheetInfoContainer) return;
+    
+    if (sheetNames.length > 1) {
+        const sheetInfo = document.createElement('div');
+        sheetInfo.className = 'sheet-info';
+        sheetInfo.dataset.fileNum = fileNum.toString();
+        sheetInfo.innerHTML = `
+            <div class="sheet-info-icon">ℹ</div>
+            <div>
+                <strong>${fileName}</strong> contains ${sheetNames.length} sheets. 
+                Using: <strong>${selectedSheet}</strong>
+                <br><small>Available sheets: ${sheetNames.join(', ')}</small>
+            </div>
+        `;
+        
+        // Remove any existing sheet info for this file
+        const existingInfos = sheetInfoContainer.querySelectorAll('.sheet-info');
+        existingInfos.forEach(info => {
+            if (info.dataset.fileNum === fileNum.toString()) {
+                info.remove();
+            }
+        });
+        
+        sheetInfoContainer.appendChild(sheetInfo);
+        sheetInfoContainer.style.display = 'flex';
+    } else {
+        // If this file has only one sheet, remove its sheet info
+        const allInfos = sheetInfoContainer.querySelectorAll('.sheet-info');
+        allInfos.forEach(info => {
+            if (info.dataset.fileNum === fileNum.toString()) {
+                info.remove();
+            }
+        });
+        
+        if (sheetInfoContainer.children.length === 0) {
+            sheetInfoContainer.style.display = 'none';
+        }
+    }
+}
+
+// Function to populate sheet selector dropdown
+function populateSheetSelector(sheetNames, fileNum, selectedSheet) {
+    const sheetSelector = document.getElementById(`sheetSelector${fileNum}`);
+    const sheetSelect = document.getElementById(`sheetSelect${fileNum}`);
+    
+    if (!sheetSelector || !sheetSelect) return;
+    
+    if (sheetNames.length > 1) {
+        // Clear existing options
+        sheetSelect.innerHTML = '';
+        
+        // Add options for each sheet
+        sheetNames.forEach((sheetName, index) => {
+            const option = document.createElement('option');
+            option.value = sheetName;
+            option.textContent = sheetName;
+            if (sheetName === selectedSheet) {
+                option.selected = true;
+            }
+            sheetSelect.appendChild(option);
+        });
+        
+        // Show the selector
+        sheetSelector.style.display = 'block';
+        
+        // Add event listener for sheet selection change
+        sheetSelect.onchange = function() {
+            processSelectedSheet(fileNum, this.value);
+        };
+    } else {
+        // Hide the selector for single-sheet files
+        sheetSelector.style.display = 'none';
+    }
+}
+
+// Function to process the selected sheet
+function processSelectedSheet(fileNum, selectedSheetName) {
+    const workbook = fileNum === 1 ? workbook1 : workbook2;
+    const fileName = fileNum === 1 ? fileName1 : fileName2;
+    
+    if (!workbook || !workbook.Sheets[selectedSheetName]) return;
+    
+    const sheet = workbook.Sheets[selectedSheetName];
+    let json = XLSX.utils.sheet_to_json(sheet, {
+        header: 1, 
+        defval: '',
+        raw: false,
+        dateNF: 'yyyy-mm-dd'
+    });
+    
+    // Process the data same as before
+    json = json.filter(row => Array.isArray(row) && row.some(cell => (cell !== null && cell !== undefined && cell.toString().trim() !== '')));
+    json = removeEmptyColumns(json);
+    json = json.map(row => {
+        if (!Array.isArray(row)) return row;
+        return row.map(cell => roundDecimalNumbers(cell));
+    });
+    
+    // Update the data and preview
+    if (fileNum === 1) {
+        data1 = json;
+        renderPreview(json, 'table1');
+    } else {
+        data2 = json;
+        renderPreview(json, 'table2');
+    }
+    
+    // Update the sheet info
+    updateSheetInfo(fileName, workbook.SheetNames, selectedSheetName, fileNum);
+}
 
 // Helper function to detect if a column likely contains dates
 function isDateColumn(columnValues, columnHeader = '') {
@@ -586,8 +701,35 @@ function handleFile(file, num) {
     if (!file) return;
     if (num === 1) {
         fileName1 = file.name;
+        workbook1 = null; // Clear previous workbook
     } else {
         fileName2 = file.name;
+        workbook2 = null; // Clear previous workbook
+    }
+    
+    // Clear any existing sheet info for this file slot
+    const sheetInfoContainer = document.getElementById('sheetInfo');
+    if (sheetInfoContainer) {
+        // Remove existing sheet info for this file number
+        const existingInfos = Array.from(sheetInfoContainer.querySelectorAll('.sheet-info'));
+        existingInfos.forEach(info => {
+            // Remove sheet info that might be for the previous file in this slot
+            if (num === 1 && info.dataset.fileNum === '1') {
+                info.remove();
+            } else if (num === 2 && info.dataset.fileNum === '2') {
+                info.remove();
+            }
+        });
+        
+        if (sheetInfoContainer.children.length === 0) {
+            sheetInfoContainer.style.display = 'none';
+        }
+    }
+    
+    // Hide sheet selector initially
+    const sheetSelector = document.getElementById(`sheetSelector${num}`);
+    if (sheetSelector) {
+        sheetSelector.style.display = 'none';
     }
     
     // Check if it's a CSV file
@@ -632,33 +774,28 @@ function handleFile(file, num) {
                 cellDates: true,
                 UTC: false  // Use local timezone to avoid shifts
             });
-            let firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            let json = XLSX.utils.sheet_to_json(firstSheet, {
-                header: 1, 
-                defval: '',
-                raw: false,  // Don't use raw values, process them
-                dateNF: 'yyyy-mm-dd'  // Prefer this date format
-            });
             
-            // Remove completely empty rows
-            json = json.filter(row => Array.isArray(row) && row.some(cell => (cell !== null && cell !== undefined && cell.toString().trim() !== '')));
-            
-            // Remove completely empty columns and normalize dates intelligently
-            json = removeEmptyColumns(json);
-            
-            // Round decimal numbers
-            json = json.map(row => {
-                if (!Array.isArray(row)) return row;
-                return row.map(cell => roundDecimalNumbers(cell));
-            });
-            
+            // Store workbook for sheet selection
             if (num === 1) {
-                data1 = json;
-                renderPreview(json, 'table1');
+                workbook1 = workbook;
             } else {
-                data2 = json;
-                renderPreview(json, 'table2');
+                workbook2 = workbook;
             }
+            
+            // Show information about sheets if there are multiple
+            if (workbook.SheetNames.length > 1) {
+                console.log(`Excel file "${file.name}" contains ${workbook.SheetNames.length} sheets:`, workbook.SheetNames);
+                console.log(`Using first sheet: "${workbook.SheetNames[0]}"`);
+            }
+            
+            // Update UI to show sheet information
+            updateSheetInfo(file.name, workbook.SheetNames, workbook.SheetNames[0], num);
+            
+            // Populate sheet selector
+            populateSheetSelector(workbook.SheetNames, num, workbook.SheetNames[0]);
+            
+            // Process the first sheet initially
+            processSelectedSheet(num, workbook.SheetNames[0]);
         };
         reader.readAsArrayBuffer(file);
     }
