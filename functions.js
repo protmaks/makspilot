@@ -822,8 +822,10 @@ function compareTables() {
     let diffColumns1Html = onlyInFile1.length > 0 ? `<span style="color: red; font-weight: bold;">${diffColumns1}</span>` : diffColumns1;
     let diffColumns2Html = onlyInFile2.length > 0 ? `<span style="color: red; font-weight: bold;">${diffColumns2}</span>` : diffColumns2;
     
-    // Form keys for exact match
-    function rowKey(row) { return JSON.stringify(row.map(x => (x !== undefined ? x : ''))); }
+    // Form keys for exact match with case-insensitive comparison
+    function rowKey(row) { 
+        return JSON.stringify(row.map(x => (x !== undefined ? x.toString().toUpperCase() : ''))); 
+    }
     let set1 = new Set(body1.map(rowKey));
     let set2 = new Set(body2.map(rowKey));
     let only1 = 0, only2 = 0, both = 0;
@@ -866,7 +868,10 @@ function compareTables() {
     function countMatches(rowA, rowB) {
         let matches = 0;
         for (let i = 0; i < finalAllCols; i++) {
-            if ((rowA[i] || '') === (rowB[i] || '')) matches++;
+            // Convert both values to uppercase for case-insensitive comparison
+            let valueA = (rowA[i] || '').toString().toUpperCase();
+            let valueB = (rowB[i] || '').toString().toUpperCase();
+            if (valueA === valueB) matches++;
         }
         return matches;
     }
@@ -932,11 +937,15 @@ function compareTables() {
                 if ((v1 && v1.toString().trim() !== '') || (v2 && v2.toString().trim() !== '')) {
                     isEmpty = false;
                 }
-                if (row1 && row2 && v1 !== v2) {
-                    hasWarn = true;
-                    allSame = false;
+                if (row1 && row2) {
+                    // Convert to uppercase for case-insensitive comparison
+                    let v1Upper = v1.toString().toUpperCase();
+                    let v2Upper = v2.toString().toUpperCase();
+                    if (v1Upper !== v2Upper) {
+                        hasWarn = true;
+                        allSame = false;
+                    }
                 }
-                if (row1 && row2 && v1 !== v2) allSame = false;
             }
             if (isEmpty) return;
             if (hideSame && row1 && row2 && allSame) return;
@@ -975,16 +984,26 @@ function compareTables() {
                 let v2 = row2 ? (row2[c] !== undefined ? row2[c] : '') : '';
                 let cellClass = '';
                 if (!row1 || !row2) cellClass = 'diff';
-                else if (v1 !== v2) cellClass = 'warn';
-                else cellClass = 'identical';
+                else {
+                    // Convert to uppercase for case-insensitive comparison
+                    let v1Upper = v1.toString().toUpperCase();
+                    let v2Upper = v2.toString().toUpperCase();
+                    if (v1Upper !== v2Upper) cellClass = 'warn';
+                    else cellClass = 'identical';
+                }
                 if (!row1 && row2) {
                     bodyHtml += `<td class="${cellClass}"><div>${v2}</div></td>`;
                 } else if (row1 && !row2) {
                     bodyHtml += `<td class="${cellClass}"><div>${v1}</div></td>`;
-                } else if (v1 !== v2) {
-                    bodyHtml += `<td class="${cellClass}"><div>${v1}</div><div style='border-top:1px solid #eee;color:#555;font-size:90%'>${v2}</div></td>`;
                 } else {
-                    bodyHtml += `<td class="${cellClass}"><div>${v1}</div></td>`;
+                    // Compare using case-insensitive logic but display original values
+                    let v1Upper = v1.toString().toUpperCase();
+                    let v2Upper = v2.toString().toUpperCase();
+                    if (v1Upper !== v2Upper) {
+                        bodyHtml += `<td class="${cellClass}"><div>${v1}</div><div style='border-top:1px solid #eee;color:#555;font-size:90%'>${v2}</div></td>`;
+                    } else {
+                        bodyHtml += `<td class="${cellClass}"><div>${v1}</div></td>`;
+                    }
                 }
             }
             bodyHtml += '</tr>';
@@ -1085,7 +1104,10 @@ function renderSortedTable() {
                     isEmpty = false;
                 }
                 if (row1 && row2) {
-                    if (v1 !== v2) {
+                    // Convert to uppercase for case-insensitive comparison
+                    let v1Upper = v1.toString().toUpperCase();
+                    let v2Upper = v2.toString().toUpperCase();
+                    if (v1Upper !== v2Upper) {
                         hasWarn = true;
                         allSame = false;
                     } else {
@@ -1132,16 +1154,26 @@ function renderSortedTable() {
                 let v2 = row2 ? (row2[c] !== undefined ? row2[c] : '') : '';
                 let cellClass = '';
                 if (!row1 || !row2) cellClass = 'diff';
-                else if (v1 !== v2) cellClass = 'warn';
-                else cellClass = 'identical';
+                else {
+                    // Convert to uppercase for case-insensitive comparison
+                    let v1Upper = v1.toString().toUpperCase();
+                    let v2Upper = v2.toString().toUpperCase();
+                    if (v1Upper !== v2Upper) cellClass = 'warn';
+                    else cellClass = 'identical';
+                }
                 if (!row1 && row2) {
                     bodyHtml += `<td class="${cellClass}"><div>${v2}</div></td>`;
                 } else if (row1 && !row2) {
                     bodyHtml += `<td class="${cellClass}"><div>${v1}</div></td>`;
-                } else if (v1 !== v2) {
-                    bodyHtml += `<td class="${cellClass}"><div>${v1}</div><div style='border-top:1px solid #eee;color:#555;font-size:90%'>${v2}</div></td>`;
                 } else {
-                    bodyHtml += `<td class="${cellClass}"><div>${v1}</div></td>`;
+                    // Compare using case-insensitive logic but display original values
+                    let v1Upper = v1.toString().toUpperCase();
+                    let v2Upper = v2.toString().toUpperCase();
+                    if (v1Upper !== v2Upper) {
+                        bodyHtml += `<td class="${cellClass}"><div>${v1}</div><div style='border-top:1px solid #eee;color:#555;font-size:90%'>${v2}</div></td>`;
+                    } else {
+                        bodyHtml += `<td class="${cellClass}"><div>${v1}</div></td>`;
+                    }
                 }
             }
             bodyHtml += '</tr>';
