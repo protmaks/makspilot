@@ -29,6 +29,19 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
+    <!-- Mobile Warning -->
+    <div class="mobile-warning" id="mobileWarning">
+        <div class="mobile-warning-content">
+            <span class="mobile-warning-icon">💻</span>
+            <h2 class="mobile-warning-title">Desktop Required</h2>
+            <p class="mobile-warning-text">
+                File comparison functionality is optimized for desktop computers. 
+                Please use a PC or laptop with a larger screen for the best experience.
+            </p>
+            <a href="index.html" class="mobile-warning-button">Back to Home</a>
+        </div>
+    </div>
+
     <!-- Header will be loaded here -->
     <header>
     <div class="header-container">
@@ -55,7 +68,7 @@
 </header>
     
     <div class="main-content" style="padding-top: 80px;"><!-- Account for fixed header -->
-        <h1>Compare Data Between Excel and CSV Files | Free Online Tool</h1>
+        <h1>Compare Data Between Excel and CSV Files - v 4.0 Beta</h1>
         <div id="summary"></div>
         <div class="comparison-container">
             <div class="table-container">
@@ -76,12 +89,12 @@
             </div>
             <div class="controls-container">
                 <div class="exclude-compare-row">
+                    <div class="compare-button-container">
+                        <button class="compare-btn" onclick="compareTables()">Compare</button>
+                    </div>
                     <div class="exclude-columns-container">
                         <label for="excludeColumns" class="exclude-label">Exclude columns:</label>
                         <input type="text" id="excludeColumns" placeholder="e.g., ID, Timestamp, CreatedDate" style="width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
-                    </div>
-                    <div class="compare-button-container">
-                        <button class="compare-btn" onclick="compareTables()">Compare</button>
                     </div>
                 </div>
                 <div class="filter-controls" style="display: none;">
@@ -115,5 +128,58 @@
     
     <!-- Load the shared header -->
     <script src="script.js"></script>
+    
+    <!-- Mobile device detection and warning -->
+    <script>
+        // Function to detect mobile devices
+        function isMobileDevice() {
+            const userAgent = navigator.userAgent;
+            const mobileKeywords = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+            const screenWidth = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+            
+            return mobileKeywords.test(userAgent) || screenWidth < 768;
+        }
+        
+        // Show/hide mobile warning based on device type
+        function checkDeviceType() {
+            const mobileWarning = document.getElementById('mobileWarning');
+            const mainContent = document.querySelector('.main-content');
+            const result = document.getElementById('result');
+            const diffTable = document.getElementById('diffTable');
+            const header = document.querySelector('header');
+            
+            if (isMobileDevice()) {
+                if (mobileWarning) mobileWarning.style.display = 'flex';
+                if (mainContent) mainContent.style.display = 'none';
+                if (result) result.style.display = 'none';
+                if (diffTable) diffTable.style.display = 'none';
+                // Ensure header stays visible on mobile
+                if (header) {
+                    header.style.display = 'block';
+                    header.style.position = 'fixed';
+                    header.style.top = '0';
+                    header.style.zIndex = '10001';
+                }
+            } else {
+                if (mobileWarning) mobileWarning.style.display = 'none';
+                if (mainContent) mainContent.style.display = 'block';
+                if (result) result.style.display = 'block';
+                if (diffTable) diffTable.style.display = 'block';
+                // Reset header styles for desktop
+                if (header) {
+                    header.style.display = 'block';
+                    header.style.position = 'fixed';
+                    header.style.top = '0';
+                    header.style.zIndex = '1000';
+                }
+            }
+        }
+        
+        // Check device type on page load
+        document.addEventListener('DOMContentLoaded', checkDeviceType);
+        
+        // Check device type on window resize (in case user rotates device or resizes window)
+        window.addEventListener('resize', checkDeviceType);
+    </script>
 </body>
 </html>
