@@ -111,6 +111,16 @@ function processSelectedSheet(fileNum, selectedSheetName) {
         
         // Process the data efficiently
         json = json.filter(row => Array.isArray(row) && row.some(cell => (cell !== null && cell !== undefined && cell.toString().trim() !== '')));
+        
+        // Normalize headers to uppercase
+        json = normalizeHeaders(json);
+        
+        // Apply date conversion to all cells (for Excel text dates like "05.01.25")
+        json = json.map(row => {
+            if (!Array.isArray(row)) return row;
+            return row.map(cell => convertExcelDate(cell));
+        });
+        
         json = removeEmptyColumns(json);
         json = json.map(row => {
             if (!Array.isArray(row)) return row;
@@ -342,30 +352,29 @@ function convertExcelDate(value, isInDateColumn = false) {
             // Assume years 00-30 are 2000-2030, years 31-99 are 1931-1999
             year = year <= 30 ? 2000 + year : 1900 + year;
             
-            // Smart interpretation: if first > 12, it's likely DD/MM, not MM/DD
-            if (first > 12 && second <= 12) {
-                // Definitely DD/MM format
-                const day = first;
-                const month = second;
+            // Always interpret as DD/MM for European context
+            const day = first;
+            const month = second;
+            if (day <= 31 && month <= 12) {
                 return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
-            } else if (first <= 12 && second <= 12) {
-                // Ambiguous - could be either MM/DD or DD/MM
-                // For European context, assume DD/MM is more likely
-                const day = first;
-                const month = second;
-                return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
-            } else {
-                // Standard MM/DD interpretation
-                const month = first;
-                const day = second;
-                if (day <= 31 && month <= 12) {
-                    return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
-                }
             }
         }
         
         // DD.MM.YY format (short year)
         dateMatch = value.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2})$/);
+        if (dateMatch) {
+            const day = parseInt(dateMatch[1]);
+            const month = parseInt(dateMatch[2]);
+            let year = parseInt(dateMatch[3]);
+            // Assume years 00-30 are 2000-2030, years 31-99 are 1931-1999
+            year = year <= 30 ? 2000 + year : 1900 + year;
+            if (day <= 31 && month <= 12) {
+                return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+            }
+        }
+        
+        // DD/MM/YY format (short year with slashes)
+        dateMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
         if (dateMatch) {
             const day = parseInt(dateMatch[1]);
             const month = parseInt(dateMatch[2]);
@@ -453,6 +462,26 @@ function convertExcelDate(value, isInDateColumn = false) {
             }
         }
         
+        // Handle Excel text dates with day first and short year like "05-May-25", "15-Dec-24"
+        dateMatch = value.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{2})$/);
+        if (dateMatch) {
+            const day = parseInt(dateMatch[1]);
+            const monthName = dateMatch[2].toLowerCase();
+            let year = parseInt(dateMatch[3]);
+            // Assume years 00-30 are 2000-2030, years 31-99 are 1931-1999
+            year = year <= 30 ? 2000 + year : 1900 + year;
+            
+            const monthMap = {
+                'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+                'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
+            };
+            
+            const month = monthMap[monthName];
+            if (month && day <= 31) {
+                return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+            }
+        }
+        
         // Handle full month names like "1 May 2025", "15 December 2024"
         dateMatch = value.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/);
         if (dateMatch) {
@@ -469,6 +498,28 @@ function convertExcelDate(value, isInDateColumn = false) {
             
             const month = monthMap[monthName];
             if (month && day <= 31 && year >= 1900 && year <= 2100) {
+                return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+            }
+        }
+        
+        // Handle full month names with short year like "1 May 25", "15 December 24"
+        dateMatch = value.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{2})$/);
+        if (dateMatch) {
+            const day = parseInt(dateMatch[1]);
+            const monthName = dateMatch[2].toLowerCase();
+            let year = parseInt(dateMatch[3]);
+            // Assume years 00-30 are 2000-2030, years 31-99 are 1931-1999
+            year = year <= 30 ? 2000 + year : 1900 + year;
+            
+            const monthMap = {
+                'january': 1, 'february': 2, 'march': 3, 'april': 4, 'may': 5, 'june': 6,
+                'july': 7, 'august': 8, 'september': 9, 'october': 10, 'november': 11, 'december': 12,
+                'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+                'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
+            };
+            
+            const month = monthMap[monthName];
+            if (month && day <= 31) {
                 return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
             }
         }
@@ -793,8 +844,17 @@ function handleFile(file, num) {
             const csvText = e.target.result;
             const json = parseCSV(csvText);
             
-            // Normalize row lengths first
-            const normalizedJson = normalizeRowLengths(json);
+            // Normalize headers to uppercase first
+            const headersNormalizedJson = normalizeHeaders(json);
+            
+            // Apply date conversion to all cells (for CSV text dates like "05.01.25")
+            const dateConvertedJson = headersNormalizedJson.map(row => {
+                if (!Array.isArray(row)) return row;
+                return row.map(cell => convertExcelDate(cell));
+            });
+            
+            // Normalize row lengths
+            const normalizedJson = normalizeRowLengths(dateConvertedJson);
             
             // Remove empty columns and normalize dates intelligently
             const cleanedJson = removeEmptyColumns(normalizedJson);
@@ -856,6 +916,16 @@ function handleFile(file, num) {
             
             // Process the data same as before
             json = json.filter(row => Array.isArray(row) && row.some(cell => (cell !== null && cell !== undefined && cell.toString().trim() !== '')));
+            
+            // Normalize headers to uppercase
+            json = normalizeHeaders(json);
+            
+            // Apply date conversion to all cells (for Excel text dates like "05.01.25")
+            json = json.map(row => {
+                if (!Array.isArray(row)) return row;
+                return row.map(cell => convertExcelDate(cell));
+            });
+            
             json = removeEmptyColumns(json);
             json = json.map(row => {
                 if (!Array.isArray(row)) return row;
@@ -872,6 +942,23 @@ function handleFile(file, num) {
         };
         reader.readAsArrayBuffer(file);
     }
+}
+
+// Function to normalize headers to uppercase
+function normalizeHeaders(data) {
+    if (!data || data.length === 0) return data;
+    
+    // Convert first row (headers) to uppercase
+    if (data[0] && Array.isArray(data[0])) {
+        data[0] = data[0].map(header => {
+            if (header && typeof header === 'string') {
+                return header.toUpperCase();
+            }
+            return header;
+        });
+    }
+    
+    return data;
 }
 
 function renderTable(data, elementId, diffRowsSet) {
@@ -1067,6 +1154,12 @@ function compareTables() {
     // Restore table structure for comparison results
     restoreTableStructure();
     
+    // Automatically enable "Hide COMMA rows" (hide identical rows) after comparison
+    const hideSameRowsCheckbox = document.getElementById('hideSameRows');
+    if (hideSameRowsCheckbox) {
+        hideSameRowsCheckbox.checked = true;
+    }
+    
     // Get excluded columns
     const excludedColumns = getExcludedColumns();
     
@@ -1151,6 +1244,13 @@ function compareTables() {
     const filterControls = document.querySelector('.filter-controls');
     if (filterControls) {
         filterControls.style.display = 'block';
+    }
+    
+    // Automatically check "Hide same rows" checkbox and hide identical rows
+    if (hideSameRowsCheckbox) {
+        hideSameRowsCheckbox.checked = true;
+        // Apply the filter immediately
+        filterTable();
     }
     
     // --- Fuzzy matching for bottom table ---
