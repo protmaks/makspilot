@@ -566,11 +566,11 @@ footer {
 }
 
 .sheet-selector {
-    margin: 10px 0;
+    margin: -5px 0px 0px 5px;
     padding: 10px;
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 6px;
+    background: #004a0017;
+    border: 1px solid #004a00;
+    border-radius: 0px 0px 6px 6px;
     font-size: 14px;
 }
 
@@ -582,13 +582,12 @@ footer {
 }
 
 .sheet-selector select {
-    width: 100%;
     padding: 8px 12px;
     border: 1px solid #ced4da;
     border-radius: 4px;
     background: white;
     font-size: 14px;
-    color: #495057;
+    color: #004a00;
     cursor: pointer;
 }
 
@@ -680,10 +679,8 @@ table td {
 }
 
 .controls-container {
-    flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    align-items: center;
     justify-content: flex-start;
     padding-top: 6px;
     min-width: 200px;
@@ -697,7 +694,7 @@ table td {
 }
 
 input[type="file"] {
-    margin: 8px 0 12px 0;
+    margin: 8px 0 0px 0;
     font-size: 1rem;
     background-color:  #004a00 ;
     color: white;
@@ -1042,7 +1039,7 @@ button.compare-btn:hover {
     display: flex;
     gap: 20px;
     align-items: flex-start;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
 }
 
 .exclude-columns-container {
@@ -1074,7 +1071,6 @@ button.compare-btn:hover {
     flex-direction: row; /* Change from column to row */
     flex-wrap: wrap; /* Allow wrapping on smaller screens */
     gap: 20px; /* Increase gap for horizontal layout */
-    margin-top: 15px;
     padding: 15px;
     background-color: #f8f9fa;
     border: 1px solid #e9ecef;
@@ -1090,6 +1086,10 @@ button.compare-btn:hover {
     cursor: pointer;
     padding: 4px 0;
     white-space: nowrap; /* Prevent text wrapping within label */
+}
+
+.filter-controls {
+
 }
 
 /* Responsive adjustments */
