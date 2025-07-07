@@ -1,4 +1,9 @@
 // Excel and CSV File Comparison Functions
+
+// Configuration constants
+const MAX_ROWS_LIMIT = 25000; // Maximum allowed rows per file
+const MAX_COLS_LIMIT = 40; // Maximum allowed columns per file
+
 let data1 = [], data2 = [];
 let fileName1 = '', fileName2 = '';
 let workbook1 = null, workbook2 = null; // Store workbooks for sheet selection
@@ -108,6 +113,30 @@ function processSelectedSheet(fileNum, selectedSheetName) {
             raw: false,
             dateNF: 'yyyy-mm-dd'
         });
+        
+        // Check both file size and column count limits simultaneously
+        let maxCols = 0;
+        for (let i = 0; i < json.length; i++) {
+            if (json[i] && json[i].length > maxCols) {
+                maxCols = json[i].length;
+            }
+        }
+        const rowsExceeded = json.length > MAX_ROWS_LIMIT;
+        const colsExceeded = maxCols > MAX_COLS_LIMIT;
+        
+        if (rowsExceeded || colsExceeded) {
+            tableElement.innerHTML = generateLimitErrorMessage(
+                'rows', json.length, MAX_ROWS_LIMIT, '', 
+                'columns', maxCols, MAX_COLS_LIMIT
+            );
+            // Clear data
+            if (fileNum === 1) {
+                data1 = [];
+            } else {
+                data2 = [];
+            }
+            return;
+        }
         
         // Process the data efficiently
         json = json.filter(row => Array.isArray(row) && row.some(cell => (cell !== null && cell !== undefined && cell.toString().trim() !== '')));
@@ -583,7 +612,12 @@ function removeEmptyColumns(data) {
     if (!data || data.length === 0) return data;
     
     // Determine the maximum number of columns
-    let maxCols = Math.max(...data.map(row => row ? row.length : 0));
+    let maxCols = 0;
+    for (let i = 0; i < data.length; i++) {
+        if (data[i] && data[i].length > maxCols) {
+            maxCols = data[i].length;
+        }
+    }
     if (maxCols === 0) return data;
     
     // Find columns that are completely empty (optimized for large files)
@@ -669,7 +703,12 @@ function normalizeRowLengths(data) {
     if (!data || data.length === 0) return data;
     
     // Find the maximum number of columns
-    const maxCols = Math.max(...data.map(row => row ? row.length : 0));
+    let maxCols = 0;
+    for (let i = 0; i < data.length; i++) {
+        if (data[i] && data[i].length > maxCols) {
+            maxCols = data[i].length;
+        }
+    }
     
     // Pad all rows to have the same number of columns
     return data.map(row => {
@@ -788,6 +827,10 @@ function parseCSVValue(value) {
 function handleFile(file, num) {
     if (!file) return;
     
+    // Show loading indicator immediately
+    const tableElement = document.getElementById(num === 1 ? 'table1' : 'table2');
+    tableElement.innerHTML = '<div style="text-align: center; padding: 20px; font-size: 16px;">📊 Loading file... Please wait</div>';
+    
     // Clear previous data for security
     if (num === 1) {
         data1 = [];
@@ -841,107 +884,248 @@ function handleFile(file, num) {
         // Handle CSV files with text reading to avoid timezone issues
         const reader = new FileReader();
         reader.onload = function(e) {
-            const csvText = e.target.result;
-            const json = parseCSV(csvText);
-            
-            // Normalize headers to uppercase first
-            const headersNormalizedJson = normalizeHeaders(json);
-            
-            // Apply date conversion to all cells (for CSV text dates like "05.01.25")
-            const dateConvertedJson = headersNormalizedJson.map(row => {
-                if (!Array.isArray(row)) return row;
-                return row.map(cell => convertExcelDate(cell));
-            });
-            
-            // Normalize row lengths
-            const normalizedJson = normalizeRowLengths(dateConvertedJson);
-            
-            // Remove empty columns and normalize dates intelligently
-            const cleanedJson = removeEmptyColumns(normalizedJson);
-            
-            // Round decimal numbers
-            const processedJson = cleanedJson.map(row => {
-                if (!Array.isArray(row)) return row;
-                return row.map(cell => roundDecimalNumbers(cell));
-            });
-            
-            if (num === 1) {
-                data1 = processedJson;
-                renderPreview(processedJson, 'table1');
-            } else {
-                data2 = processedJson;
-                renderPreview(processedJson, 'table2');
-            }
+            // Use setTimeout to allow UI to update with loading message
+            setTimeout(() => {
+                const csvText = e.target.result;
+                const json = parseCSV(csvText);
+                
+                // Check both file size and column count limits simultaneously
+                let maxCols = 0;
+                for (let i = 0; i < json.length; i++) {
+                    if (json[i] && json[i].length > maxCols) {
+                        maxCols = json[i].length;
+                    }
+                }
+                const rowsExceeded = json.length > MAX_ROWS_LIMIT;
+                const colsExceeded = maxCols > MAX_COLS_LIMIT;
+                
+                if (rowsExceeded || colsExceeded) {
+                    tableElement.innerHTML = generateLimitErrorMessage(
+                        'rows', json.length, MAX_ROWS_LIMIT, '', 
+                        'columns', maxCols, MAX_COLS_LIMIT
+                    );
+                    // Clear data
+                    if (num === 1) {
+                        data1 = [];
+                        fileName1 = '';
+                        workbook1 = null;
+                    } else {
+                        data2 = [];
+                        fileName2 = '';
+                        workbook2 = null;
+                    }
+                    return;
+                }
+                
+                // Show progress for large files
+                if (json.length > 1000) {
+                    tableElement.innerHTML = '<div style="text-align: center; padding: 20px; font-size: 16px;">⚙️ Processing large CSV file... Please wait</div>';
+                }
+                
+                // Use setTimeout for each processing step to allow UI updates
+                setTimeout(() => {
+                    // Normalize headers to uppercase first
+                    const headersNormalizedJson = normalizeHeaders(json);
+                    
+                    // Apply date conversion to all cells (for CSV text dates like "05.01.25")
+                    const dateConvertedJson = headersNormalizedJson.map(row => {
+                        if (!Array.isArray(row)) return row;
+                        return row.map(cell => convertExcelDate(cell));
+                    });
+                    
+                    setTimeout(() => {
+                        // Normalize row lengths
+                        const normalizedJson = normalizeRowLengths(dateConvertedJson);
+                        
+                        // Remove empty columns and normalize dates intelligently
+                        const cleanedJson = removeEmptyColumns(normalizedJson);
+                        
+                        setTimeout(() => {
+                            // Round decimal numbers
+                            const processedJson = cleanedJson.map(row => {
+                                if (!Array.isArray(row)) return row;
+                                return row.map(cell => roundDecimalNumbers(cell));
+                            });
+                            
+                            if (num === 1) {
+                                data1 = processedJson;
+                                renderPreview(processedJson, 'table1');
+                            } else {
+                                data2 = processedJson;
+                                renderPreview(processedJson, 'table2');
+                            }
+                        }, 10);
+                    }, 10);
+                }, 10);
+            }, 10);
         };
         reader.readAsText(file, 'UTF-8');
     } else {
         // Handle Excel files with XLSX library
         const reader = new FileReader();
         reader.onload = function(e) {
-            let data = new Uint8Array(e.target.result);
-            // Use cellDates option to preserve date formatting and avoid timezone issues
-            let workbook = XLSX.read(data, {
-                type: 'array',
-                cellDates: true,
-                UTC: false  // Use local timezone to avoid shifts
-            });
-            
-            // Store workbook for sheet selection
-            if (num === 1) {
-                workbook1 = workbook;
-            } else {
-                workbook2 = workbook;
-            }
-            
-            // Show information about sheets if there are multiple
-            if (workbook.SheetNames.length > 1) {
-                console.log(`Excel file "${file.name}" contains ${workbook.SheetNames.length} sheets:`, workbook.SheetNames);
-                console.log(`Using first sheet: "${workbook.SheetNames[0]}"`);
-            }
-            
-            // Update UI to show sheet information
-            updateSheetInfo(file.name, workbook.SheetNames, workbook.SheetNames[0], num);
-            
-            // Populate sheet selector
-            populateSheetSelector(workbook.SheetNames, num, workbook.SheetNames[0]);
-            
-            // Process the first sheet directly (more efficient than calling processSelectedSheet)
-            let firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            let json = XLSX.utils.sheet_to_json(firstSheet, {
-                header: 1, 
-                defval: '',
-                raw: false,
-                dateNF: 'yyyy-mm-dd'
-            });
-            
-            // Process the data same as before
-            json = json.filter(row => Array.isArray(row) && row.some(cell => (cell !== null && cell !== undefined && cell.toString().trim() !== '')));
-            
-            // Normalize headers to uppercase
-            json = normalizeHeaders(json);
-            
-            // Apply date conversion to all cells (for Excel text dates like "05.01.25")
-            json = json.map(row => {
-                if (!Array.isArray(row)) return row;
-                return row.map(cell => convertExcelDate(cell));
-            });
-            
-            json = removeEmptyColumns(json);
-            json = json.map(row => {
-                if (!Array.isArray(row)) return row;
-                return row.map(cell => roundDecimalNumbers(cell));
-            });
-            
-            if (num === 1) {
-                data1 = json;
-                renderPreview(json, 'table1');
-            } else {
-                data2 = json;
-                renderPreview(json, 'table2');
-            }
+            // Use setTimeout to allow UI to update
+            setTimeout(() => {
+                let data = new Uint8Array(e.target.result);
+                // Use cellDates option to preserve date formatting and avoid timezone issues
+                let workbook = XLSX.read(data, {
+                    type: 'array',
+                    cellDates: true,
+                    UTC: false  // Use local timezone to avoid shifts
+                });
+                
+                // Store workbook for sheet selection
+                if (num === 1) {
+                    workbook1 = workbook;
+                } else {
+                    workbook2 = workbook;
+                }
+                
+                // Show information about sheets if there are multiple
+                if (workbook.SheetNames.length > 1) {
+                    console.log(`Excel file "${file.name}" contains ${workbook.SheetNames.length} sheets:`, workbook.SheetNames);
+                    console.log(`Using first sheet: "${workbook.SheetNames[0]}"`);
+                }
+                
+                // Update UI to show sheet information
+                updateSheetInfo(file.name, workbook.SheetNames, workbook.SheetNames[0], num);
+                
+                // Populate sheet selector
+                populateSheetSelector(workbook.SheetNames, num, workbook.SheetNames[0]);
+                
+                setTimeout(() => {
+                    // Process the first sheet directly (more efficient than calling processSelectedSheet)
+                    let firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    let json = XLSX.utils.sheet_to_json(firstSheet, {
+                        header: 1, 
+                        defval: '',
+                        raw: false,
+                        dateNF: 'yyyy-mm-dd'
+                    });
+                    
+                    // Check both file size and column count limits simultaneously
+                    let maxCols = 0;
+                    for (let i = 0; i < json.length; i++) {
+                        if (json[i] && json[i].length > maxCols) {
+                            maxCols = json[i].length;
+                        }
+                    }
+                    const rowsExceeded = json.length > MAX_ROWS_LIMIT;
+                    const colsExceeded = maxCols > MAX_COLS_LIMIT;
+                    
+                    if (rowsExceeded || colsExceeded) {
+                        tableElement.innerHTML = generateLimitErrorMessage(
+                            'rows', json.length, MAX_ROWS_LIMIT, '', 
+                            'columns', maxCols, MAX_COLS_LIMIT
+                        );
+                        // Clear data
+                        if (num === 1) {
+                            data1 = [];
+                            fileName1 = '';
+                            workbook1 = null;
+                        } else {
+                            data2 = [];
+                            fileName2 = '';
+                            workbook2 = null;
+                        }
+                        return;
+                    }
+                    
+                    // Show progress for large files
+                    if (json.length > 1000) {
+                        tableElement.innerHTML = '<div style="text-align: center; padding: 20px; font-size: 16px;">⚙️ Processing large Excel file... Please wait</div>';
+                    }
+                    
+                    setTimeout(() => {
+                        // Process the data same as before
+                        json = json.filter(row => Array.isArray(row) && row.some(cell => (cell !== null && cell !== undefined && cell.toString().trim() !== '')));
+                        
+                        // Normalize headers to uppercase
+                        json = normalizeHeaders(json);
+                        
+                        // Apply date conversion to all cells (for Excel text dates like "05.01.25")
+                        json = json.map(row => {
+                            if (!Array.isArray(row)) return row;
+                            return row.map(cell => convertExcelDate(cell));
+                        });
+                        
+                        setTimeout(() => {
+                            json = removeEmptyColumns(json);
+                            json = json.map(row => {
+                                if (!Array.isArray(row)) return row;
+                                return row.map(cell => roundDecimalNumbers(cell));
+                            });
+                            
+                            if (num === 1) {
+                                data1 = json;
+                                renderPreview(json, 'table1');
+                            } else {
+                                data2 = json;
+                                renderPreview(json, 'table2');
+                            }
+                        }, 10);
+                    }, 10);
+                }, 10);
+            }, 10);
         };
         reader.readAsArrayBuffer(file);
     }
+}
+
+// Helper function to generate limit exceeded error message
+function generateLimitErrorMessage(type, current, limit, additionalInfo = '', secondType = null, secondCurrent = null, secondLimit = null) {
+    if (secondType && secondCurrent !== null && secondLimit !== null) {
+        // Combined limits error message
+        const rowsInfo = type === 'rows' ? { current, limit } : { current: secondCurrent, limit: secondLimit };
+        const colsInfo = type === 'columns' ? { current, limit } : { current: secondCurrent, limit: secondLimit };
+        
+        let violatedLimits = [];
+        if (rowsInfo.current > rowsInfo.limit) {
+            violatedLimits.push(`<strong>${rowsInfo.current.toLocaleString()} rows</strong> (limit: ${rowsInfo.limit.toLocaleString()})`);
+        }
+        if (colsInfo.current > colsInfo.limit) {
+            violatedLimits.push(`<strong>${colsInfo.current} columns</strong> (limit: ${colsInfo.limit})`);
+        }
+        
+        const title = violatedLimits.length > 1 ? 'File Size and Column Limits Exceeded' : 
+                     (rowsInfo.current > rowsInfo.limit ? 'File Size Limit Exceeded' : 'Too Many Columns');
+        
+        return `
+            <div style="text-align: center; padding: 40px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; margin: 20px 0;">
+                <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+                <div style="font-size: 18px; font-weight: 600; color: #856404; margin-bottom: 10px;">${title}</div>
+                <div style="color: #856404; margin-bottom: 15px;">
+                    ${additionalInfo ? additionalInfo + ' contains' : 'This file contains'}:<br>
+                    ${violatedLimits.join('<br>')}
+                </div>
+                <div style="color: #856404; font-size: 14px;">
+                    Please use a smaller file with fewer rows and columns, or contact support for enterprise solutions.
+                </div>
+            </div>
+        `;
+    }
+    
+    // Single limit error message (original functionality)
+    const isRows = type === 'rows';
+    const title = isRows ? 'File Size Limit Exceeded' : 'Too Many Columns';
+    const currentText = isRows ? `${current.toLocaleString()} rows` : `${current} columns`;
+    const limitText = isRows ? `${limit.toLocaleString()} rows` : `${limit} columns`;
+    const suggestion = isRows 
+        ? 'Please use a smaller file or contact support for enterprise solutions.'
+        : 'Please reduce the number of columns or contact support for enterprise solutions.';
+    
+    return `
+        <div style="text-align: center; padding: 40px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; margin: 20px 0;">
+            <div style="font-size: 28px; margin-bottom: 16px;">⚠️</div>
+            <div style="font-size: 18px; font-weight: 600; color: #856404; margin-bottom: 10px;">${title}</div>
+            <div style="color: #856404; margin-bottom: 15px;">
+                ${additionalInfo ? additionalInfo + ' contains' : 'This file contains'} <strong>${currentText}</strong>, but the limit is <strong>${limitText}</strong>.
+            </div>
+            <div style="color: #856404; font-size: 14px;">
+                ${suggestion}
+            </div>
+        </div>
+    `;
 }
 
 // Function to normalize headers to uppercase
@@ -1052,16 +1236,18 @@ function showPlaceholderMessage() {
 
 function restoreTableStructure() {
     document.getElementById('diffTable').innerHTML = `
-        <div class="table-header-fixed">
-            <table class="diff-table-header">
-                <thead></thead>
-                <tbody class="filter-row"></tbody>
-            </table>
-        </div>
-        <div class="table-body-scrollable">
-            <table class="diff-table-body">
-                <tbody></tbody>
-            </table>
+        <div class="table-container-sync">
+            <div class="table-header-fixed">
+                <table class="diff-table-header">
+                    <thead></thead>
+                    <tbody class="filter-row"></tbody>
+                </table>
+            </div>
+            <div class="table-body-scrollable">
+                <table class="diff-table-body">
+                    <tbody></tbody>
+                </table>
+            </div>
         </div>
     `;
 }
@@ -1151,6 +1337,71 @@ function compareTables() {
         return;
     }
     
+    // Check combined size limit before comparison
+    const totalRows = Math.max(data1.length, data2.length);
+    if (totalRows > MAX_ROWS_LIMIT) {
+        document.getElementById('result').innerHTML = `
+            <div style="text-align: center; padding: 40px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; margin: 20px 0;">
+                <div style="font-size: 28px; margin-bottom: 16px;">⚠️</div>
+                <div style="font-size: 18px; font-weight: 600; color: #856404; margin-bottom: 10px;">File Size Limit Exceeded</div>
+                <div style="color: #856404; margin-bottom: 15px;">
+                    Cannot compare files with more than <strong>${MAX_ROWS_LIMIT.toLocaleString()}</strong> rows.<br>
+                    Current files have <strong>${data1.length.toLocaleString()}</strong> and <strong>${data2.length.toLocaleString()}</strong> rows.
+                </div>
+                <div style="color: #856404; font-size: 14px;">
+                    Please use smaller files or contact support for enterprise solutions.
+                </div>
+            </div>
+        `;
+        document.getElementById('summary').innerHTML = '';
+        return;
+    }
+    
+    // Check column count limit before comparison
+    let maxCols1 = 0;
+    for (let i = 0; i < data1.length; i++) {
+        if (data1[i] && data1[i].length > maxCols1) {
+            maxCols1 = data1[i].length;
+        }
+    }
+    let maxCols2 = 0;
+    for (let i = 0; i < data2.length; i++) {
+        if (data2[i] && data2[i].length > maxCols2) {
+            maxCols2 = data2[i].length;
+        }
+    }
+    const totalCols = Math.max(maxCols1, maxCols2);
+    if (totalCols > MAX_COLS_LIMIT) {
+        document.getElementById('result').innerHTML = `
+            <div style="text-align: center; padding: 40px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; margin: 20px 0;">
+                <div style="font-size: 28px; margin-bottom: 16px;">⚠️</div>
+                <div style="font-size: 18px; font-weight: 600; color: #856404; margin-bottom: 10px;">Too Many Columns</div>
+                <div style="color: #856404; margin-bottom: 15px;">
+                    Cannot compare files with more than <strong>${MAX_COLS_LIMIT}</strong> columns.<br>
+                    Current files have <strong>${maxCols1}</strong> and <strong>${maxCols2}</strong> columns.
+                </div>
+                <div style="color: #856404; font-size: 14px;">
+                    Please reduce the number of columns or contact support for enterprise solutions.
+                </div>
+            </div>
+        `;
+        document.getElementById('summary').innerHTML = '';
+        return;
+    }
+    
+    // Show loading indicator for large files
+    if (totalRows > 1000) {
+        document.getElementById('result').innerHTML = '<div style="text-align: center; padding: 20px; font-size: 16px;">🔄 Comparing large files... Please wait</div>';
+        document.getElementById('summary').innerHTML = '<div style="text-align: center; padding: 10px;">Processing...</div>';
+    }
+    
+    // Use setTimeout to allow UI to update
+    setTimeout(() => {
+        performComparison();
+    }, 10);
+}
+
+function performComparison() {
     // Restore table structure for comparison results
     restoreTableStructure();
     
@@ -1246,16 +1497,18 @@ function compareTables() {
         filterControls.style.display = 'block';
     }
     
-    // Automatically check "Hide same rows" checkbox and hide identical rows
+    // Don't automatically check "Hide same rows" - let user decide
     if (hideSameRowsCheckbox) {
-        hideSameRowsCheckbox.checked = true;
-        // Apply the filter immediately
-        filterTable();
+        // Reset checkbox state and render all rows initially
+        hideSameRowsCheckbox.checked = false;
+        // Use universal rendering function for consistency
+        renderComparisonTable();
     }
     
     // --- Fuzzy matching for bottom table ---
     let used2 = new Array(body2.length).fill(false);
     let pairs = [];
+    
     function countMatches(rowA, rowB) {
         let matches = 0;
         for (let i = 0; i < finalAllCols; i++) {
@@ -1266,153 +1519,312 @@ function compareTables() {
         }
         return matches;
     }
-    for (let i = 0; i < body1.length; i++) {
-        let bestIdx = -1, bestScore = -1;
-        for (let j = 0; j < body2.length; j++) {
-            if (used2[j]) continue;
-            let score = countMatches(body1[i], body2[j]);
-            if (score > bestScore) {
-                bestScore = score;
-                bestIdx = j;
+    
+    // Process large files in batches to avoid freezing the UI
+    function processBatch(startIndex, batchSize) {
+        const endIndex = Math.min(startIndex + batchSize, body1.length);
+        
+        for (let i = startIndex; i < endIndex; i++) {
+            let bestIdx = -1, bestScore = -1;
+            for (let j = 0; j < body2.length; j++) {
+                if (used2[j]) continue;
+                let score = countMatches(body1[i], body2[j]);
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestIdx = j;
+                }
+            }
+            if (bestScore >= Math.ceil(finalAllCols / 2)) {
+                pairs.push({row1: body1[i], row2: body2[bestIdx]});
+                used2[bestIdx] = true;
+            } else {
+                pairs.push({row1: body1[i], row2: null});
             }
         }
-        if (bestScore >= Math.ceil(finalAllCols / 2)) {
-            pairs.push({row1: body1[i], row2: body2[bestIdx]});
-            used2[bestIdx] = true;
+        
+        // Continue with next batch or finish
+        if (endIndex < body1.length) {
+            // Show progress for large files
+            if (body1.length > 1000) {
+                const progress = Math.round((endIndex / body1.length) * 100);
+                document.getElementById('result').innerHTML = `<div style="text-align: center; padding: 20px; font-size: 16px;">🔄 Comparing files... ${progress}% complete</div>`;
+            }
+            setTimeout(() => processBatch(endIndex, batchSize), 10);
         } else {
-            pairs.push({row1: body1[i], row2: null});
+            // Add unmatched rows from body2
+            for (let j = 0; j < body2.length; j++) {
+                if (!used2[j]) {
+                    pairs.push({row1: null, row2: body2[j]});
+                }
+            }
+            
+            // Save pairs and headers for sorting
+            currentPairs = pairs;
+            currentFinalHeaders = finalHeaders;
+            currentFinalAllCols = finalAllCols;
+            
+            // Continue with rendering using universal function
+            renderComparisonTable();
         }
     }
-    for (let j = 0; j < body2.length; j++) {
-        if (!used2[j]) {
-            pairs.push({row1: null, row2: body2[j]});
-        }
+    
+    // Determine batch size based on file size
+    const batchSize = body1.length > 5000 ? 100 : body1.length > 1000 ? 250 : 1000;
+    processBatch(0, batchSize);
+}
+
+// Universal function to render comparison table with consistent styling
+function renderComparisonTable() {
+    if (!currentPairs || currentPairs.length === 0) {
+        document.querySelector('.diff-table-header thead').innerHTML = '';
+        document.querySelector('.filter-row').innerHTML = '';
+        document.querySelector('.diff-table-body tbody').innerHTML = '<tr><td colspan="100" style="text-align:center; padding:20px;">No data to display</td></tr>';
+        return;
     }
-    // Save pairs and headers for sorting
-    currentPairs = pairs;
-    currentFinalHeaders = finalHeaders;
-    currentFinalAllCols = finalAllCols;
-    // --- Bottom table with same rows filtering ---
+    
+    // Get filter states
     let hideSame = document.getElementById('hideSameRows').checked;
-    let html = '';
-    if (pairs.length > 0) {
-        // Table headers
-        let headerHtml = '<tr><th title="Source - shows which file the data comes from">Source</th>';
-        for (let c = 0; c < finalAllCols; c++) {
-            let headerText = finalHeaders[c] !== undefined ? finalHeaders[c] : '';
-            let titleAttr = headerText ? ` title="${headerText.toString().replace(/"/g, '&quot;')}"` : '';
-            headerHtml += `<th class="sortable" onclick="sortTable(${c})"${titleAttr}>${headerText}</th>`;
+    const hideDiffRows = document.getElementById('hideDiffColumns').checked;
+    const hideNewRows1 = document.getElementById('hideNewRows1').checked;
+    const hideNewRows2 = document.getElementById('hideNewRows2').checked;
+    
+    // Table headers with consistent styling
+    let headerHtml = '<tr><th title="Source - shows which file the data comes from">Source</th>';
+    for (let c = 0; c < currentFinalAllCols; c++) {
+        let sortClass = 'sortable';
+        if (c === currentSortColumn) {
+            sortClass += currentSortDirection === 'asc' ? ' sort-asc' : ' sort-desc';
         }
-        headerHtml += '</tr>';
-        document.querySelector('.diff-table-header thead').innerHTML = headerHtml;
+        let headerText = currentFinalHeaders[c] !== undefined ? currentFinalHeaders[c] : '';
+        let titleAttr = headerText ? ` title="${headerText.toString().replace(/"/g, '&quot;')}"` : '';
+        headerHtml += `<th class="${sortClass}" onclick="sortTable(${c})"${titleAttr}>${headerText}</th>`;
+    }
+    headerHtml += '</tr>';
+    document.querySelector('.diff-table-header thead').innerHTML = headerHtml;
+    
+    // Filter row with consistent styling
+    let filterHtml = '<tr><td><input type="text" placeholder="Filter..." onkeyup="filterTable()" style="width:100%; padding:4px; border:1px solid #ccc; border-radius:3px;"></td>';
+    for (let c = 0; c < currentFinalAllCols; c++) {
+        filterHtml += `<td><input type="text" placeholder="Filter..." onkeyup="filterTable()" style="width:100%; padding:4px; border:1px solid #ccc; border-radius:3px;"></td>`;
+    }
+    filterHtml += '</tr>';
+    document.querySelector('.filter-row').innerHTML = filterHtml;
+    
+    // Count visible rows first to handle "no results" properly
+    let visibleRowCount = 0;
+    let tempBodyHtml = '';
+    
+    currentPairs.forEach(pair => {
+        let row1 = pair.row1;
+        let row2 = pair.row2;
         
-        // Filter row
-        let filterHtml = '<tr><td><input type="text" placeholder="Filter..." onkeyup="filterTable()" style="width:100%; padding:4px; border:1px solid #ccc; border-radius:3px;"></td>';
-        for (let c = 0; c < finalAllCols; c++) {
-            filterHtml += `<td><input type="text" placeholder="Filter..." onkeyup="filterTable()" style="width:100%; padding:4px; border:1px solid #ccc; border-radius:3px;"></td>`;
-        }
-        filterHtml += '</tr>';
-        document.querySelector('.filter-row').innerHTML = filterHtml;
+        // Pre-convert values to uppercase for performance
+        let row1Upper = row1 ? row1.map(val => (val !== undefined ? val.toString().toUpperCase() : '')) : null;
+        let row2Upper = row2 ? row2.map(val => (val !== undefined ? val.toString().toUpperCase() : '')) : null;
         
-        // Table body
-        let bodyHtml = '';
-        pairs.forEach(pair => {
-            let row1 = pair.row1;
-            let row2 = pair.row2;
-            
-            // Pre-convert values to uppercase for performance
-            let row1Upper = row1 ? row1.map(val => (val !== undefined ? val.toString().toUpperCase() : '')) : null;
-            let row2Upper = row2 ? row2.map(val => (val !== undefined ? val.toString().toUpperCase() : '')) : null;
-            
-            // Skip completely empty rows
-            let isEmpty = true;
-            let hasWarn = false;
-            let allSame = true;
-            for (let c = 0; c < finalAllCols; c++) {
-                let v1 = row1 ? (row1[c] !== undefined ? row1[c] : '') : '';
-                let v2 = row2 ? (row2[c] !== undefined ? row2[c] : '') : '';
-                if ((v1 && v1.toString().trim() !== '') || (v2 && v2.toString().trim() !== '')) {
-                    isEmpty = false;
-                }
-                if (row1 && row2) {
-                    // Use pre-converted uppercase values
-                    if (row1Upper[c] !== row2Upper[c]) {
-                        hasWarn = true;
-                        allSame = false;
-                    }
-                }
+        let isEmpty = true;
+        let hasWarn = false;
+        let allSame = true;
+        let hasDiff = false;
+        
+        for (let c = 0; c < currentFinalAllCols; c++) {
+            let v1 = row1 ? (row1[c] !== undefined ? row1[c] : '') : '';
+            let v2 = row2 ? (row2[c] !== undefined ? row2[c] : '') : '';
+            if ((v1 && v1.toString().trim() !== '') || (v2 && v2.toString().trim() !== '')) {
+                isEmpty = false;
             }
-            if (isEmpty) return;
-            if (hideSame && row1 && row2 && allSame) return;
-            
-            // Apply additional row filters after computing hasWarn
-            if (hideNewRows1 && row1 && !row2) return; // Skip rows only in file 1
-            if (hideNewRows2 && !row1 && row2) return; // Skip rows only in file 2
-            if (hideDiffRows && row1 && row2 && hasWarn) return; // Skip rows with differences (orange rows)
-            
-            let source = '';
             if (row1 && row2) {
-                source = 'Both files';
-            } else if (row1) {
-                source = fileName1 || 'File 1';
+                if (row1Upper[c] !== row2Upper[c]) {
+                    hasWarn = true;
+                    allSame = false;
+                } 
             } else {
-                source = fileName2 || 'File 2';
+                hasDiff = true;
+                allSame = false;
             }
-            
-            // Enhanced row class logic
-            let rowClass = '';
-            let hasDiff = !row1 || !row2;
-            if (hasDiff) rowClass = 'row-diff';
-            else if (hasWarn) rowClass = 'row-warn';
-            else if (allSame) rowClass = 'row-identical';
-            else rowClass = 'row-default';
-            
-            bodyHtml += `<tr class="${rowClass}">`;
-            // Format source column similar to diff cells when there are differences
-            if (row1 && row2 && (hasWarn || !allSame)) {
-                bodyHtml += `<td><div>${fileName1 || 'File 1'}</div><div style='border-top:1px solid #eee;color:#555;font-size:90%'>${fileName2 || 'File 2'}</div></td>`;
+        }
+        
+        if (isEmpty) return;
+        if (hideSame && row1 && row2 && allSame) return;
+        if (hideNewRows1 && row1 && !row2) return;
+        if (hideNewRows2 && !row1 && row2) return;
+        if (hideDiffRows && row1 && row2 && hasWarn) return;
+        
+        visibleRowCount++;
+    });
+    
+    // If no visible rows after filtering, show appropriate message
+    if (visibleRowCount === 0) {
+        const activeFilters = [];
+        if (hideSame) activeFilters.push('Hide identical rows');
+        if (hideNewRows1) activeFilters.push('Hide rows only in File 1');
+        if (hideNewRows2) activeFilters.push('Hide rows only in File 2');
+        if (hideDiffRows) activeFilters.push('Hide rows with differences');
+        
+        let message = 'No rows match the current filters';
+        if (activeFilters.length > 0) {
+            message += ': ' + activeFilters.join(', ');
+        }
+        
+        document.querySelector('.diff-table-body tbody').innerHTML = `<tr><td colspan="100" style="text-align:center; padding:20px;">${message}</td></tr>`;
+        return;
+    }
+
+    // Table body with consistent styling
+    let bodyHtml = '';
+    currentPairs.forEach(pair => {
+        let row1 = pair.row1;
+        let row2 = pair.row2;
+        
+        // Pre-convert values to uppercase for performance
+        let row1Upper = row1 ? row1.map(val => (val !== undefined ? val.toString().toUpperCase() : '')) : null;
+        let row2Upper = row2 ? row2.map(val => (val !== undefined ? val.toString().toUpperCase() : '')) : null;
+        
+        let isEmpty = true;
+        let hasWarn = false;
+        let allSame = true;
+        let hasDiff = false;
+        
+        for (let c = 0; c < currentFinalAllCols; c++) {
+            let v1 = row1 ? (row1[c] !== undefined ? row1[c] : '') : '';
+            let v2 = row2 ? (row2[c] !== undefined ? row2[c] : '') : '';
+            if ((v1 && v1.toString().trim() !== '') || (v2 && v2.toString().trim() !== '')) {
+                isEmpty = false;
+            }
+            if (row1 && row2) {
+                if (row1Upper[c] !== row2Upper[c]) {
+                    hasWarn = true;
+                    allSame = false;
+                } 
             } else {
-                bodyHtml += `<td>${source}</td>`;
+                hasDiff = true;
+                allSame = false;
             }
-            for (let c = 0; c < finalAllCols; c++) {
-                let v1 = row1 ? (row1[c] !== undefined ? row1[c] : '') : '';
-                let v2 = row2 ? (row2[c] !== undefined ? row2[c] : '') : '';
-                let cellClass = '';
-                if (!row1 || !row2) cellClass = 'diff';
-                else {
-                    // Use pre-converted uppercase values for comparison
-                    if (row1Upper[c] !== row2Upper[c]) cellClass = 'warn';
-                    else cellClass = 'identical';
-                }
-                if (!row1 && row2) {
-                    bodyHtml += `<td class="${cellClass}"><div>${v2}</div></td>`;
-                } else if (row1 && !row2) {
-                    bodyHtml += `<td class="${cellClass}"><div>${v1}</div></td>`;
+        }
+        
+        if (isEmpty) return;
+        if (hideSame && row1 && row2 && allSame) return;
+        if (hideNewRows1 && row1 && !row2) return;
+        if (hideNewRows2 && !row1 && row2) return;
+        if (hideDiffRows && row1 && row2 && hasWarn) return;
+        
+        // If both files have data and they differ, create two separate rows
+        if (row1 && row2 && hasWarn) {
+            // Row for File 1
+            bodyHtml += `<tr class="warn-row warn-row-group-start">`;
+            bodyHtml += `<td class="warn-cell">${fileName1 || 'File 1'}</td>`;
+            for (let c = 0; c < currentFinalAllCols; c++) {
+                let v1 = row1[c] !== undefined ? row1[c] : '';
+                let v2 = row2[c] !== undefined ? row2[c] : '';
+                let v1Upper = row1Upper[c] || '';
+                let v2Upper = row2Upper[c] || '';
+                
+                if (v1Upper !== v2Upper) {
+                    // Different values - show in warn-cell
+                    bodyHtml += `<td class="warn-cell">${v1}</td>`;
                 } else {
-                    // Compare using pre-converted values but display original values
-                    if (row1Upper[c] !== row2Upper[c]) {
-                        bodyHtml += `<td class="${cellClass}"><div>${v1}</div><div style='border-top:1px solid #eee;color:#555;font-size:90%'>${v2}</div></td>`;
-                    } else {
-                        bodyHtml += `<td class="${cellClass}"><div>${v1}</div></td>`;
-                    }
+                    // Same values - will be merged with rowspan
+                    bodyHtml += `<td class="identical" rowspan="2" style="vertical-align: middle; text-align: center;">${v1}</td>`;
                 }
             }
             bodyHtml += '</tr>';
-        });
-        document.querySelector('.diff-table-body tbody').innerHTML = bodyHtml;
+            
+            // Row for File 2
+            bodyHtml += `<tr class="warn-row warn-row-group-end">`;
+            bodyHtml += `<td class="warn-cell">${fileName2 || 'File 2'}</td>`;
+            for (let c = 0; c < currentFinalAllCols; c++) {
+                let v1 = row1[c] !== undefined ? row1[c] : '';
+                let v2 = row2[c] !== undefined ? row2[c] : '';
+                let v1Upper = row1Upper[c] || '';
+                let v2Upper = row2Upper[c] || '';
+                
+                if (v1Upper !== v2Upper) {
+                    // Different values - show in warn-cell
+                    bodyHtml += `<td class="warn-cell">${v2}</td>`;
+                }
+                // For identical values, we already added rowspan=2 in the first row, so skip here
+            }
+            bodyHtml += '</tr>';
+        } else {
+            // Single row for identical data or data from only one file
+            let source = '';
+            let rowClass = '';
+            
+            if (row1 && row2 && allSame) {
+                source = 'Both files';
+                rowClass = '';
+            } else if (row1 && !row2) {
+                source = fileName1 || 'File 1';
+                rowClass = 'new-row';
+            } else if (!row1 && row2) {
+                source = fileName2 || 'File 2';
+                rowClass = 'new-row';
+            }
+            
+            bodyHtml += `<tr class="${rowClass}">`;
+            bodyHtml += `<td>${source}</td>`;
+            
+            // Data columns
+            for (let c = 0; c < currentFinalAllCols; c++) {
+                let cellValue = '';
+                let cellClass = '';
+                
+                if (row1 && !row2) {
+                    cellValue = row1[c] !== undefined ? row1[c] : '';
+                    cellClass = 'new-cell';
+                } else if (!row1 && row2) {
+                    cellValue = row2[c] !== undefined ? row2[c] : '';
+                    cellClass = 'new-cell';
+                } else if (row1 && row2) {
+                    // Both files have the same data
+                    cellValue = row1[c] !== undefined ? row1[c] : '';
+                    cellClass = '';
+                }
+                
+                bodyHtml += `<td class="${cellClass}">${cellValue}</td>`;
+            }
+            bodyHtml += '</tr>';
+        }
+    });
+    
+    document.querySelector('.diff-table-body tbody').innerHTML = bodyHtml;
+    
+    // Apply consistent styling and synchronization immediately
+    setTimeout(() => {
+        // Ensure tables have proper CSS classes and structure
+        const headerTable = document.querySelector('.diff-table-header');
+        const bodyTable = document.querySelector('.diff-table-body');
+        const container = document.querySelector('.table-container-sync');
         
-        // Sync scroll after table generation
-        setTimeout(() => {
-            adjustTableWidth();
-            syncTableScroll();
-        }, 50);
-    } else {
-        document.querySelector('.diff-table-header thead').innerHTML = '';
-        document.querySelector('.filter-row').innerHTML = '';
-        document.querySelector('.diff-table-body tbody').innerHTML = '<tr><td colspan="100" style="text-align:center; padding:20px;">No different rows found</td></tr>';
-    }
+        if (container) {
+            container.style.position = 'relative';
+            container.style.overflow = 'hidden';
+            container.style.border = '1px solid #e0e0e0';
+            container.style.borderRadius = '8px';
+        }
+        
+        if (headerTable) {
+            headerTable.style.borderCollapse = 'separate';
+            headerTable.style.borderSpacing = '0';
+            headerTable.style.tableLayout = 'fixed';
+            headerTable.style.width = '100%';
+        }
+        
+        if (bodyTable) {
+            bodyTable.style.borderCollapse = 'separate';
+            bodyTable.style.borderSpacing = '0';
+            bodyTable.style.tableLayout = 'fixed';
+            bodyTable.style.width = '100%';
+        }
+        
+        // Apply full synchronization with enhanced width enforcement
+        forceTableWidthSync();
+        syncTableScroll();
+        syncColumnWidths();
+    }, 50);
 }
 
+// Sorting function
 function sortTable(column) {
     if (currentSortColumn === column) {
         currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
@@ -1445,141 +1857,8 @@ function sortTable(column) {
         }
     });
     
-    // Update display
-    renderSortedTable();
-}
-
-function renderSortedTable() {
-    let hideSame = document.getElementById('hideSameRows').checked;
-    const hideDiffRows = document.getElementById('hideDiffColumns').checked;
-    const hideNewRows1 = document.getElementById('hideNewRows1').checked;
-    const hideNewRows2 = document.getElementById('hideNewRows2').checked;
-    
-    if (currentPairs.length > 0) {
-        // Table headers
-        let headerHtml = '<tr><th title="Source - shows which file the data comes from">Source</th>';
-        for (let c = 0; c < currentFinalAllCols; c++) {
-            let sortClass = 'sortable';
-            if (c === currentSortColumn) {
-                sortClass += currentSortDirection === 'asc' ? ' sort-asc' : ' sort-desc';
-            }
-            let headerText = currentFinalHeaders[c] !== undefined ? currentFinalHeaders[c] : '';
-            let titleAttr = headerText ? ` title="${headerText.toString().replace(/"/g, '&quot;')}"` : '';
-            headerHtml += `<th class="${sortClass}" onclick="sortTable(${c})"${titleAttr}>${headerText}</th>`;
-        }
-        headerHtml += '</tr>';
-        document.querySelector('.diff-table-header thead').innerHTML = headerHtml;
-        
-        // Filter row
-        let filterHtml = '<tr><td><input type="text" placeholder="Filter..." onkeyup="filterTable()" style="width:100%; padding:4px; border:1px solid #ccc; border-radius:3px;"></td>';
-        for (let c = 0; c < currentFinalAllCols; c++) {
-            filterHtml += `<td><input type="text" placeholder="Filter..." onkeyup="filterTable()" style="width:100%; padding:4px; border:1px solid #ccc; border-radius:3px;"></td>`;
-        }
-        filterHtml += '</tr>';
-        document.querySelector('.filter-row').innerHTML = filterHtml;
-        
-        // Table body
-        let bodyHtml = '';
-        currentPairs.forEach(pair => {
-            let row1 = pair.row1;
-            let row2 = pair.row2;
-            
-            // Pre-convert values to uppercase for performance
-            let row1Upper = row1 ? row1.map(val => (val !== undefined ? val.toString().toUpperCase() : '')) : null;
-            let row2Upper = row2 ? row2.map(val => (val !== undefined ? val.toString().toUpperCase() : '')) : null;
-            
-            let isEmpty = true;
-            let hasWarn = false;
-            let allSame = true;
-            let hasDiff = false;
-            let hasIdentical = false;
-            
-            for (let c = 0; c < currentFinalAllCols; c++) {
-                let v1 = row1 ? (row1[c] !== undefined ? row1[c] : '') : '';
-                let v2 = row2 ? (row2[c] !== undefined ? row2[c] : '') : '';
-                if ((v1 && v1.toString().trim() !== '') || (v2 && v2.toString().trim() !== '')) {
-                    isEmpty = false;
-                }
-                if (row1 && row2) {
-                    // Use pre-converted uppercase values
-                    if (row1Upper[c] !== row2Upper[c]) {
-                        hasWarn = true;
-                        allSame = false;
-                    } else {
-                        hasIdentical = true;
-                    }
-                } else {
-                    hasDiff = true;
-                    allSame = false;
-                }
-            }
-            
-            if (isEmpty) return;
-            if (hideSame && row1 && row2 && allSame) return;
-            
-            // Apply additional row filters after computing hasWarn
-            if (hideNewRows1 && row1 && !row2) return; // Skip rows only in file 1
-            if (hideNewRows2 && !row1 && row2) return; // Skip rows only in file 2
-            if (hideDiffRows && row1 && row2 && hasWarn) return; // Skip rows with differences (orange rows)
-            
-            let source = '';
-            if (row1 && row2) {
-                source = 'Both files';
-            } else if (row1) {
-                source = fileName1 || 'File 1';
-            } else {
-                source = fileName2 || 'File 2';
-            }
-            
-            let rowClass = '';
-            if (hasDiff) rowClass = 'row-diff';
-            else if (hasWarn) rowClass = 'row-warn';
-            else if (hasIdentical && allSame) rowClass = 'row-identical';
-            else rowClass = 'row-default'; // Add default class
-            
-            bodyHtml += `<tr class="${rowClass}">`;
-            // Format source column similar to diff cells when there are differences
-            if (row1 && row2 && (hasWarn || !allSame)) {
-                bodyHtml += `<td><div>${fileName1 || 'File 1'}</div><div style='border-top:1px solid #eee;color:#555;font-size:90%'>${fileName2 || 'File 2'}</div></td>`;
-            } else {
-                bodyHtml += `<td>${source}</td>`;
-            }
-            for (let c = 0; c < currentFinalAllCols; c++) {
-                let v1 = row1 ? (row1[c] !== undefined ? row1[c] : '') : '';
-                let v2 = row2 ? (row2[c] !== undefined ? row2[c] : '') : '';
-                let cellClass = '';
-                if (!row1 || !row2) cellClass = 'diff';
-                else {
-                    // Use pre-converted uppercase values for comparison
-                    if (row1Upper[c] !== row2Upper[c]) cellClass = 'warn';
-                    else cellClass = 'identical';
-                }
-                if (!row1 && row2) {
-                    bodyHtml += `<td class="${cellClass}"><div>${v2}</div></td>`;
-                } else if (row1 && !row2) {
-                    bodyHtml += `<td class="${cellClass}"><div>${v1}</div></td>`;
-                } else {
-                    // Compare using pre-converted values but display original values
-                    if (row1Upper[c] !== row2Upper[c]) {
-                        bodyHtml += `<td class="${cellClass}"><div>${v1}</div><div style='border-top:1px solid #eee;color:#555;font-size:90%'>${v2}</div></td>`;
-                    } else {
-                        bodyHtml += `<td class="${cellClass}"><div>${v1}</div></td>`;
-                    }
-                }
-            }
-            bodyHtml += '</tr>';
-        });
-        document.querySelector('.diff-table-body tbody').innerHTML = bodyHtml;
-        
-        // Only sync scroll after rendering (don't adjust width on filtering)
-        setTimeout(() => {
-            syncTableScroll();
-        }, 50);
-    } else {
-        document.querySelector('.diff-table-header thead').innerHTML = '';
-        document.querySelector('.filter-row').innerHTML = '';
-        document.querySelector('.diff-table-body tbody').innerHTML = '<tr><td colspan="100" style="text-align:center; padding:20px;">No different rows found</td></tr>';
-    }
+    // Update display using universal rendering function
+    renderComparisonTable();
 }
 
 // Table filtering function
@@ -1609,6 +1888,12 @@ function filterTable() {
         
         row.style.display = show ? '' : 'none';
     }
+    
+    // Synchronize column widths after filtering with full sync
+    setTimeout(() => {
+        syncColumnWidths();
+        forceTableWidthSync();
+    }, 10);
 }
 
 // Function to set correct table width (only called once during initial render)
@@ -1622,9 +1907,9 @@ function adjustTableWidth() {
         const numColumns = headerCells.length;
         
         if (numColumns > 0) {
-            // Calculate fixed total width: Source column (120px) + data columns (150px each)
-            const sourceColumnWidth = 120;
-            const dataColumnWidth = 150;
+            // Calculate fixed total width: Source column (240px) + data columns (180px each)
+            const sourceColumnWidth = 240;
+            const dataColumnWidth = 180;
             const totalWidth = sourceColumnWidth + ((numColumns - 1) * dataColumnWidth);
             
             // Set consistent table widths
@@ -1633,40 +1918,96 @@ function adjustTableWidth() {
             bodyTable.style.width = widthStyle;
             headerTable.style.minWidth = widthStyle;
             bodyTable.style.minWidth = widthStyle;
+            
+            // Synchronize column widths after setting table width
+            setTimeout(() => {
+                syncColumnWidths();
+            }, 10);
         }
     }
 }
 
-// Synchronize header and body table scrolling
-function syncTableScroll() {
-    const headerContainer = document.querySelector('.table-header-fixed');
-    const bodyContainer = document.querySelector('.table-body-scrollable');
+// Performance monitoring functions for large files
+function getMemoryUsage() {
+    if (performance && performance.memory) {
+        return {
+            used: Math.round(performance.memory.usedJSHeapSize / 1048576), // MB
+            total: Math.round(performance.memory.totalJSHeapSize / 1048576), // MB
+            limit: Math.round(performance.memory.jsHeapSizeLimit / 1048576) // MB
+        };
+    }
+    return null;
+}
+
+function showMemoryWarning() {
+    const memory = getMemoryUsage();
+    if (memory && memory.used > memory.limit * 0.8) {
+        const warningDiv = document.createElement('div');
+        warningDiv.innerHTML = `
+            <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; margin: 10px 0; border-radius: 5px;">
+                <strong>⚠️ High Memory Usage:</strong> The browser is using ${memory.used}MB of ${memory.limit}MB available memory.
+                <br><small>Consider using filters to reduce the amount of data displayed.</small>
+            </div>
+        `;
+        document.getElementById('result').appendChild(warningDiv);
+    }
+}
+
+// Optimized CSV parsing for large files
+function parseCSVChunked(csvText, chunkSize = 1000) {
+    const lines = csvText.split(/\r?\n/);
+    const result = [];
+    const delimiter = detectCSVDelimiter(csvText);
     
-    if (headerContainer && bodyContainer) {
-        // Remove existing listeners to avoid duplicates
-        headerContainer.removeEventListener('scroll', syncHeaderToBody);
-        bodyContainer.removeEventListener('scroll', syncBodyToHeader);
+    // Process in chunks to avoid blocking the UI
+    function processChunk(startIndex) {
+        const endIndex = Math.min(startIndex + chunkSize, lines.length);
         
-        // Add new listeners
-        bodyContainer.addEventListener('scroll', syncBodyToHeader);
-        headerContainer.addEventListener('scroll', syncHeaderToBody);
+        for (let i = startIndex; i < endIndex; i++) {
+            const line = lines[i];
+            if (line.trim() === '') continue;
+            
+            const row = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let j = 0; j < line.length; j++) {
+                const char = line[j];
+                
+                if (char === '"') {
+                    if (inQuotes && line[j + 1] === '"') {
+                        current += '"';
+                        j++;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === delimiter && !inQuotes) {
+                    row.push(parseCSVValue(current.trim()));
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            
+            row.push(parseCSVValue(current.trim()));
+            
+            if (row.some(cell => cell !== null && cell !== undefined && cell.toString().trim() !== '')) {
+                result.push(row);
+            }
+        }
+        
+        if (endIndex < lines.length) {
+            // Continue processing next chunk
+            setTimeout(() => processChunk(endIndex), 10);
+        }
     }
-}
-
-function syncBodyToHeader() {
-    const headerContainer = document.querySelector('.table-header-fixed');
-    const bodyContainer = document.querySelector('.table-body-scrollable');
-    if (headerContainer && bodyContainer) {
-        headerContainer.scrollLeft = bodyContainer.scrollLeft;
-    }
-}
-
-function syncHeaderToBody() {
-    const headerContainer = document.querySelector('.table-header-fixed');
-    const bodyContainer = document.querySelector('.table-body-scrollable');
-    if (headerContainer && bodyContainer) {
-        bodyContainer.scrollLeft = headerContainer.scrollLeft;
-    }
+    
+    return new Promise((resolve) => {
+        processChunk(0);
+        // For now, return synchronous parsing for compatibility
+        // In future, this could be made fully asynchronous
+        resolve(parseCSV(csvText));
+    });
 }
 
 // Initialize synchronization and placeholder on page load
@@ -1687,25 +2028,25 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add event listeners for filter checkboxes
     document.getElementById('hideSameRows').addEventListener('change', function() {
         if (currentPairs && currentPairs.length > 0) {
-            renderSortedTable();
+            renderComparisonTable();
         }
     });
     
     document.getElementById('hideDiffColumns').addEventListener('change', function() {
         if (currentPairs && currentPairs.length > 0) {
-            renderSortedTable();
+            renderComparisonTable();
         }
     });
     
     document.getElementById('hideNewRows1').addEventListener('change', function() {
         if (currentPairs && currentPairs.length > 0) {
-            renderSortedTable();
+            renderComparisonTable();
         }
     });
     
     document.getElementById('hideNewRows2').addEventListener('change', function() {
         if (currentPairs && currentPairs.length > 0) {
-            renderSortedTable();
+            renderComparisonTable();
         }
     });
     
@@ -1719,3 +2060,207 @@ document.addEventListener('DOMContentLoaded', function() {
     `;
     document.getElementById('summary').innerHTML = htmlSummary;
 });
+
+// Function to synchronize column widths between header and body tables
+function syncColumnWidths() {
+    const headerTable = document.querySelector('.diff-table-header');
+    const bodyTable = document.querySelector('.diff-table-body');
+    
+    if (!headerTable || !bodyTable) return;
+    
+    const headerCells = headerTable.querySelectorAll('th');
+    const bodyRows = bodyTable.querySelectorAll('tbody tr:not([style*="display: none"])');
+    
+    if (!headerCells.length || !bodyRows.length) return;
+    
+    // Force minimum width - first column 240px, others 150px
+    headerCells.forEach((cell, index) => {
+        if (index === 0) {
+            cell.style.minWidth = '240px';
+            cell.style.width = '240px';
+        } else {
+            cell.style.minWidth = '150px';
+            cell.style.width = 'auto';
+        }
+    });
+    
+    bodyRows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        cells.forEach((cell, index) => {
+            if (index === 0) {
+                cell.style.minWidth = '240px';
+                cell.style.width = '240px';
+            } else {
+                cell.style.minWidth = '150px';
+                cell.style.width = 'auto';
+            }
+        });
+    });
+    
+    // Calculate and apply synchronized widths
+    requestAnimationFrame(() => {
+        const columnWidths = [];
+        const numColumns = headerCells.length;
+        
+        for (let colIndex = 0; colIndex < numColumns; colIndex++) {
+            let maxWidth = 180; // Minimum width
+            
+            // Check header width
+            const headerRect = headerCells[colIndex].getBoundingClientRect();
+            maxWidth = Math.max(maxWidth, headerRect.width);
+            
+            // Check body cell widths (sample up to 10 visible rows)
+            const sampleRows = Math.min(bodyRows.length, 10);
+            for (let rowIndex = 0; rowIndex < sampleRows; rowIndex++) {
+                const row = bodyRows[rowIndex];
+                const cells = row.querySelectorAll('td');
+                if (cells[colIndex]) {
+                    const cellRect = cells[colIndex].getBoundingClientRect();
+                    maxWidth = Math.max(maxWidth, cellRect.width);
+                }
+            }
+            
+            columnWidths[colIndex] = Math.ceil(maxWidth);
+        }
+        
+        // Apply synchronized widths with special handling for first column
+        for (let colIndex = 0; colIndex < numColumns; colIndex++) {
+            let width;
+            
+            if (colIndex === 0) {
+                // First column (Source) - fixed width
+                width = '240px';
+            } else {
+                // Other columns - use calculated width with minimum 180px
+                width = Math.max(columnWidths[colIndex], 180) + 'px';
+            }
+            
+            // Set header width
+            headerCells[colIndex].style.width = width;
+            headerCells[colIndex].style.minWidth = width;
+            
+            // Set body cell widths for all rows
+            const columnCells = bodyTable.querySelectorAll(`td:nth-child(${colIndex + 1})`);
+            columnCells.forEach(cell => {
+                cell.style.width = width;
+                cell.style.minWidth = width;
+            });
+        }
+        
+        // Calculate total width with fixed first column
+        const firstColumnWidth = 240;
+        const otherColumnsWidth = columnWidths.slice(1).reduce((sum, width) => sum + Math.max(width, 180), 0);
+        const totalWidth = Math.max(firstColumnWidth + otherColumnsWidth, 800);
+        const tableWidth = totalWidth + 'px';
+        
+        headerTable.style.width = tableWidth;
+        bodyTable.style.width = tableWidth;
+        headerTable.style.minWidth = tableWidth;
+        bodyTable.style.minWidth = tableWidth;
+    });
+}
+
+// Function to synchronize table scroll
+function syncTableScroll() {
+    const headerTable = document.querySelector('.table-header-fixed');
+    const bodyTable = document.querySelector('.table-body-scrollable');
+    
+    if (headerTable && bodyTable) {
+        // Remove existing scroll listener to avoid duplicates
+        bodyTable.removeEventListener('scroll', syncScrollHandler);
+        
+        // Add the scroll synchronization
+        bodyTable.addEventListener('scroll', syncScrollHandler);
+    }
+}
+
+// Define scroll handler function separately to allow removal
+function syncScrollHandler() {
+    const headerTable = document.querySelector('.table-header-fixed');
+    const bodyTable = document.querySelector('.table-body-scrollable');
+    
+    if (headerTable && bodyTable) {
+        headerTable.scrollLeft = bodyTable.scrollLeft;
+    }
+}
+
+// Function to force table width synchronization with enhanced column width enforcement
+function forceTableWidthSync() {
+    const headerTable = document.querySelector('.diff-table-header');
+    const bodyTable = document.querySelector('.diff-table-body');
+    
+    if (!headerTable || !bodyTable) return;
+    
+    // Force table layout and styling
+    headerTable.style.tableLayout = 'fixed';
+    bodyTable.style.tableLayout = 'fixed';
+    headerTable.style.width = '100%';
+    bodyTable.style.width = '100%';
+    
+    // Get all cells and force minimum width
+    const headerCells = headerTable.querySelectorAll('th');
+    const bodyRows = bodyTable.querySelectorAll('tbody tr');
+    
+    if (headerCells.length === 0) return;
+    
+    // Calculate total available width
+    const container = document.querySelector('.table-container-sync');
+    const containerWidth = container ? container.offsetWidth : 800;
+    const totalColumns = headerCells.length;
+    
+    // Special handling for first column (Source) - fixed width
+    const firstColumnWidth = 240;
+    const remainingWidth = containerWidth - firstColumnWidth;
+    const remainingColumns = totalColumns - 1;
+    
+    // Calculate width for remaining columns (minimum 180px each)
+    const minRemainingColumnWidth = 180;
+    const calculatedRemainingWidth = remainingColumns > 0 ? 
+        Math.max(minRemainingColumnWidth, Math.floor(remainingWidth / remainingColumns)) : 
+        minRemainingColumnWidth;
+    
+    // Apply widths to header cells
+    headerCells.forEach((cell, index) => {
+        if (index === 0) {
+            // First column (Source) - fixed width
+            cell.style.width = firstColumnWidth + 'px';
+            cell.style.minWidth = firstColumnWidth + 'px';
+            cell.style.maxWidth = firstColumnWidth + 'px';
+        } else {
+            // Other columns
+            const columnWidth = calculatedRemainingWidth + 'px';
+            cell.style.width = columnWidth;
+            cell.style.minWidth = columnWidth;
+            cell.style.maxWidth = 'none';
+        }
+        cell.style.boxSizing = 'border-box';
+    });
+    
+    // Apply widths to body cells
+    bodyRows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        cells.forEach((cell, index) => {
+            if (index < totalColumns) {
+                if (index === 0) {
+                    // First column (Source) - fixed width
+                    cell.style.width = firstColumnWidth + 'px';
+                    cell.style.minWidth = firstColumnWidth + 'px';
+                    cell.style.maxWidth = firstColumnWidth + 'px';
+                } else {
+                    // Other columns
+                    const columnWidth = calculatedRemainingWidth + 'px';
+                    cell.style.width = columnWidth;
+                    cell.style.minWidth = columnWidth;
+                    cell.style.maxWidth = 'none';
+                }
+                cell.style.boxSizing = 'border-box';
+            }
+        });
+    });
+    
+    // Set minimum table width to ensure horizontal scrolling when needed
+    const totalTableWidth = firstColumnWidth + (calculatedRemainingWidth * remainingColumns);
+    const minTableWidth = Math.max(totalTableWidth, containerWidth) + 'px';
+    headerTable.style.minWidth = minTableWidth;
+    bodyTable.style.minWidth = minTableWidth;
+}
