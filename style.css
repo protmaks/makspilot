@@ -480,7 +480,7 @@ footer {
 }
 
 .main-content h1 {
-    margin: 20px 0 16px 0;
+    margin: 10px 0 6px 0;
     text-align: center;
     font-weight: 600;
     font-size: 2.2rem;
@@ -769,7 +769,7 @@ button.compare-btn:hover {
 
 #summary {
     max-width: 1200px;
-    margin: 20px auto;
+    margin: 10px auto;
     padding: 0 20px;
 }
 
