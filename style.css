@@ -1021,18 +1021,15 @@ button.compare-btn:hover {
     white-space: nowrap;
     font-size: 11px;
     cursor: pointer;
-    width: auto; /* Let JavaScript calculate and set the width */
-    min-width: 150px !important; /* Minimum column width */
+    /* Remove conflicting width rules - let CSS at end of file handle this */
+    box-sizing: border-box;
 }
 
 /* Fixed first column (Source) */
 .diff-table-header th:first-child {
-    position: sticky;
-    left: 0;
-    z-index: 3;
+    /* Remove conflicting rules - let CSS at end of file handle this */
     background-color: #f8f9fa;
     box-shadow: 2px 0 5px rgba(0,0,0,0.1);
-    min-width: 360px !important;
 }
 
 .diff-table-header th:hover {
@@ -1076,18 +1073,15 @@ button.compare-btn:hover {
     overflow: hidden;
     text-overflow: ellipsis;
     vertical-align: top;
-    width: auto; /* Let JavaScript calculate and set the width */
-    min-width: 150px !important; /* Minimum column width */
+    /* Remove conflicting width rules - let CSS at end of file handle this */
+    box-sizing: border-box;
 }
 
 /* Fixed first column (Source) for body */
 .diff-table-body td:first-child {
-    position: sticky;
-    left: 0;
-    z-index: 2;
+    /* Remove conflicting rules - let CSS at end of file handle this */
     background-color: #ffffff;
     box-shadow: 2px 0 5px rgba(0,0,0,0.1);
-    min-width: 360px !important;
 }
 
 /* Ensure hover effects work correctly on fixed column */
@@ -1588,5 +1582,71 @@ button.compare-btn:hover {
         top: 0 !important;
         z-index: 10001 !important;
     }
+}
+
+/* Additional table stability improvements for filtering */
+.table-header-fixed {
+    overflow-x: auto;
+    overflow-y: hidden;
+    position: relative;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.table-body-scrollable {
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 70vh;
+    position: relative;
+}
+
+/* Force consistent column behavior during filtering */
+.diff-table-header,
+.diff-table-body {
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    /* Remove width: 100% to allow our JavaScript to control width */
+}
+
+/* Ensure filtered rows maintain table structure */
+.diff-table-body tr[style*="display: none"] {
+    display: none !important;
+    height: 0 !important;
+    line-height: 0 !important;
+    padding: 0 !important;
+}
+
+.diff-table-body tr[style*="display: none"] td {
+    height: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    line-height: 0 !important;
+}
+
+/* Enhanced column width stability */
+.diff-table-header th,
+.diff-table-body td {
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+/* Prevent column width changes during filtering */
+.diff-table-header th:not(:first-child),
+.diff-table-body td:not(:first-child) {
+    width: 180px !important;
+    min-width: 180px !important;
+    max-width: 180px !important;
+}
+
+/* Special handling for first column to prevent shifts */
+.diff-table-header th:first-child,
+.diff-table-body td:first-child {
+    width: 240px !important;
+    min-width: 240px !important;
+    max-width: 240px !important;
+    position: sticky;
+    left: 0;
+    z-index: 2;
 }
 
