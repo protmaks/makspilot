@@ -1469,7 +1469,13 @@ function performComparison() {
     // --- Top table ---
     let totalRows = Math.max(data1.length, data2.length) - 1;
     let maxRows = Math.max(body1.length, body2.length);
-    let percentDiff = maxRows > 0 ? (((only1 + only2) / maxRows) * 100).toFixed(2) : '0.00';
+    
+    // Calculate percentage difference correctly: different rows / total unique rows
+    // Total unique rows = only1 + only2 + both (all unique rows across both files)
+    let totalUniqueRows = only1 + only2 + both;
+    let differentRows = only1 + only2;
+    let percentDiff = totalUniqueRows > 0 ? Math.min(((differentRows / totalUniqueRows) * 100), 100).toFixed(2) : '0.00';
+    
     let percentClass = 'percent-low';
     if (parseFloat(percentDiff) > 30) percentClass = 'percent-high';
     else if (parseFloat(percentDiff) > 10) percentClass = 'percent-medium';
@@ -1807,20 +1813,21 @@ function renderComparisonTable() {
             headerTable.style.borderCollapse = 'separate';
             headerTable.style.borderSpacing = '0';
             headerTable.style.tableLayout = 'fixed';
-            headerTable.style.width = '100%';
+            // Don't set width to 100% - let syncColumnWidths handle it
         }
         
         if (bodyTable) {
             bodyTable.style.borderCollapse = 'separate';
             bodyTable.style.borderSpacing = '0';
             bodyTable.style.tableLayout = 'fixed';
-            bodyTable.style.width = '100%';
+            // Don't set width to 100% - let syncColumnWidths handle it
         }
         
         // Apply full synchronization with enhanced width enforcement
+        // Order matters: syncColumnWidths first, then forceTableWidthSync for consistency
+        syncColumnWidths();
         forceTableWidthSync();
         syncTableScroll();
-        syncColumnWidths();
     }, 50);
 }
 
@@ -1870,29 +1877,112 @@ function filterTable() {
     });
     
     let rows = document.querySelectorAll('.diff-table-body tbody tr');
-    // Skip headers and filter row
+    
+    // Process rows in pairs or individually
     for (let i = 0; i < rows.length; i++) {
         let row = rows[i];
         let cells = row.querySelectorAll('td');
-        let show = true;
         
-        for (let j = 0; j < filters.length && j < cells.length; j++) {
-            if (filters[j] && filters[j].trim() !== '') {
-                let cellText = cells[j].textContent.toLowerCase();
-                if (!cellText.includes(filters[j])) {
-                    show = false;
-                    break;
-                }
-            }
+        // Check if this row has rowspan cells (first row of a pair)
+        let hasRowspan = Array.from(cells).some(cell => cell.hasAttribute('rowspan'));
+        
+        if (hasRowspan && i + 1 < rows.length) {
+            // Process pair of rows together
+            let nextRow = rows[i + 1];
+            let show = false;
+            
+            // Check first row
+            show = checkRowMatchesFilters(row, filters) || checkRowMatchesFilters(nextRow, filters, row);
+            
+            // Apply visibility to both rows
+            row.style.display = show ? '' : 'none';
+            nextRow.style.display = show ? '' : 'none';
+            
+            i++; // Skip next row since we processed it
+        } else {
+            // Process single row
+            let show = checkRowMatchesFilters(row, filters);
+            row.style.display = show ? '' : 'none';
         }
-        
-        row.style.display = show ? '' : 'none';
     }
     
-    // Synchronize column widths after filtering with full sync
+    // Force comprehensive table reset and resync after filtering
+    refreshTableLayout();
+}
+
+// Helper function to check if a row matches filters
+function checkRowMatchesFilters(row, filters, rowspanRow = null) {
+    let cells = row.querySelectorAll('td');
+    
+    for (let j = 0; j < filters.length; j++) {
+        if (filters[j] && filters[j].trim() !== '') {
+            let cellText = '';
+            
+            if (j < cells.length) {
+                cellText = cells[j].textContent.toLowerCase();
+            } else if (rowspanRow) {
+                // This might be a case where cell is covered by rowspan from previous row
+                let rowspanCells = rowspanRow.querySelectorAll('td');
+                
+                // Try to find the corresponding cell accounting for rowspan
+                let adjustedIndex = j;
+                let currentCellIndex = 0;
+                
+                for (let k = 0; k <= j && currentCellIndex < rowspanCells.length; k++) {
+                    if (k === j) {
+                        if (rowspanCells[currentCellIndex] && rowspanCells[currentCellIndex].hasAttribute('rowspan')) {
+                            // This cell spans down to current row
+                            cellText = rowspanCells[currentCellIndex].textContent.toLowerCase();
+                        }
+                        break;
+                    }
+                    
+                    // Move to next cell if current one doesn't have rowspan
+                    if (!rowspanCells[currentCellIndex] || !rowspanCells[currentCellIndex].hasAttribute('rowspan')) {
+                        currentCellIndex++;
+                    }
+                }
+            }
+            
+            if (cellText && !cellText.includes(filters[j])) {
+                return false;
+            }
+        }
+    }
+    
+    return true;
+}
+
+// New function for comprehensive table layout refresh
+function refreshTableLayout() {
+    const headerTable = document.querySelector('.diff-table-header');
+    const bodyTable = document.querySelector('.diff-table-body');
+    const headerContainer = document.querySelector('.table-header-fixed');
+    const bodyContainer = document.querySelector('.table-body-scrollable');
+    
+    if (!headerTable || !bodyTable) return;
+    
+    // Step 1: Reset table layout completely
+    headerTable.style.tableLayout = 'auto';
+    bodyTable.style.tableLayout = 'auto';
+    
+    // Step 2: Force a reflow
+    headerTable.offsetHeight;
+    bodyTable.offsetHeight;
+    
+    // Step 3: Apply fixed layout and sync column widths
+    headerTable.style.tableLayout = 'fixed';
+    bodyTable.style.tableLayout = 'fixed';
+    
+    // Step 4: Apply our synchronized column widths
     setTimeout(() => {
         syncColumnWidths();
         forceTableWidthSync();
+        
+        // Step 5: Ensure containers are properly sized
+        if (headerContainer && bodyContainer) {
+            headerContainer.scrollLeft = bodyContainer.scrollLeft;
+        }
     }, 10);
 }
 
@@ -2069,95 +2159,57 @@ function syncColumnWidths() {
     if (!headerTable || !bodyTable) return;
     
     const headerCells = headerTable.querySelectorAll('th');
-    const bodyRows = bodyTable.querySelectorAll('tbody tr:not([style*="display: none"])');
+    const allBodyRows = bodyTable.querySelectorAll('tbody tr'); // Get ALL rows, not just visible ones
     
-    if (!headerCells.length || !bodyRows.length) return;
+    if (!headerCells.length) return;
     
-    // Force minimum width - first column 240px, others 150px
-    headerCells.forEach((cell, index) => {
-        if (index === 0) {
-            cell.style.minWidth = '240px';
-            cell.style.width = '240px';
+    // Force table layout to fixed for consistent column behavior
+    headerTable.style.tableLayout = 'fixed';
+    bodyTable.style.tableLayout = 'fixed';
+    
+    const numColumns = headerCells.length;
+    
+    // Set fixed widths based on column index - no dynamic calculation needed
+    for (let colIndex = 0; colIndex < numColumns; colIndex++) {
+        let width;
+        
+        if (colIndex === 0) {
+            // First column (Source) - always fixed at 240px
+            width = '240px';
         } else {
-            cell.style.minWidth = '150px';
-            cell.style.width = 'auto';
+            // All other columns - fixed at 180px for consistency
+            width = '180px';
         }
-    });
-    
-    bodyRows.forEach(row => {
-        const cells = row.querySelectorAll('td');
-        cells.forEach((cell, index) => {
-            if (index === 0) {
-                cell.style.minWidth = '240px';
-                cell.style.width = '240px';
-            } else {
-                cell.style.minWidth = '150px';
-                cell.style.width = 'auto';
+        
+        // Set header width
+        const headerCell = headerCells[colIndex];
+        headerCell.style.width = width;
+        headerCell.style.minWidth = width;
+        headerCell.style.maxWidth = width;
+        headerCell.style.boxSizing = 'border-box';
+        
+        // Set body cell widths for ALL rows (including hidden ones)
+        allBodyRows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells[colIndex]) {
+                cells[colIndex].style.width = width;
+                cells[colIndex].style.minWidth = width;
+                cells[colIndex].style.maxWidth = width;
+                cells[colIndex].style.boxSizing = 'border-box';
             }
         });
-    });
+    }
     
-    // Calculate and apply synchronized widths
-    requestAnimationFrame(() => {
-        const columnWidths = [];
-        const numColumns = headerCells.length;
-        
-        for (let colIndex = 0; colIndex < numColumns; colIndex++) {
-            let maxWidth = 180; // Minimum width
-            
-            // Check header width
-            const headerRect = headerCells[colIndex].getBoundingClientRect();
-            maxWidth = Math.max(maxWidth, headerRect.width);
-            
-            // Check body cell widths (sample up to 10 visible rows)
-            const sampleRows = Math.min(bodyRows.length, 10);
-            for (let rowIndex = 0; rowIndex < sampleRows; rowIndex++) {
-                const row = bodyRows[rowIndex];
-                const cells = row.querySelectorAll('td');
-                if (cells[colIndex]) {
-                    const cellRect = cells[colIndex].getBoundingClientRect();
-                    maxWidth = Math.max(maxWidth, cellRect.width);
-                }
-            }
-            
-            columnWidths[colIndex] = Math.ceil(maxWidth);
-        }
-        
-        // Apply synchronized widths with special handling for first column
-        for (let colIndex = 0; colIndex < numColumns; colIndex++) {
-            let width;
-            
-            if (colIndex === 0) {
-                // First column (Source) - fixed width
-                width = '240px';
-            } else {
-                // Other columns - use calculated width with minimum 180px
-                width = Math.max(columnWidths[colIndex], 180) + 'px';
-            }
-            
-            // Set header width
-            headerCells[colIndex].style.width = width;
-            headerCells[colIndex].style.minWidth = width;
-            
-            // Set body cell widths for all rows
-            const columnCells = bodyTable.querySelectorAll(`td:nth-child(${colIndex + 1})`);
-            columnCells.forEach(cell => {
-                cell.style.width = width;
-                cell.style.minWidth = width;
-            });
-        }
-        
-        // Calculate total width with fixed first column
-        const firstColumnWidth = 240;
-        const otherColumnsWidth = columnWidths.slice(1).reduce((sum, width) => sum + Math.max(width, 180), 0);
-        const totalWidth = Math.max(firstColumnWidth + otherColumnsWidth, 800);
-        const tableWidth = totalWidth + 'px';
-        
-        headerTable.style.width = tableWidth;
-        bodyTable.style.width = tableWidth;
-        headerTable.style.minWidth = tableWidth;
-        bodyTable.style.minWidth = tableWidth;
-    });
+    // Calculate total table width and apply it
+    const sourceColumnWidth = 240;
+    const dataColumnWidth = 180;
+    const calculatedTotalWidth = sourceColumnWidth + ((numColumns - 1) * dataColumnWidth);
+    
+    // Set consistent table widths
+    headerTable.style.width = calculatedTotalWidth + 'px';
+    bodyTable.style.width = calculatedTotalWidth + 'px';
+    headerTable.style.minWidth = calculatedTotalWidth + 'px';
+    bodyTable.style.minWidth = calculatedTotalWidth + 'px';
 }
 
 // Function to synchronize table scroll
@@ -2191,76 +2243,56 @@ function forceTableWidthSync() {
     
     if (!headerTable || !bodyTable) return;
     
-    // Force table layout and styling
-    headerTable.style.tableLayout = 'fixed';
-    bodyTable.style.tableLayout = 'fixed';
-    headerTable.style.width = '100%';
-    bodyTable.style.width = '100%';
-    
-    // Get all cells and force minimum width
     const headerCells = headerTable.querySelectorAll('th');
-    const bodyRows = bodyTable.querySelectorAll('tbody tr');
+    const allBodyRows = bodyTable.querySelectorAll('tbody tr');
     
     if (headerCells.length === 0) return;
     
-    // Calculate total available width
-    const container = document.querySelector('.table-container-sync');
-    const containerWidth = container ? container.offsetWidth : 800;
-    const totalColumns = headerCells.length;
+    // Force table layout to fixed
+    headerTable.style.tableLayout = 'fixed';
+    bodyTable.style.tableLayout = 'fixed';
     
-    // Special handling for first column (Source) - fixed width
-    const firstColumnWidth = 240;
-    const remainingWidth = containerWidth - firstColumnWidth;
-    const remainingColumns = totalColumns - 1;
+    const numColumns = headerCells.length;
     
-    // Calculate width for remaining columns (minimum 180px each)
-    const minRemainingColumnWidth = 180;
-    const calculatedRemainingWidth = remainingColumns > 0 ? 
-        Math.max(minRemainingColumnWidth, Math.floor(remainingWidth / remainingColumns)) : 
-        minRemainingColumnWidth;
-    
-    // Apply widths to header cells
-    headerCells.forEach((cell, index) => {
-        if (index === 0) {
-            // First column (Source) - fixed width
-            cell.style.width = firstColumnWidth + 'px';
-            cell.style.minWidth = firstColumnWidth + 'px';
-            cell.style.maxWidth = firstColumnWidth + 'px';
+    // Use EXACTLY the same logic as syncColumnWidths for consistency
+    for (let colIndex = 0; colIndex < numColumns; colIndex++) {
+        let width;
+        
+        if (colIndex === 0) {
+            // First column (Source) - always fixed at 240px
+            width = '240px';
         } else {
-            // Other columns
-            const columnWidth = calculatedRemainingWidth + 'px';
-            cell.style.width = columnWidth;
-            cell.style.minWidth = columnWidth;
-            cell.style.maxWidth = 'none';
+            // All other columns - fixed at 180px for consistency
+            width = '180px';
         }
-        cell.style.boxSizing = 'border-box';
-    });
-    
-    // Apply widths to body cells
-    bodyRows.forEach(row => {
-        const cells = row.querySelectorAll('td');
-        cells.forEach((cell, index) => {
-            if (index < totalColumns) {
-                if (index === 0) {
-                    // First column (Source) - fixed width
-                    cell.style.width = firstColumnWidth + 'px';
-                    cell.style.minWidth = firstColumnWidth + 'px';
-                    cell.style.maxWidth = firstColumnWidth + 'px';
-                } else {
-                    // Other columns
-                    const columnWidth = calculatedRemainingWidth + 'px';
-                    cell.style.width = columnWidth;
-                    cell.style.minWidth = columnWidth;
-                    cell.style.maxWidth = 'none';
-                }
-                cell.style.boxSizing = 'border-box';
+        
+        // Apply to header cells
+        const headerCell = headerCells[colIndex];
+        headerCell.style.width = width;
+        headerCell.style.minWidth = width;
+        headerCell.style.maxWidth = width;
+        headerCell.style.boxSizing = 'border-box';
+        
+        // Apply to ALL body cells (including hidden rows)
+        allBodyRows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells[colIndex]) {
+                cells[colIndex].style.width = width;
+                cells[colIndex].style.minWidth = width;
+                cells[colIndex].style.maxWidth = width;
+                cells[colIndex].style.boxSizing = 'border-box';
             }
         });
-    });
+    }
     
-    // Set minimum table width to ensure horizontal scrolling when needed
-    const totalTableWidth = firstColumnWidth + (calculatedRemainingWidth * remainingColumns);
-    const minTableWidth = Math.max(totalTableWidth, containerWidth) + 'px';
-    headerTable.style.minWidth = minTableWidth;
-    bodyTable.style.minWidth = minTableWidth;
+    // Calculate and set total table width
+    const sourceColumnWidth = 240;
+    const dataColumnWidth = 180;
+    const calculatedTotalWidth = sourceColumnWidth + ((numColumns - 1) * dataColumnWidth);
+    
+    // Set consistent table widths
+    headerTable.style.width = calculatedTotalWidth + 'px';
+    bodyTable.style.width = calculatedTotalWidth + 'px';
+    headerTable.style.minWidth = calculatedTotalWidth + 'px';
+    bodyTable.style.minWidth = calculatedTotalWidth + 'px';
 }
