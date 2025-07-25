@@ -2,7 +2,7 @@ User-agent: *
 Allow: /
 
 # Sitemap location
-Sitemap: https://maxpilot.com/sitemap.xml
+Sitemap: https://makspilot.com/sitemap.xml
 
 # Allow indexing of main pages
 Allow: /index.html
