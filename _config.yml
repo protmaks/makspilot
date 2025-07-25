@@ -1,17 +1,32 @@
+# Site settings
+title: MaksPilot
+description: Compare Excel and CSV files effortlessly
+url: "https://makspilot.com"
+baseurl: ""
+
+# Build settings
 plugins:
   - jekyll-redirect-from
+  - jekyll-seo-tag
 
 permalink: pretty
 
-# Remove .html extension and redirect index.html
+# Clean URLs without .html extension
 defaults:
   - scope:
       path: ""
       type: "pages"
     values:
       layout: null
-      
-# Redirect index.html to clean URLs
-redirect_from:
-  - /index.html
-  - /*/index.html
+
+# Exclude files from processing
+exclude:
+  - README.md
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - .sass-cache
+  - .jekyll-cache
+  - gemfiles
+  - CNAME
