@@ -1,13 +1,22 @@
 # Redirect .html to clean URLs
 RewriteEngine On
 
+# Redirect index.html to root directory
+RewriteCond %{THE_REQUEST} /([^/]+/)?index\.html [NC]
+RewriteRule ^(.*?)index\.html$ /%1? [R=301,L]
+
+# Redirect /index.html to root
+RewriteCond %{THE_REQUEST} \s/+index\.html [NC]
+RewriteRule ^index\.html$ /? [R=301,L]
+
 # Remove .html extension from URLs
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^([^\.]+)$ $1.html [NC,L]
 
-# Redirect .html URLs to clean URLs
+# Redirect .html URLs to clean URLs (but not index.html - handled above)
 RewriteCond %{THE_REQUEST} /([^.]+)\.html [NC]
+RewriteCond %{REQUEST_URI} !index\.html$ [NC]
 RewriteRule ^ /%1? [NC,L,R=301]
 
 # Handle trailing slash

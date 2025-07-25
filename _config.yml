@@ -3,9 +3,15 @@ plugins:
 
 permalink: pretty
 
+# Remove .html extension and redirect index.html
 defaults:
   - scope:
       path: ""
       type: "pages"
     values:
       layout: null
+      
+# Redirect index.html to clean URLs
+redirect_from:
+  - /index.html
+  - /*/index.html
