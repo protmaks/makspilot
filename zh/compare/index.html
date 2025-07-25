@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-placeholder-text="在您的计算机上选择文件并点击比较">
+<head>
+    <script src="../../redirect.js"></script>    <script async src="https://www.googletagmanager.com/gtag/js?id=G-C19L2VS3EH"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'G-C19L2VS3EH');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="轻松比较Excel和CSV文件之间的数据。免费在线数据比较工具。上传您的文件，立即识别差异，并导出详细报告。">
+    <meta name="keywords" content="Excel比较, CSV比较, 文件比较, 在线工具, Excel差异, CSV差异, XLS比较, XLSX比较, 免费工具, 安全比较">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="MaxPilot">
+    <meta property="og:title" content="比较Excel和CSV文件之间的数据 | 免费在线工具 - MaksPilot">
+    <meta property="og:description" content="轻松比较Excel和CSV文件之间的数据。免费在线数据比较工具。上传您的文件，立即识别差异，并导出详细报告。">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://maxpilot.github.io/compare/la../compare/">
+    <meta property="og:image" content="https://maxpilot.github.io/compare/img/main.png">
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml">
+    <link rel="canonical" href="https://maxpilot.github.io/compare/la../compare/">
+    <link rel="alternate" hreflang="en" href="https://maxpilot.github.io/compare/compare/">
+    <link rel="alternate" hreflang="ru" href="https://maxpilot.github.io/compare/la../compare/">
+    <link rel="alternate" hreflang="pl" href="https://maxpilot.github.io/compare/la../compare/">
+    <link rel="alternate" hreflang="zh-CN" href="https://maxpilot.github.io/compare/la../compare/">
+    <title>MaksPilot - Excel和CSV文件比较</title>
+    <link rel="icon" type="image/x-icon" href="../favicon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+    <!-- Mobile Warning -->
+    <div class="mobile-warning" id="mobileWarning">
+        <div class="mobile-warning-content">
+            <span class="mobile-warning-icon">💻</span>
+            <h2 class="mobile-warning-title">需要桌面设备</h2>
+            <p class="mobile-warning-text">
+                文件比较功能针对桌面计算机进行了优化。
+                请使用具有较大屏幕的PC或笔记本电脑以获得最佳体验。
+            </p>
+            <a href="index.html" class="mobile-warning-button">返回首页</a>
+        </div>
+    </div>
+
+    <!-- Header will be loaded here -->
+    <header>
+    <div class="header-container">
+        <a href="index.html" class="logo">
+            <img src="../img/maxpilot.png" alt="MaxPilot Logo">
+        </a>
+        <nav>
+            <ul class="nav-menu">
+                <li><a href="index.html#block-1">问题</a></li>
+                <li><a href="index.html#block-4">安全</a></li>
+                <li><a href="compare/" class="nav-cta">开始比较</a></li>
+                <li><a href="https://medium.com/@protmaks/comparing-excel-and-csv-without-loading-online-tool-for-business-5ab689ff1850" target="_blank">使用指南</a></li>
+                <li><a href="https://medium.com/@protmaks" target="_blank">我的博客</a></li>
+                <li><a href="https://www.linkedin.c../protmaks/" class="social-link" title="linkedin" target="_blank">
+                    <img src="../img/linkedin.png" alt="linkedin">
+                </a></li>
+                <li class="lang-switcher">
+                    <select class="lang-select" onchange="window.location.href=this.value">
+                        <option value="../compare/">English</option>
+                        <option value="/ru/compare/">Русский</option>
+                        <option value="/pl/compare/">Polski</option>
+                        <option value="compare.html" selected>中文</option>
+                        <option value="/es/compare/">Español</option>
+                        <option value="/ar/compare/">العربية</option>
+                        <option value="/pt/compare/">Português</option>
+                        <option value="/ja/compare/">日本語</option>
+                        <option value="/de/compare/">Deutsch</option>
+                    </select>
+                </li>
+            </ul>
+            <div class="mobile-menu-toggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </nav>
+    </div>
+</header>
+    
+    <div class="main-content" style="padding-top: 80px;"><!-- Account for fixed header -->
+        <h1>比较Excel和CSV文件之间的数据 - v 4.0 Beta</h1>
+        <p style="text-align: center; font-size: 14px; color: #666;">
+            📝 阅读我的指南并在评论中留下您的反馈或问题
+            <a href="https://medium.com/@protmaks/comparing-excel-and-csv-without-loading-online-tool-for-business-5ab689ff1850" target="_blank" style="color: #ffb17a; text-decoration: none;">在Medium上</a>
+        </p>
+        <div id="summary"></div>
+        <div class="comparison-container">
+            <div class="table-container">
+                <label for="file1" class="file-label">选择文件1：</label>
+                <input type="file" id="file1" accept=".xlsx,.xls,.csv"><br>
+                <div class="sheet-selector" id="sheetSelector1" style="display: none;">
+                    <label for="sheetSelect1">选择工作表：</label>
+                    <select id="sheetSelect1"></select>
+                </div>
+                <div id="table1"></div>
+            </div>
+            <div class="table-container">
+                <label for="file2" class="file-label">选择文件2：</label>
+                <input type="file" id="file2" accept=".xlsx,.xls,.csv"><br>
+                <div class="sheet-selector" id="sheetSelector2" style="display: none;">
+                    <label for="sheetSelect2">选择工作表：</label>
+                    <select id="sheetSelect2"></select>
+                </div>
+                <div id="table2"></div>
+            </div>
+            <div class="controls-container">
+                <div class="exclude-compare-row">
+                    <div class="compare-button-container">
+                        <button class="compare-btn" onclick="compareTables()">比较</button>
+                    </div>
+                    <div class="exclude-columns-container">
+                        <label for="excludeColumns" class="exclude-label">排除列：</label>
+                        <input type="text" id="excludeColumns" placeholder="例如：ID, 时间戳, 创建日期" style="width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+                    </div>
+                </div>
+                <div class="filter-controls" style="display: none;">
+                    <div class="filter-options">
+                        <label><input type="checkbox" id="hideSameRows"> 隐藏相同行</label>
+                        <label><input type="checkbox" id="hideDiffColumns"> 隐藏差异行</label>
+                        <label><input type="checkbox" id="hideNewRows1"> 隐藏仅在文件1中的行</label>
+                        <label><input type="checkbox" id="hideNewRows2"> 隐藏仅在文件2中的行</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="result"></div>
+    <div id="diffTable">
+        <div class="table-header-fixed">
+            <table class="diff-table-header">
+                <thead></thead>
+                <tbody class="filter-row"></tbody>
+            </table>
+        </div>
+        <div class="table-body-scrollable">
+            <table class="diff-table-body">
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Load the comparison functions -->
+    <script src="../functions.js"></script>
+    
+    <!-- Load the shared header -->
+    <script src="../script.js"></script>
+    
+    <!-- Mobile device detection and warning -->
+    <script>
+        // Function to detect mobile devices
+        function isMobileDevice() {
+            const userAgent = navigator.userAgent;
+            const mobileKeywords = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+            const screenWidth = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+            
+            return mobileKeywords.test(userAgent) || screenWidth < 768;
+        }
+        
+        // Show/hide mobile warning based on device type
+        function checkDeviceType() {
+            const mobileWarning = document.getElementById('mobileWarning');
+            const mainContent = document.querySelector('.main-content');
+            const result = document.getElementById('result');
+            const diffTable = document.getElementById('diffTable');
+            const header = document.querySelector('header');
+            
+            if (isMobileDevice()) {
+                if (mobileWarning) mobileWarning.style.display = 'flex';
+                if (mainContent) mainContent.style.display = 'none';
+                if (result) result.style.display = 'none';
+                if (diffTable) diffTable.style.display = 'none';
+                // Ensure header stays visible on mobile
+                if (header) {
+                    header.style.display = 'block';
+                    header.style.position = 'fixed';
+                    header.style.top = '0';
+                    header.style.zIndex = '10001';
+                }
+            } else {
+                if (mobileWarning) mobileWarning.style.display = 'none';
+                if (mainContent) mainContent.style.display = 'block';
+                if (result) result.style.display = 'block';
+                if (diffTable) diffTable.style.display = 'block';
+                // Reset header styles for desktop
+                if (header) {
+                    header.style.display = 'block';
+                    header.style.position = 'fixed';
+                    header.style.top = '0';
+                    header.style.zIndex = '1000';
+                }
+            }
+        }
+        
+        // Check device type on page load
+        document.addEventListener('DOMContentLoaded', checkDeviceType);
+        
+        // Check device type on window resize (in case user rotates device or resizes window)
+        window.addEventListener('resize', checkDeviceType);
+    </script>
+</body>
+</html>

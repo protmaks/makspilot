@@ -9,20 +9,19 @@
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://maxpilot.com/" />
-    <xhtml:link rel="alternate" hreflang="ru" href="https://maxpilot.com/lang/ru/" />
-    <xhtml:link rel="alternate" hreflang="pl" href="https://maxpilot.com/lang/pl/" />
-    <xhtml:link rel="alternate" hreflang="zh" href="https://maxpilot.com/lang/zh/" />
-    <xhtml:link rel="alternate" hreflang="es" href="https://maxpilot.com/lang/es/" />
-    <xhtml:link rel="alternate" hreflang="ar" href="https://maxpilot.com/lang/ar/" />
-    <xhtml:link rel="alternate" hreflang="pt" href="https://maxpilot.com/lang/pt/" />
-    <xhtml:link rel="alternate" hreflang="ja" href="https://maxpilot.com/lang/ja/" />
-    <xhtml:link rel="alternate" hreflang="de" href="https://maxpilot.com/lang/de/" />
-    <xhtml:link rel="alternate" hreflang="fr" href="https://maxpilot.com/lang/fr/" />
+    <xhtml:link rel="alternate" hreflang="ru" href="https://maxpilot.com/ru/" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://maxpilot.com/pl/" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://maxpilot.com/zh/" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://maxpilot.com/es/" />
+    <xhtml:link rel="alternate" hreflang="ar" href="https://maxpilot.com/ar/" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://maxpilot.com/pt/" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://maxpilot.com/ja/" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://maxpilot.com/de/" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://maxpilot.com/" />
   </url>
   
   <url>
-    <loc>https://maxpilot.com/compare.html</loc>
+    <loc>https://maxpilot.com/compare/</loc>
     <lastmod>2024-12-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
@@ -30,14 +29,14 @@
 
   <!-- Russian Pages -->
   <url>
-    <loc>https://maxpilot.com/lang/ru/</loc>
+    <loc>https://maxpilot.com/ru/</loc>
     <lastmod>2024-12-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   
   <url>
-    <loc>https://maxpilot.com/lang/ru/compare.html</loc>
+    <loc>https://maxpilot.com/ru/compare/</loc>
     <lastmod>2024-12-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -45,14 +44,14 @@
 
   <!-- Polish Pages -->
   <url>
-    <loc>https://maxpilot.com/lang/pl/</loc>
+    <loc>https://maxpilot.com/pl/</loc>
     <lastmod>2024-12-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   
   <url>
-    <loc>https://maxpilot.com/lang/pl/compare.html</loc>
+    <loc>https://maxpilot.com/pl/compare/</loc>
     <lastmod>2024-12-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -60,14 +59,14 @@
 
   <!-- Chinese Pages -->
   <url>
-    <loc>https://maxpilot.com/lang/zh/</loc>
+    <loc>https://maxpilot.com/zh/</loc>
     <lastmod>2024-12-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   
   <url>
-    <loc>https://maxpilot.com/lang/zh/compare.html</loc>
+    <loc>https://maxpilot.com/zh/compare/</loc>
     <lastmod>2024-12-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -75,14 +74,14 @@
 
   <!-- Spanish Pages -->
   <url>
-    <loc>https://maxpilot.com/lang/es/</loc>
+    <loc>https://maxpilot.com/es/</loc>
     <lastmod>2024-12-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   
   <url>
-    <loc>https://maxpilot.com/lang/es/compare.html</loc>
+    <loc>https://maxpilot.com/es/compare/</loc>
     <lastmod>2024-12-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -90,14 +89,14 @@
 
   <!-- Arabic Pages -->
   <url>
-    <loc>https://maxpilot.com/lang/ar/</loc>
+    <loc>https://maxpilot.com/ar/</loc>
     <lastmod>2024-12-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   
   <url>
-    <loc>https://maxpilot.com/lang/ar/compare.html</loc>
+    <loc>https://maxpilot.com/ar/compare/</loc>
     <lastmod>2024-12-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -105,14 +104,14 @@
 
   <!-- Portuguese Pages -->
   <url>
-    <loc>https://maxpilot.com/lang/pt/</loc>
+    <loc>https://maxpilot.com/pt/</loc>
     <lastmod>2024-12-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   
   <url>
-    <loc>https://maxpilot.com/lang/pt/compare.html</loc>
+    <loc>https://maxpilot.com/pt/compare/</loc>
     <lastmod>2024-12-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -120,14 +119,14 @@
 
   <!-- Japanese Pages -->
   <url>
-    <loc>https://maxpilot.com/lang/ja/</loc>
+    <loc>https://maxpilot.com/ja/</loc>
     <lastmod>2024-12-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   
   <url>
-    <loc>https://maxpilot.com/lang/ja/compare.html</loc>
+    <loc>https://maxpilot.com/ja/compare/</loc>
     <lastmod>2024-12-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -135,14 +134,14 @@
 
   <!-- German Pages -->
   <url>
-    <loc>https://maxpilot.com/lang/de/</loc>
+    <loc>https://maxpilot.com/de/</loc>
     <lastmod>2024-12-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   
   <url>
-    <loc>https://maxpilot.com/lang/de/compare.html</loc>
+    <loc>https://maxpilot.com/de/compare/</loc>
     <lastmod>2024-12-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -150,14 +149,12 @@
 
   <!-- French Pages -->
   <url>
-    <loc>https://maxpilot.com/lang/fr/</loc>
     <lastmod>2024-12-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   
   <url>
-    <loc>https://maxpilot.com/lang/fr/compare.html</loc>
     <lastmod>2024-12-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
