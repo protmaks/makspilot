@@ -2,12 +2,22 @@ User-agent: *
 Allow: /
 
 # Sitemap location
-Sitemap: https://makspilot.com/compare/sitemap.xml
+Sitemap: https://maxpilot.com/sitemap.xml
 
 # Allow indexing of main pages
 Allow: /index.html
 Allow: /compare.html
-Allow: /demo.html
+
+# Allow all language directories
+Allow: /lang/ru/
+Allow: /lang/pl/
+Allow: /lang/zh/
+Allow: /lang/es/
+Allow: /lang/ar/
+Allow: /lang/pt/
+Allow: /lang/ja/
+Allow: /lang/de/
+Allow: /lang/fr/
 
 # Allow CSS and JS files for proper rendering
 Allow: /style.css
@@ -16,11 +26,14 @@ Allow: /functions.js
 
 # Allow images for social media previews
 Allow: /img/
+Allow: /favicon.ico
 
 # Block unnecessary files
 Disallow: /examples/
 Disallow: /*.md$
-Disallow: /MULTI_SHEETS_README.md
+Disallow: /*.xlsx
+Disallow: /*.csv
+Disallow: /*.xls
 
 # Crawl-delay to be respectful
 Crawl-delay: 1

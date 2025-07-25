@@ -1,6 +1,0 @@
-ID,Name,Email,Department,Salary,Manager,Location
-1,John Doe,john@example.com,IT,75000,Mike Wilson,New York
-2,Jane Smith,jane@example.com,HR,67000,Sarah Connor,Boston
-3,Bob Johnson,bob@example.com,IT,72000,Mike Wilson,New York
-4,Alice Brown,alice@example.com,Finance,82000,David Lee,Chicago
-5,Charlie Wilson,charlie@example.com,Marketing,60000,Lisa Turner,Seattle

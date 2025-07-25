@@ -1650,3 +1650,67 @@ button.compare-btn:hover {
     z-index: 2;
 }
 
+/* Language Switcher Styles */
+.lang-switcher {
+    position: relative;
+    display: inline-block;
+}
+
+.lang-select {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 8px 12px 8px 35px;
+    color: #63cfbf;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: 
+        url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%2363cfbf" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" x2="22" y1="12" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>'),
+        url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"><path fill="%2363cfbf" d="M2 0L0 2h4zm0 5L0 3h4z"/></svg>');
+    background-repeat: no-repeat, no-repeat;
+    background-position: left 10px center, right 10px center;
+    background-size: 16px, 10px;
+    padding-right: 35px;
+    min-width: 100px;
+    box-shadow: 0 2px 6px #63cfbf;
+
+}
+
+.lang-select:hover {
+    box-shadow: 0 0 0 2px #FFB17A;
+}
+
+.lang-select:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px #FFB17A;
+}
+
+.lang-select option {
+    background: #1a1a1a;
+    color: #fff;
+    padding: 8px;
+}
+
+@media (max-width: 768px) {
+    .lang-select {
+        font-size: 16px;
+        padding: 10px 14px 10px 38px;
+        padding-right: 38px;
+        background-size: 18px, 12px;
+    }
+}
+
+/* File input labels */
+.file-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #333;
+    font-size: 14px;
+}
+
