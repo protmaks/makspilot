@@ -5,7 +5,7 @@
   <!-- English Pages (with hreflang links) -->
   <url>
     <loc>https://maxpilot.com/</loc>
-    <lastmod>2024-12-20</lastmod>
+    <lastmod>2025-07-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://maxpilot.com/" />
@@ -22,7 +22,7 @@
   
   <url>
     <loc>https://maxpilot.com/compare/</loc>
-    <lastmod>2024-12-20</lastmod>
+    <lastmod>2025-07-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
@@ -30,14 +30,14 @@
   <!-- Russian Pages -->
   <url>
     <loc>https://maxpilot.com/ru/</loc>
-    <lastmod>2024-12-20</lastmod>
+    <lastmod>2025-07-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   
   <url>
     <loc>https://maxpilot.com/ru/compare/</loc>
-    <lastmod>2024-12-20</lastmod>
+    <lastmod>2025-07-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -45,14 +45,14 @@
   <!-- Polish Pages -->
   <url>
     <loc>https://maxpilot.com/pl/</loc>
-    <lastmod>2024-12-20</lastmod>
+    <lastmod>2025-07-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   
   <url>
     <loc>https://maxpilot.com/pl/compare/</loc>
-    <lastmod>2024-12-20</lastmod>
+    <lastmod>2025-07-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -60,14 +60,14 @@
   <!-- Chinese Pages -->
   <url>
     <loc>https://maxpilot.com/zh/</loc>
-    <lastmod>2024-12-20</lastmod>
+    <lastmod>2025-07-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   
   <url>
     <loc>https://maxpilot.com/zh/compare/</loc>
-    <lastmod>2024-12-20</lastmod>
+    <lastmod>2025-07-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -75,14 +75,14 @@
   <!-- Spanish Pages -->
   <url>
     <loc>https://maxpilot.com/es/</loc>
-    <lastmod>2024-12-20</lastmod>
+    <lastmod>2025-07-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   
   <url>
     <loc>https://maxpilot.com/es/compare/</loc>
-    <lastmod>2024-12-20</lastmod>
+    <lastmod>2025-07-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -90,14 +90,14 @@
   <!-- Arabic Pages -->
   <url>
     <loc>https://maxpilot.com/ar/</loc>
-    <lastmod>2024-12-20</lastmod>
+    <lastmod>2025-07-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   
   <url>
     <loc>https://maxpilot.com/ar/compare/</loc>
-    <lastmod>2024-12-20</lastmod>
+    <lastmod>2025-07-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -105,14 +105,14 @@
   <!-- Portuguese Pages -->
   <url>
     <loc>https://maxpilot.com/pt/</loc>
-    <lastmod>2024-12-20</lastmod>
+    <lastmod>2025-07-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   
   <url>
     <loc>https://maxpilot.com/pt/compare/</loc>
-    <lastmod>2024-12-20</lastmod>
+    <lastmod>2025-07-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -120,14 +120,14 @@
   <!-- Japanese Pages -->
   <url>
     <loc>https://maxpilot.com/ja/</loc>
-    <lastmod>2024-12-20</lastmod>
+    <lastmod>2025-07-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   
   <url>
     <loc>https://maxpilot.com/ja/compare/</loc>
-    <lastmod>2024-12-20</lastmod>
+    <lastmod>2025-07-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -135,27 +135,27 @@
   <!-- German Pages -->
   <url>
     <loc>https://maxpilot.com/de/</loc>
-    <lastmod>2024-12-20</lastmod>
+    <lastmod>2025-07-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   
   <url>
     <loc>https://maxpilot.com/de/compare/</loc>
-    <lastmod>2024-12-20</lastmod>
+    <lastmod>2025-07-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
 
   <!-- French Pages -->
   <url>
-    <lastmod>2024-12-20</lastmod>
+    <lastmod>2025-07-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   
   <url>
-    <lastmod>2024-12-20</lastmod>
+    <lastmod>2025-07-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
