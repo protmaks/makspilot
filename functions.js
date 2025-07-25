@@ -1220,10 +1220,14 @@ function rowToKey(row) {
 function showPlaceholderMessage() {
     document.getElementById('result').innerHTML = '';
     document.getElementById('summary').innerHTML = '';
+    
+    // Get the translated text from HTML data attributes or use default English
+    const placeholderText = document.documentElement.getAttribute('data-placeholder-text') || 'Choose files on your computer and click Compare';
+    
     document.getElementById('diffTable').innerHTML = `
         <div class="placeholder-message">
             <div class="placeholder-icon">📊</div>
-            <div class="placeholder-text">Choose files on your computer and click Compare</div>
+            <div class="placeholder-text">${placeholderText}</div>
         </div>
     `;
     
