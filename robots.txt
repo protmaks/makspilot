@@ -9,15 +9,14 @@ Allow: /index.html
 Allow: /compare.html
 
 # Allow all language directories
-Allow: /lang/ru/
-Allow: /lang/pl/
-Allow: /lang/zh/
-Allow: /lang/es/
-Allow: /lang/ar/
-Allow: /lang/pt/
-Allow: /lang/ja/
-Allow: /lang/de/
-Allow: /lang/fr/
+Allow: /ru/
+Allow: /pl/
+Allow: /zh/
+Allow: /es/
+Allow: /ar/
+Allow: /pt/
+Allow: /ja/
+Allow: /de/
 
 # Allow CSS and JS files for proper rendering
 Allow: /style.css

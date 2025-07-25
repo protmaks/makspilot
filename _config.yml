@@ -1,0 +1,11 @@
+plugins:
+  - jekyll-redirect-from
+
+permalink: pretty
+
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: null
