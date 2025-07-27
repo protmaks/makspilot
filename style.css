@@ -1714,3 +1714,43 @@ button.compare-btn:hover {
     font-size: 14px;
 }
 
+/* How Use Page Classes */
+.how-use-title {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #FFB17A;
+}
+
+.instruction-container {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 30px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 40px;
+}
+
+.instruction-step {
+    font-size: 1.1rem;
+    line-height: 1.7;
+    text-align: center;
+    margin-bottom: 20px;
+    font-style: italic;
+    color: #F9FAFB;
+}
+
+.instruction-step-pp {
+    font-size: 1.1rem;
+    line-height: 1.7;
+    text-align: justify;
+    margin-bottom: 20px;
+    font-style: italic;
+    color: #F9FAFB;
+}
+
+.footer-contact {
+    font-size: 12px;
+    color: #666;
+    margin: 10px 0 5px 0;
+    text-align: center;
+}
+
