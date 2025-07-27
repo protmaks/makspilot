@@ -27,13 +27,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Header scroll effect
     const header = document.querySelector('header');
-    window.addEventListener('scroll', function() {
-        if (window.scrollY > 50) {
-            header.style.backgroundColor = 'rgba(255, 255, 255, 0.98)';
-        } else {
-            header.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
-        }
-    });
+    if (header) {
+        window.addEventListener('scroll', function() {
+            if (window.scrollY > 50) {
+                header.style.backgroundColor = 'rgba(255, 255, 255, 0.98)';
+            } else {
+                header.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+            }
+        });
+    }
 
     // Handle all anchor links with smooth scrolling
     const links = document.querySelectorAll('a[href^="#"]');

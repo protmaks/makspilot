@@ -53,16 +53,16 @@
                         <img src="../img/linkedin.png" alt="LinkedIn">
                     </a></li>
                     <li class="lang-switcher">
-                        <select class="lang-select" onchange="window.location.href=this.value">
-                            <option value="/how_use/" selected>English</option>
-                            <option value="/ru/how_use/">Русский</option>
-                            <option value="/pl/how_use/">Polski</option>
-                            <option value="/zh/how_use/">中文</option>
-                            <option value="/es/how_use/">Español</option>
-                            <option value="/ar/how_use/">العربية</option>
-                            <option value="/pt/how_use/">Português</option>
-                            <option value="/ja/how_use/">日本語</option>
-                            <option value="/de/how_use/">Deutsch</option>
+                        <select class="lang-select" onchange="switchLanguage(this.value)">
+                            <option value="/how_use/" selected>EN</option>
+                            <option value="/ru/how_use/">RU</option>
+                            <option value="/pl/how_use/">PL</option>
+                            <option value="/zh/how_use/">ZH</option>
+                            <option value="/es/how_use/">ES</option>
+                            <option value="/ar/how_use/">AR</option>
+                            <option value="/pt/how_use/">PT</option>
+                            <option value="/ja/how_use/">JA</option>
+                            <option value="/de/how_use/">DE</option>
                         </select>
                     </li>
                 </ul>
@@ -74,58 +74,53 @@
             </nav>
         </div>
     </header>
-    
+    <main>
+        <section class="compact-hero">
+            <div class="container">
+                <div class="compact-hero-content">
+                    <h1 class="how-use-title">How to Compare Excel Files Easily</h1>
+                    
+                    <div class="instruction-container">
+                        <p class="instruction-step-pp">
+                            Our tool allows you to quickly and easily compare two Excel or CSV files. Here's a step-by-step guide on how to use it:
+                        </p>
+                        
+                        <h3 style="color: #FFB17A; margin: 25px 0 15px 0;">Step 1: Select Your Files</h3>
+                        <p class="instruction-step-pp">
+                            Click "Choose file" for each file you want to compare. You can upload .xlsx, .xls, or .csv files. Make sure both files have similar structure for best results.
+                        </p>
+                        
+                        <h3 style="color: #FFB17A; margin: 25px 0 15px 0;">Step 2: Configure Options (Optional)</h3>
+                        <p class="instruction-step-pp">
+                            If your files have multiple sheets, select the specific sheet you want to compare using the dropdown menu. You can also exclude specific columns from comparison by entering column names separated by commas.
+                        </p>
+                        
+                        <h3 style="color: #FFB17A; margin: 25px 0 15px 0;">Step 3: Run the Comparison</h3>
+                        <p class="instruction-step-pp">
+                            Click the "Compare Files" button to start the analysis. Processing is done entirely in your browser, keeping your data secure and private.
+                        </p>
+                        
+                        <h3 style="color: #FFB17A; margin: 25px 0 15px 0;">Step 4: Review Results</h3>
+                        <p class="instruction-step-pp">
+                            Results are displayed in a color-coded table where you can easily spot differences between files. Highlighted cells show where values differ between the two files.
+                        </p>
+                        
+                        <h3 style="color: #FFB17A; margin: 25px 0 15px 0;">Tips for Better Results:</h3>
+                        <p class="instruction-step-pp">
+                            • Ensure your files have similar headers<br>
+                            • Clean your data before comparison by removing extra spaces<br>
+                            • For large files, consider breaking them into smaller sections<br>
+                            • Use the column exclusion feature to ignore irrelevant fields like timestamps or unique IDs
+                        </p>
+                    </div>
 
-    <!-- Problems Solved Section -->
-    <section class="compact-section content-section">
-        <div class="container">
-            <h1 class="how-use-title">How to compare two Excel files or Excel and CSV</h1>
-            
-            <div class="instruction-container">
-                <p class="instruction-step-pp">
-                    1. Open the site MaksPilot in any modern browser on your computer.
-                </p>
-                <p class="instruction-step-pp">
-                    2. Select two files, Excel or CSV; if there are several tabs in Excel, select the one you need. Currently, there is a limit on the number of rows and columns because the browser resources are limited, but if the project is in demand, then it is possible to increase the file sizes for comparison.
-                </p>
-                <p class="instruction-step-pp">
-                    3. Several lines from the file are displayed under the file to make sure you have selected the required one.
-                </p>
-                <p class="instruction-step-pp">
-                    4. Click to Compare.
-                </p>
-                <p class="instruction-step-pp">
-                    5. At the top is the final pivot table, which displays the number of lines in each file, the number of lines that match and do not match, as well as the columns that are in one file but not in the other.
-                </p>
-                <p class="instruction-step-pp">
-                    6. Below is a field where you can enter a list of columns and exclude them from the comparison.
-                </p>
-                <p class="instruction-step-pp">
-                    7. Below we see a table with detailed results. The lines are grouped, and the differences are highlighted, which allows you to quickly find discrepancies.
-                </p>
-                <p class="instruction-step-pp">
-                    The orange lines are those that are only in one table. The red ones are those that have differences; they are grouped, and the green ones show what is similar. The white ones are those that are present in two tables.
-                </p>
-                <p class="instruction-step-pp">
-                    8. There is a filter under the heading of each column.
-                </p>
-                <p class="instruction-step-pp">
-                    9. There is also a filter for lines that can be hidden from the bottom table:
-                </p>
+                    <div style="text-align: center; margin: 40px 0;">
+                        <a href="../compare/" class="cta-button">Start Comparison</a>
+                    </div>
+                </div>
             </div>
-        </div>
-    </section>
-
-
-
-    <!-- CTA Section -->
-    <section class="compact-cta">
-        <div class="container">
-            <h2>Ready to Compare Your Files?</h2>
-            <p class="subtext">Stop wasting time on manual comparisons. Get accurate results in seconds.</p>
-            <a href="../compare/" class="cta-button">Start Comparing Now</a>
-        </div>
-    </section>
+        </section>
+    </main>
 
     <!-- Footer -->
     <footer class="compact-footer">
