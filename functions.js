@@ -1419,9 +1419,13 @@ function performComparison() {
     const excludedColumns = getExcludedColumns();
     
     // Get filter options
-    const hideDiffRows = document.getElementById('hideDiffColumns').checked; // Hide rows with differences
-    const hideNewRows1 = document.getElementById('hideNewRows1').checked; // Hide rows only in file 1
-    const hideNewRows2 = document.getElementById('hideNewRows2').checked; // Hide rows only in file 2
+    const hideDiffRowsEl = document.getElementById('hideDiffColumns');
+    const hideNewRows1El = document.getElementById('hideNewRows1');
+    const hideNewRows2El = document.getElementById('hideNewRows2');
+    
+    const hideDiffRows = hideDiffRowsEl ? hideDiffRowsEl.checked : false; // Hide rows with differences
+    const hideNewRows1 = hideNewRows1El ? hideNewRows1El.checked : false; // Hide rows only in file 1
+    const hideNewRows2 = hideNewRows2El ? hideNewRows2El.checked : false; // Hide rows only in file 2
     
     // --- Statistics ---
     let header1 = data1[0] || [];
@@ -1593,10 +1597,15 @@ function renderComparisonTable() {
     }
     
     // Get filter states
-    let hideSame = document.getElementById('hideSameRows').checked;
-    const hideDiffRows = document.getElementById('hideDiffColumns').checked;
-    const hideNewRows1 = document.getElementById('hideNewRows1').checked;
-    const hideNewRows2 = document.getElementById('hideNewRows2').checked;
+    const hideSameEl = document.getElementById('hideSameRows');
+    const hideDiffEl = document.getElementById('hideDiffColumns');
+    const hideNewRows1El = document.getElementById('hideNewRows1');
+    const hideNewRows2El = document.getElementById('hideNewRows2');
+    
+    let hideSame = hideSameEl ? hideSameEl.checked : false;
+    const hideDiffRows = hideDiffEl ? hideDiffEl.checked : false;
+    const hideNewRows1 = hideNewRows1El ? hideNewRows1El.checked : false;
+    const hideNewRows2 = hideNewRows2El ? hideNewRows2El.checked : false;
     
     // Table headers with consistent styling
     let headerHtml = '<tr><th title="Source - shows which file the data comes from">Source</th>';
@@ -2120,29 +2129,41 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Add event listeners for filter checkboxes
-    document.getElementById('hideSameRows').addEventListener('change', function() {
-        if (currentPairs && currentPairs.length > 0) {
-            renderComparisonTable();
-        }
-    });
+    const hideSameRowsEl = document.getElementById('hideSameRows');
+    if (hideSameRowsEl) {
+        hideSameRowsEl.addEventListener('change', function() {
+            if (currentPairs && currentPairs.length > 0) {
+                renderComparisonTable();
+            }
+        });
+    }
     
-    document.getElementById('hideDiffColumns').addEventListener('change', function() {
-        if (currentPairs && currentPairs.length > 0) {
-            renderComparisonTable();
-        }
-    });
+    const hideDiffColumnsEl = document.getElementById('hideDiffColumns');
+    if (hideDiffColumnsEl) {
+        hideDiffColumnsEl.addEventListener('change', function() {
+            if (currentPairs && currentPairs.length > 0) {
+                renderComparisonTable();
+            }
+        });
+    }
     
-    document.getElementById('hideNewRows1').addEventListener('change', function() {
-        if (currentPairs && currentPairs.length > 0) {
-            renderComparisonTable();
-        }
-    });
+    const hideNewRows1El = document.getElementById('hideNewRows1');
+    if (hideNewRows1El) {
+        hideNewRows1El.addEventListener('change', function() {
+            if (currentPairs && currentPairs.length > 0) {
+                renderComparisonTable();
+            }
+        });
+    }
     
-    document.getElementById('hideNewRows2').addEventListener('change', function() {
-        if (currentPairs && currentPairs.length > 0) {
-            renderComparisonTable();
-        }
-    });
+    const hideNewRows2El = document.getElementById('hideNewRows2');
+    if (hideNewRows2El) {
+        hideNewRows2El.addEventListener('change', function() {
+            if (currentPairs && currentPairs.length > 0) {
+                renderComparisonTable();
+            }
+        });
+    }
     
     // Initialize table with empty values on page load
     let htmlSummary = `
