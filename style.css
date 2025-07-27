@@ -1337,10 +1337,6 @@ button.compare-btn:hover {
     height: auto;
 }
 
-.compact-section {
-    padding: 40px 0;
-}
-
 .features-grid {
     display: flex;
     flex-direction: column;
@@ -1743,7 +1739,6 @@ button.compare-btn:hover {
     line-height: 1.7;
     text-align: justify;
     margin-bottom: 20px;
-    font-style: italic;
     color: #F9FAFB;
 }
 

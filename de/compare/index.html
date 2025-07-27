@@ -39,7 +39,7 @@
                 <li><a href="../#block-1">Probleme</a></li>
                 <li><a href="../#block-4">Sicherheit</a></li>
                 <li><a href="./" class="nav-cta">Vergleich Starten</a></li>
-                <li><a href="https://medium.com/@protmaks/comparing-excel-and-csv-without-loading-online-tool-for-business-5ab689ff1850" target="_blank">Anleitung</a></li>
+                <li><a href="../how_use/">Anleitung</a></li>
                 <li><a href="https://medium.com/@protmaks" target="_blank">Mein Blog</a></li>
                 <li><a href="https://www.linkedin.c../protmaks/" class="social-link" title="linkedin" target="_blank">
                     <img src="../../img/linkedin.png" alt="linkedin">
@@ -69,10 +69,13 @@
     
     <div class="main-content" style="padding-top: 80px;">
         <h1>Datenvergleich zwischen Excel- und CSV-Dateien - v 4.0 Beta</h1>
+        <p style="text-align: center; font-size: 14px; color: #666;">
+            📝 Lesen Sie meine detaillierte Anleitung 
+            <a href="../how_use/" style="color: #ffb17a; text-decoration: none;">hier</a>
+        </p>
         <div id="summary"></div>
         <div class="comparison-container">
             <div class="table-container">
-                <label for="file1" class="file-label">Datei 1 wählen:</label>
                 <input type="file" id="file1" accept=".xlsx,.xls,.csv"><br>
                 <div class="sheet-selector" id="sheetSelector1" style="display: none;">
                     <label for="sheetSelect1">Blatt auswählen:</label>
@@ -81,7 +84,6 @@
                 <div id="table1"></div>
             </div>
             <div class="table-container">
-                <label for="file2" class="file-label">Datei 2 wählen:</label>
                 <input type="file" id="file2" accept=".xlsx,.xls,.csv"><br>
                 <div class="sheet-selector" id="sheetSelector2" style="display: none;">
                     <label for="sheetSelect2">Blatt auswählen:</label>
@@ -97,6 +99,14 @@
                     <div class="exclude-columns-container">
                         <label for="excludeColumns" class="exclude-label">Spalten ausschließen:</label>
                         <input type="text" id="excludeColumns" placeholder="z.B. ID, Zeitstempel, Erstellungsdatum" style="width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+                    </div>
+                </div>
+                <div class="filter-controls" style="display: none;">
+                    <div class="filter-options">
+                        <label><input type="checkbox" id="hideSameRows"> Gleiche Zeilen ausblenden</label>
+                        <label><input type="checkbox" id="hideDiffColumns"> Unterschiedliche Zeilen ausblenden</label>
+                        <label><input type="checkbox" id="hideNewRows1"> Zeilen nur in Datei 1 ausblenden</label>
+                        <label><input type="checkbox" id="hideNewRows2"> Zeilen nur in Datei 2 ausblenden</label>
                     </div>
                 </div>
             </div>
