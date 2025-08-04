@@ -110,8 +110,8 @@ function processSelectedSheet(fileNum, selectedSheetName) {
         let json = XLSX.utils.sheet_to_json(sheet, {
             header: 1, 
             defval: '',
-            raw: false,
-            dateNF: 'yyyy-mm-dd'
+            raw: true,          // Get raw values to preserve full precision
+            dateNF: 'yyyy-mm-dd hh:mm:ss'  // More complete date format
         });
         
         // Check both file size and column count limits simultaneously
@@ -277,8 +277,7 @@ function convertExcelDate(value, isInDateColumn = false) {
         // and the number is in a reasonable Excel date range
         if (isInDateColumn && 
             value >= 36000 && // Around 1998 - more reasonable starting point for dates
-            value <= 73050 && // Approximately year 2100
-            value === Math.floor(value)) { // Only whole numbers (dates don't have fractional parts)
+            value <= 73050) { // Approximately year 2100 - removed whole number check
             
             // Excel epoch starts from January 1, 1900 (but Excel incorrectly treats 1900 as a leap year)
             // Use UTC to avoid timezone issues
@@ -289,12 +288,27 @@ function convertExcelDate(value, isInDateColumn = false) {
             const year = dateUTC.getUTCFullYear();
             const month = dateUTC.getUTCMonth() + 1;
             const day = dateUTC.getUTCDate();
+            const hour = dateUTC.getUTCHours();
+            const minute = dateUTC.getUTCMinutes();
+            const second = dateUTC.getUTCSeconds();
             
             if (year >= 1998 && year <= 2100) {
-                // Format as YYYY-MM-DD
-                return year + '-' + 
-                       String(month).padStart(2, '0') + '-' + 
-                       String(day).padStart(2, '0');
+                // Check if this has time component (fractional part of the Excel number)
+                const hasFractionalPart = value !== Math.floor(value);
+                if (hasFractionalPart || hour !== 0 || minute !== 0 || second !== 0) {
+                    // Format as YYYY-MM-DD HH:MM:SS
+                    return year + '-' + 
+                           String(month).padStart(2, '0') + '-' + 
+                           String(day).padStart(2, '0') + ' ' +
+                           String(hour).padStart(2, '0') + ':' + 
+                           String(minute).padStart(2, '0') + ':' +
+                           String(second).padStart(2, '0');
+                } else {
+                    // Format as YYYY-MM-DD (date only)
+                    return year + '-' + 
+                           String(month).padStart(2, '0') + '-' + 
+                           String(day).padStart(2, '0');
+                }
             }
         }
     }
@@ -607,6 +621,114 @@ function convertExcelDate(value, isInDateColumn = false) {
                     result += ':' + String(second_time).padStart(2, '0');
                     
                     return result;
+                }
+            }
+        }
+        
+        // Handle AM/PM formats WITHOUT seconds (like "2022-01-01 10:41 AM")
+        let ampmNoSecondsMatch = value.match(/^(\d{4})-(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{1,2})\s+(AM|PM)$/i);
+        if (ampmNoSecondsMatch) {
+            const year = parseInt(ampmNoSecondsMatch[1]);
+            const month = parseInt(ampmNoSecondsMatch[2]);
+            const day = parseInt(ampmNoSecondsMatch[3]);
+            let hour = parseInt(ampmNoSecondsMatch[4]);
+            const minute = parseInt(ampmNoSecondsMatch[5]);
+            const ampm = ampmNoSecondsMatch[6].toUpperCase();
+            
+            // Convert 12-hour to 24-hour format
+            if (ampm === 'AM') {
+                if (hour === 12) hour = 0; // 12:xx AM becomes 00:xx
+            } else { // PM
+                if (hour !== 12) hour += 12; // 1-11 PM becomes 13-23, 12 PM stays 12
+            }
+            
+            if (year >= 1900 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31 && hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+                // Add :00 seconds since they weren't specified
+                return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
+                       String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0') + ':00';
+            }
+        }
+        
+        // Handle MM/DD/YYYY AM/PM formats WITHOUT seconds (like "1/1/2022 10:41 AM")
+        ampmNoSecondsMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{1,2})\s+(AM|PM)$/i);
+        if (ampmNoSecondsMatch) {
+            const first = parseInt(ampmNoSecondsMatch[1]);
+            const second = parseInt(ampmNoSecondsMatch[2]);
+            const year = parseInt(ampmNoSecondsMatch[3]);
+            let hour = parseInt(ampmNoSecondsMatch[4]);
+            const minute = parseInt(ampmNoSecondsMatch[5]);
+            const ampm = ampmNoSecondsMatch[6].toUpperCase();
+            
+            // Convert 12-hour to 24-hour format
+            if (ampm === 'AM') {
+                if (hour === 12) hour = 0;
+            } else { // PM
+                if (hour !== 12) hour += 12;
+            }
+            
+            if (year >= 1900 && year <= 2100 && hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+                let month, day;
+                
+                // Smart format detection
+                if (first > 12 && second <= 12) {
+                    day = first;
+                    month = second;
+                } else if (second > 12 && first <= 12) {
+                    month = first;
+                    day = second;
+                } else if (first <= 12 && second <= 12) {
+                    month = first;
+                    day = second;
+                } else {
+                    return value;
+                }
+                
+                if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+                    // Add :00 seconds since they weren't specified
+                    return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
+                           String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0') + ':00';
+                }
+            }
+        }
+        
+        // Handle MM/DD/YY AM/PM formats WITHOUT seconds (like "1/1/22 10:41 AM")
+        ampmNoSecondsMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})\s+(\d{1,2}):(\d{1,2})\s+(AM|PM)$/i);
+        if (ampmNoSecondsMatch) {
+            const first = parseInt(ampmNoSecondsMatch[1]);
+            const second = parseInt(ampmNoSecondsMatch[2]);
+            let year = parseInt(ampmNoSecondsMatch[3]);
+            let hour = parseInt(ampmNoSecondsMatch[4]);
+            const minute = parseInt(ampmNoSecondsMatch[5]);
+            const ampm = ampmNoSecondsMatch[6].toUpperCase();
+            
+            // Convert year
+            year = year <= 30 ? 2000 + year : 1900 + year;
+            
+            // Convert 12-hour to 24-hour format
+            if (ampm === 'AM') {
+                if (hour === 12) hour = 0;
+            } else { // PM
+                if (hour !== 12) hour += 12;
+            }
+            
+            if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+                let month, day;
+                
+                if (first > 12) {
+                    day = first;
+                    month = second;
+                } else if (second > 12) {
+                    month = first;
+                    day = second;
+                } else {
+                    month = first;
+                    day = second;
+                }
+                
+                if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+                    // Add :00 seconds since they weren't specified
+                    return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
+                           String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0') + ':00';
                 }
             }
         }
@@ -1383,7 +1505,7 @@ function handleFile(file, num) {
                 // Use cellDates option to preserve date formatting and avoid timezone issues
                 let workbook = XLSX.read(data, {
                     type: 'array',
-                    cellDates: true,
+                    cellDates: false,    // Get raw values instead of Date objects
                     UTC: false  // Use local timezone to avoid shifts
                 });
                 
@@ -1412,8 +1534,8 @@ function handleFile(file, num) {
                     let json = XLSX.utils.sheet_to_json(firstSheet, {
                         header: 1, 
                         defval: '',
-                        raw: false,
-                        dateNF: 'yyyy-mm-dd'
+                        raw: true,          // Get raw values to preserve full precision
+                        dateNF: 'yyyy-mm-dd hh:mm:ss'  // More complete date format
                     });
                     
                     // Check both file size and column count limits simultaneously

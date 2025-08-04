@@ -1,0 +1,11 @@
+DateTime,Event,Type
+2022-01-01 10:41:52 AM,Meeting 1,With seconds
+2022-01-01 10:41 AM,Meeting 2,Without seconds
+1/1/2022 10:41:52 PM,Meeting 3,American format with seconds
+1/1/2022 10:41 PM,Meeting 4,American format without seconds
+1/1/22 10:41:52 AM,Meeting 5,Short year with seconds
+1/1/22 10:41 AM,Meeting 6,Short year without seconds
+2022-01-01 12:00:30 AM,Meeting 7,Midnight with seconds
+2022-01-01 12:00 AM,Meeting 8,Midnight without seconds
+2022-01-01 12:00:30 PM,Meeting 9,Noon with seconds
+2022-01-01 12:00 PM,Meeting 10,Noon without seconds
