@@ -276,16 +276,14 @@ function isDateColumn(columnValues, columnHeader = '') {
 function formatDate(year, month, day, hour = null, minute = null, seconds = null) {
     let result = year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
     
-    // Add time if hour and minute are provided
-    if (hour !== null && minute !== null) {
-        // Always remove time if it's 00:00:00 for consistency
-        if (hour === 0 && minute === 0 && (seconds === null || seconds === 0)) {
-            return result; // Return date only
-        }
-        
+    // Check if we have any meaningful time (not 00:00:00)
+    const hasTime = (hour !== null && minute !== null) && 
+                   !(hour === 0 && minute === 0 && (seconds === null || seconds === 0));
+    
+    if (hasTime) {
         result += ' ' + String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
         
-        // Always add seconds if provided (even if 0, unless it's 00:00:00)
+        // Add seconds if provided
         if (seconds !== null) {
             result += ':' + String(seconds).padStart(2, '0');
         }
@@ -320,11 +318,8 @@ function convertExcelDate(value, isInDateColumn = false) {
             const second = value.getSeconds();
             
             if (year >= 1900 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-                // Use the new formatDate function for consistency
-                const result = formatDate(year, month, day, hour !== 0 || minute !== 0 || second !== 0 ? hour : null, 
-                                        hour !== 0 || minute !== 0 || second !== 0 ? minute : null, 
-                                        hour !== 0 || minute !== 0 || second !== 0 ? second : null);
-                return result;
+                // Use formatDate which automatically handles 00:00:00 removal
+                return formatDate(year, month, day, hour, minute, second);
             }
         }
     }
