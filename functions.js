@@ -284,12 +284,174 @@ function convertExcelDate(value, isInDateColumn = false) {
             }
         }
         
+        // Check for YYYY-MM-DD HH:MM format - keep it as is
+        let isoDateTimeMatch = value.match(/^(\d{4})-(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/);
+        if (isoDateTimeMatch) {
+            const year = parseInt(isoDateTimeMatch[1]);
+            const month = parseInt(isoDateTimeMatch[2]);
+            const day = parseInt(isoDateTimeMatch[3]);
+            const hour = parseInt(isoDateTimeMatch[4]);
+            const minute = parseInt(isoDateTimeMatch[5]);
+            if (year >= 1900 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31 && hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+                return value; // Already in correct format
+            }
+        }
+        
+        // Handle MM/DD/YY HH:MM:SS format (with seconds)
+        let dateTimeMatchSec = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})\s+(\d{1,2}):(\d{1,2}):(\d{1,2})$/);
+        if (dateTimeMatchSec) {
+            const first = parseInt(dateTimeMatchSec[1]);
+            const second = parseInt(dateTimeMatchSec[2]);
+            let year = parseInt(dateTimeMatchSec[3]);
+            const hour = parseInt(dateTimeMatchSec[4]);
+            const minute = parseInt(dateTimeMatchSec[5]);
+            const sec = parseInt(dateTimeMatchSec[6]);
+            
+            // Assume years 00-30 are 2000-2030, years 31-99 are 1931-1999
+            year = year <= 30 ? 2000 + year : 1900 + year;
+            
+            // For American format like 8/1/22, interpret as MM/DD
+            if (first <= 12 && second <= 31 && hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59 && sec >= 0 && sec <= 59) {
+                const month = first;
+                const day = second;
+                return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
+                       String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+            }
+        }
+        
+        // Handle MM/DD/YY HH:MM format (like "8/1/22 10:41")
+        let dateTimeMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/);
+        if (dateTimeMatch) {
+            const first = parseInt(dateTimeMatch[1]);
+            const second = parseInt(dateTimeMatch[2]);
+            let year = parseInt(dateTimeMatch[3]);
+            const hour = parseInt(dateTimeMatch[4]);
+            const minute = parseInt(dateTimeMatch[5]);
+            
+            // Assume years 00-30 are 2000-2030, years 31-99 are 1931-1999
+            year = year <= 30 ? 2000 + year : 1900 + year;
+            
+            // For American format like 8/1/22, interpret as MM/DD
+            if (first <= 12 && second <= 31 && hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+                const month = first;
+                const day = second;
+                return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
+                       String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+            }
+        }
+        
+        // Handle MM/DD/YYYY HH:MM:SS format (with seconds and full year)
+        let dateTimeMatchFullSec = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{1,2}):(\d{1,2})$/);
+        if (dateTimeMatchFullSec) {
+            const first = parseInt(dateTimeMatchFullSec[1]);
+            const second = parseInt(dateTimeMatchFullSec[2]);
+            const year = parseInt(dateTimeMatchFullSec[3]);
+            const hour = parseInt(dateTimeMatchFullSec[4]);
+            const minute = parseInt(dateTimeMatchFullSec[5]);
+            const sec = parseInt(dateTimeMatchFullSec[6]);
+            
+            // For American format, interpret as MM/DD
+            if (first <= 12 && second <= 31 && year >= 1900 && year <= 2100 && hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59 && sec >= 0 && sec <= 59) {
+                const month = first;
+                const day = second;
+                return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
+                       String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+            }
+        }
+        
+        // Handle MM/DD/YYYY HH:MM format (like "8/1/2022 10:41")
+        dateTimeMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/);
+        if (dateTimeMatch) {
+            const first = parseInt(dateTimeMatch[1]);
+            const second = parseInt(dateTimeMatch[2]);
+            const year = parseInt(dateTimeMatch[3]);
+            const hour = parseInt(dateTimeMatch[4]);
+            const minute = parseInt(dateTimeMatch[5]);
+            
+            // For American format, interpret as MM/DD
+            if (first <= 12 && second <= 31 && year >= 1900 && year <= 2100 && hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+                const month = first;
+                const day = second;
+                return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
+                       String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+            }
+        }
+        
+        // Handle DD/MM/YY HH:MM format (European with time)
+        dateTimeMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/);
+        if (dateTimeMatch) {
+            const first = parseInt(dateTimeMatch[1]);
+            const second = parseInt(dateTimeMatch[2]);
+            let year = parseInt(dateTimeMatch[3]);
+            const hour = parseInt(dateTimeMatch[4]);
+            const minute = parseInt(dateTimeMatch[5]);
+            
+            // Assume years 00-30 are 2000-2030, years 31-99 are 1931-1999
+            year = year <= 30 ? 2000 + year : 1900 + year;
+            
+            // For European format, interpret as DD/MM if first > 12
+            if (first > 12 && second <= 12 && hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+                const day = first;
+                const month = second;
+                return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
+                       String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+            }
+        }
+        
+        // Handle DD.MM.YY HH:MM format (dots with time)
+        dateTimeMatch = value.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/);
+        if (dateTimeMatch) {
+            const day = parseInt(dateTimeMatch[1]);
+            const month = parseInt(dateTimeMatch[2]);
+            let year = parseInt(dateTimeMatch[3]);
+            const hour = parseInt(dateTimeMatch[4]);
+            const minute = parseInt(dateTimeMatch[5]);
+            
+            // Assume years 00-30 are 2000-2030, years 31-99 are 1931-1999
+            year = year <= 30 ? 2000 + year : 1900 + year;
+            
+            if (day <= 31 && month <= 12 && hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+                return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
+                       String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+            }
+        }
+        
+        // Handle DD.MM.YYYY HH:MM format (dots with full year and time)
+        dateTimeMatch = value.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/);
+        if (dateTimeMatch) {
+            const day = parseInt(dateTimeMatch[1]);
+            const month = parseInt(dateTimeMatch[2]);
+            const year = parseInt(dateTimeMatch[3]);
+            const hour = parseInt(dateTimeMatch[4]);
+            const minute = parseInt(dateTimeMatch[5]);
+            
+            if (day <= 31 && month <= 12 && year >= 1900 && year <= 2100 && hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+                return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
+                       String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+            }
+        }
+        
         // Check if it's a Date object converted to string that might have timezone issues
         // This can happen when CSV parsing creates Date objects that get stringified
         if (value.includes('T') || value.includes('GMT') || value.includes('UTC')) {
             try {
                 // For ISO strings, extract date part directly to avoid timezone conversion
                 if (value.includes('T')) {
+                    // Check if it's a full datetime ISO string
+                    const fullDateTimeMatch = value.match(/^(\d{4})-(\d{1,2})-(\d{1,2})T(\d{1,2}):(\d{1,2}):(\d{1,2})/);
+                    if (fullDateTimeMatch) {
+                        const year = parseInt(fullDateTimeMatch[1]);
+                        const month = parseInt(fullDateTimeMatch[2]);
+                        const day = parseInt(fullDateTimeMatch[3]);
+                        const hour = parseInt(fullDateTimeMatch[4]);
+                        const minute = parseInt(fullDateTimeMatch[5]);
+                        if (year >= 1900 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+                            return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
+                                   String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+                        }
+                    }
+                    
+                    // Otherwise extract just date part
                     const datePart = value.split('T')[0];
                     const dateMatch = datePart.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
                     if (dateMatch) {
@@ -302,15 +464,24 @@ function convertExcelDate(value, isInDateColumn = false) {
                     }
                 }
                 
-                // Fallback: Parse as Date and extract just the date part in local timezone
+                // Fallback: Parse as Date and preserve both date and time if available
                 const dateObj = new Date(value);
                 if (!isNaN(dateObj.getTime())) {
                     // Use local date components to avoid timezone shifts
                     const year = dateObj.getFullYear();
                     const month = dateObj.getMonth() + 1;
                     const day = dateObj.getDate();
+                    const hour = dateObj.getHours();
+                    const minute = dateObj.getMinutes();
+                    
                     if (year >= 1900 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-                        return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+                        // Check if original value contains time information
+                        if (value.includes(':') || hour !== 0 || minute !== 0) {
+                            return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
+                                   String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+                        } else {
+                            return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+                        }
                     }
                 }
             } catch (e) {
