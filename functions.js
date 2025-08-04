@@ -297,6 +297,37 @@ function convertExcelDate(value, isInDateColumn = false) {
             }
         }
         
+        // Handle YYYY-MM-DD HH:MM:SS AM/PM format (like "2022-01-01 10:41:52 AM")
+        let isoDateTimeAMPMMatch = value.match(/^(\d{4})-(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?\s+(AM|PM)$/i);
+        if (isoDateTimeAMPMMatch) {
+            const year = parseInt(isoDateTimeAMPMMatch[1]);
+            const month = parseInt(isoDateTimeAMPMMatch[2]); 
+            const day = parseInt(isoDateTimeAMPMMatch[3]);
+            let hour = parseInt(isoDateTimeAMPMMatch[4]);
+            const minute = parseInt(isoDateTimeAMPMMatch[5]);
+            const second = isoDateTimeAMPMMatch[6] ? parseInt(isoDateTimeAMPMMatch[6]) : 0;
+            const ampm = isoDateTimeAMPMMatch[7].toUpperCase();
+            
+            // Convert 12-hour to 24-hour format
+            if (ampm === 'AM') {
+                if (hour === 12) hour = 0; // 12:xx AM becomes 00:xx
+            } else { // PM
+                if (hour !== 12) hour += 12; // 1-11 PM becomes 13-23, 12 PM stays 12
+            }
+            
+            if (year >= 1900 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31 && hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59 && second >= 0 && second <= 59) {
+                let result = year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
+                       String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+                
+                // Add seconds if present in original
+                if (isoDateTimeAMPMMatch[6]) {
+                    result += ':' + String(second).padStart(2, '0');
+                }
+                
+                return result;
+            }
+        }
+        
         // Handle MM/DD/YY HH:MM:SS format (with seconds)
         let dateTimeMatchSec = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})\s+(\d{1,2}):(\d{1,2}):(\d{1,2})$/);
         if (dateTimeMatchSec) {
@@ -319,6 +350,52 @@ function convertExcelDate(value, isInDateColumn = false) {
             }
         }
         
+        // Handle MM/DD/YY HH:MM:SS AM/PM format (like "8/1/22 10:41:52 AM")
+        let shortYearAMPMMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?\s+(AM|PM)$/i);
+        if (shortYearAMPMMatch) {
+            const first = parseInt(shortYearAMPMMatch[1]);
+            const second = parseInt(shortYearAMPMMatch[2]);
+            let year = parseInt(shortYearAMPMMatch[3]);
+            let hour = parseInt(shortYearAMPMMatch[4]);
+            const minute = parseInt(shortYearAMPMMatch[5]);
+            const seconds = shortYearAMPMMatch[6] ? parseInt(shortYearAMPMMatch[6]) : 0;
+            const ampm = shortYearAMPMMatch[7].toUpperCase();
+            
+            // Convert to 24-hour format
+            if (ampm === 'AM' && hour === 12) {
+                hour = 0;  // 12 AM becomes 00
+            } else if (ampm === 'PM' && hour !== 12) {
+                hour += 12;  // 1-11 PM becomes 13-23
+            }
+            // 12 PM stays as 12
+            
+            // Assume years 00-30 are 2000-2030, years 31-99 are 1931-1999
+            year = year <= 30 ? 2000 + year : 1900 + year;
+            
+            // Smart format detection: prefer MM/DD for typical American patterns
+            if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+                let month, day;
+                
+                // If first > 12, it must be DD/MM (European)
+                if (first > 12) {
+                    day = first;
+                    month = second;
+                } else if (second > 12) {
+                    // If second > 12, it must be MM/DD (American)
+                    month = first;
+                    day = second;
+                } else {
+                    // Both <= 12, use American MM/DD format by default
+                    month = first;
+                    day = second;
+                }
+                
+                if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+                    return formatDate(year, month, day, hour, minute, seconds);
+                }
+            }
+        }
+
         // Handle MM/DD/YY HH:MM format (like "8/1/22 10:41")
         let dateTimeMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/);
         if (dateTimeMatch) {
@@ -444,6 +521,58 @@ function convertExcelDate(value, isInDateColumn = false) {
                     // Add seconds if present
                     if (dateTimeMatch[6]) {
                         result += ':' + String(seconds).padStart(2, '0');
+                    }
+                    
+                    return result;
+                }
+            }
+        }
+        
+        // Handle MM/DD/YYYY HH:MM:SS AM/PM format (like "8/1/2022 10:41:52 AM")
+        let dateTimeAMPMMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?\s+(AM|PM)$/i);
+        if (dateTimeAMPMMatch) {
+            const first = parseInt(dateTimeAMPMMatch[1]);
+            const second = parseInt(dateTimeAMPMMatch[2]);
+            const year = parseInt(dateTimeAMPMMatch[3]);
+            let hour = parseInt(dateTimeAMPMMatch[4]);
+            const minute = parseInt(dateTimeAMPMMatch[5]);
+            const second_time = dateTimeAMPMMatch[6] ? parseInt(dateTimeAMPMMatch[6]) : 0;
+            const ampm = dateTimeAMPMMatch[7].toUpperCase();
+            
+            // Convert 12-hour to 24-hour format
+            if (ampm === 'AM') {
+                if (hour === 12) hour = 0; // 12:xx AM becomes 00:xx
+            } else { // PM
+                if (hour !== 12) hour += 12; // 1-11 PM becomes 13-23, 12 PM stays 12
+            }
+            
+            if (year >= 1900 && year <= 2100 && hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+                let month, day;
+                
+                // Smart format detection
+                if (first > 12 && second <= 12) {
+                    // Must be DD/MM
+                    day = first;
+                    month = second;
+                } else if (second > 12 && first <= 12) {
+                    // Must be MM/DD
+                    month = first;
+                    day = second;
+                } else if (first <= 12 && second <= 12) {
+                    // Ambiguous case - prefer MM/DD for American format with AM/PM
+                    month = first;
+                    day = second;
+                } else {
+                    return value; // Invalid date
+                }
+                
+                if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+                    let result = year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
+                           String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+                    
+                    // Add seconds if present
+                    if (dateTimeAMPMMatch[6]) {
+                        result += ':' + String(second_time).padStart(2, '0');
                     }
                     
                     return result;
