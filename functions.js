@@ -202,8 +202,8 @@ function isDateColumn(columnValues, columnHeader = '') {
                 dateCount++;
             } else if (typeof value === 'number') {
                 numberCount++;
-                // Check if number could be an Excel date (broader range 1900-2500)
-                if (value >= 1 && value <= 219146) {
+                // Check if number could be an Excel date (exclude small numbers like 18)
+                if (value >= 1000 && value <= 219146) {
                     potentialExcelDates++;
                 }
             }
@@ -275,18 +275,26 @@ function convertExcelDate(value, isInDateColumn = false) {
     if (typeof value === 'number' && value > 1 && value < 300000) {
         // Be more aggressive in converting numbers that look like Excel dates
         // Always convert numbers in the typical Excel date range (1900-2500)
-        if (value >= 1 && value <= 219146) { // Around 1900-2500
+        // But exclude small numbers that are likely just regular numbers
+        if (value >= 1000 && value <= 219146) { // Around 1902-2500, exclude small numbers
             
             // Handle Excel serial numbers with more precision for time parts
             const wholeDays = Math.floor(value);
             const timeFraction = value - wholeDays;
             
             // Excel epoch: January 1, 1900 (accounting for Excel's leap year bug)
+            // Excel serial 1 = 1900-01-01, so we need to add (wholeDays - 1) days to 1900-01-01
             const excelEpoch = new Date(1900, 0, 1);
-            const daysToAdd = wholeDays - 1; // Subtract 1 because Excel counts from day 1, not 0
+            const daysToAdd = wholeDays - 1; // Subtract 1 because Excel serial 1 = 1900-01-01
             
-            // Calculate date
-            const baseDate = new Date(excelEpoch.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
+            // Calculate date - but account for Excel's 1900 leap year bug
+            // Excel incorrectly treats 1900 as a leap year, so for dates after Feb 28, 1900, subtract 1 day
+            let adjustedDays = daysToAdd;
+            if (wholeDays > 59) { // After Feb 28, 1900 (Excel serial 59)
+                adjustedDays = daysToAdd - 1; // Correct for Excel's leap year bug
+            }
+            
+            const baseDate = new Date(excelEpoch.getTime() + adjustedDays * 24 * 60 * 60 * 1000);
             
             // Calculate time from fractional part
             const totalSeconds = Math.round(timeFraction * 24 * 60 * 60);
