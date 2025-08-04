@@ -203,7 +203,7 @@ function isDateColumn(columnValues, columnHeader = '') {
             } else if (typeof value === 'number') {
                 numberCount++;
                 // Check if number could be an Excel date (broader range including fractional)
-                if (value >= 36000 && value <= 73050) {
+                if (value >= 25000 && value <= 80000) {
                     potentialExcelDates++;
                 }
             }
@@ -223,7 +223,7 @@ function isDateColumn(columnValues, columnHeader = '') {
     
     return (headerSuggestsDate && combinedDateRatio > 0.3) ||
            dateRatio > 0.5 || 
-           (potentialDateRatio > 0.7 && numberCount > 0) || 
+           (potentialDateRatio > 0.5 && numberCount > 0) || 
            combinedDateRatio > 0.6;
 }
 
@@ -276,9 +276,9 @@ function convertExcelDate(value, isInDateColumn = false) {
         // Convert numbers to dates if we're in a date column context
         // or if the number looks like a reasonable Excel date
         const shouldConvert = isInDateColumn || 
-            (value >= 40000 && value <= 60000); // Covers years 2009-2064, most common range
+            (value >= 25000 && value <= 80000); // Covers years 1968-2119, broader range
             
-        if (shouldConvert && value >= 36000 && value <= 73050) { // Around 1998-2100
+        if (shouldConvert && value >= 25000 && value <= 80000) { // Around 1968-2119
             
             // Handle Excel serial numbers with more precision for time parts
             const wholeDays = Math.floor(value);
