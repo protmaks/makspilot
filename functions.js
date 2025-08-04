@@ -202,8 +202,8 @@ function isDateColumn(columnValues, columnHeader = '') {
                 dateCount++;
             } else if (typeof value === 'number') {
                 numberCount++;
-                // Check if number could be an Excel date (1900-2100 range)
-                if (value >= 36000 && value <= 73050 && value === Math.floor(value)) {
+                // Check if number could be an Excel date (broader range including fractional)
+                if (value >= 36000 && value <= 73050) {
                     potentialExcelDates++;
                 }
             }
@@ -273,36 +273,46 @@ function convertExcelDate(value, isInDateColumn = false) {
     
     // Check if value is a number that could be an Excel date serial number
     if (typeof value === 'number' && value > 1 && value < 100000) {
-        // Only convert numbers to dates if we're in a date column context
-        // and the number is in a reasonable Excel date range
-        if (isInDateColumn && 
-            value >= 36000 && // Around 1998 - more reasonable starting point for dates
-            value <= 73050) { // Approximately year 2100 - removed whole number check
+        // Convert numbers to dates if we're in a date column context
+        // or if the number looks like a reasonable Excel date
+        const shouldConvert = isInDateColumn || 
+            (value >= 40000 && value <= 60000); // Covers years 2009-2064, most common range
             
-            // Excel epoch starts from January 1, 1900 (but Excel incorrectly treats 1900 as a leap year)
-            // Use UTC to avoid timezone issues
-            const excelEpochUTC = Date.UTC(1899, 11, 30); // December 30, 1899 UTC
-            const dateUTC = new Date(excelEpochUTC + value * 24 * 60 * 60 * 1000);
+        if (shouldConvert && value >= 36000 && value <= 73050) { // Around 1998-2100
             
-            // Ensure we're working with UTC values
-            const year = dateUTC.getUTCFullYear();
-            const month = dateUTC.getUTCMonth() + 1;
-            const day = dateUTC.getUTCDate();
-            const hour = dateUTC.getUTCHours();
-            const minute = dateUTC.getUTCMinutes();
-            const second = dateUTC.getUTCSeconds();
+            // Handle Excel serial numbers with more precision for time parts
+            const wholeDays = Math.floor(value);
+            const timeFraction = value - wholeDays;
+            
+            // Excel epoch: January 1, 1900 (accounting for Excel's leap year bug)
+            const excelEpoch = new Date(1900, 0, 1);
+            const daysToAdd = wholeDays - 1; // Subtract 1 because Excel counts from day 1, not 0
+            
+            // Calculate date
+            const baseDate = new Date(excelEpoch.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
+            
+            // Calculate time from fractional part
+            const totalSeconds = Math.round(timeFraction * 24 * 60 * 60);
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            
+            const year = baseDate.getFullYear();
+            const month = baseDate.getMonth() + 1;
+            const day = baseDate.getDate();
             
             if (year >= 1998 && year <= 2100) {
-                // Check if this has time component (fractional part of the Excel number)
-                const hasFractionalPart = value !== Math.floor(value);
-                if (hasFractionalPart || hour !== 0 || minute !== 0 || second !== 0) {
+                // Check if this has time component
+                const hasTime = timeFraction > 0 || hours !== 0 || minutes !== 0 || seconds !== 0;
+                
+                if (hasTime) {
                     // Format as YYYY-MM-DD HH:MM:SS
                     return year + '-' + 
                            String(month).padStart(2, '0') + '-' + 
                            String(day).padStart(2, '0') + ' ' +
-                           String(hour).padStart(2, '0') + ':' + 
-                           String(minute).padStart(2, '0') + ':' +
-                           String(second).padStart(2, '0');
+                           String(hours).padStart(2, '0') + ':' + 
+                           String(minutes).padStart(2, '0') + ':' +
+                           String(seconds).padStart(2, '0');
                 } else {
                     // Format as YYYY-MM-DD (date only)
                     return year + '-' + 
