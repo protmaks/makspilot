@@ -144,11 +144,8 @@ function processSelectedSheet(fileNum, selectedSheetName) {
         // Normalize headers to uppercase
         json = normalizeHeaders(json);
         
-        // Apply date conversion to all cells (for Excel text dates like "05.01.25")
-        json = json.map(row => {
-            if (!Array.isArray(row)) return row;
-            return row.map(cell => convertExcelDate(cell));
-        });
+        // Analyze column types and apply appropriate conversions
+        json = processColumnTypes(json);
         
         json = removeEmptyColumns(json);
         json = json.map(row => {
@@ -168,6 +165,53 @@ function processSelectedSheet(fileNum, selectedSheetName) {
         // Update the sheet info
         updateSheetInfo(fileName, workbook.SheetNames, selectedSheetName, fileNum);
     }, 10);
+}
+
+// Function to analyze column types and apply appropriate conversions
+function processColumnTypes(data) {
+    if (!data || data.length === 0) return data;
+    
+    // Get column count
+    const maxCols = Math.max(...data.map(row => Array.isArray(row) ? row.length : 0));
+    if (maxCols === 0) return data;
+    
+    // Analyze each column
+    const columnTypes = [];
+    const headers = data[0] || [];
+    
+    for (let colIndex = 0; colIndex < maxCols; colIndex++) {
+        // Extract column values (skip header row)
+        const columnValues = [];
+        for (let rowIndex = 1; rowIndex < data.length; rowIndex++) {
+            const value = data[rowIndex] && data[rowIndex][colIndex];
+            if (value !== null && value !== undefined && value.toString().trim() !== '') {
+                columnValues.push(value);
+            }
+        }
+        
+        // Determine column type
+        const columnHeader = headers[colIndex] || '';
+        const isDateCol = isDateColumn(columnValues, columnHeader);
+        columnTypes[colIndex] = isDateCol ? 'date' : 'other';
+        
+        console.log(`Column ${colIndex} (${columnHeader}): ${columnTypes[colIndex]} - Sample values:`, columnValues.slice(0, 3));
+    }
+    
+    // Apply conversions based on column types
+    const processedData = data.map((row, rowIndex) => {
+        if (!Array.isArray(row) || rowIndex === 0) return row; // Skip header
+        
+        return row.map((cell, colIndex) => {
+            if (columnTypes[colIndex] === 'date') {
+                return convertExcelDate(cell, true); // Force date conversion
+            } else {
+                // For non-date columns, don't convert numbers to dates
+                return cell;
+            }
+        });
+    });
+    
+    return processedData;
 }
 
 // Helper function to detect if a column likely contains dates
@@ -273,38 +317,63 @@ function convertExcelDate(value, isInDateColumn = false) {
     
     // Check if value is a number that could be an Excel date serial number
     if (typeof value === 'number' && value > 1 && value < 300000) {
-        // Be more aggressive in converting numbers that look like Excel dates
-        // Always convert numbers in the typical Excel date range (1900-2500)
-        // But exclude small numbers that are likely just regular numbers
-        if (value >= 1000 && value <= 219146) { // Around 1902-2500, exclude small numbers
+        // Only convert numbers to dates if explicitly in a date column context
+        // Don't auto-convert numbers like 174382 or 35 unless we're sure it's a date column
+        if (isInDateColumn && value >= 1000 && value <= 219146) { // Around 1902-2500, exclude small numbers
             
             // Handle Excel serial numbers with more precision for time parts
             const wholeDays = Math.floor(value);
             const timeFraction = value - wholeDays;
             
             // Excel epoch: January 1, 1900 (accounting for Excel's leap year bug)
-            // Excel serial 1 = 1900-01-01, so we need to add (wholeDays - 1) days to 1900-01-01
-            const excelEpoch = new Date(1900, 0, 1);
-            const daysToAdd = wholeDays - 1; // Subtract 1 because Excel serial 1 = 1900-01-01
+            // Avoid timezone issues by calculating date components directly
+            let days = wholeDays;
             
-            // Calculate date - but account for Excel's 1900 leap year bug
             // Excel incorrectly treats 1900 as a leap year, so for dates after Feb 28, 1900, subtract 1 day
-            let adjustedDays = daysToAdd;
             if (wholeDays > 59) { // After Feb 28, 1900 (Excel serial 59)
-                adjustedDays = daysToAdd - 1; // Correct for Excel's leap year bug
+                days = wholeDays - 1; // Correct for Excel's leap year bug
             }
             
-            const baseDate = new Date(excelEpoch.getTime() + adjustedDays * 24 * 60 * 60 * 1000);
+            // Calculate date components directly to avoid timezone shifts
+            // Excel serial 1 = January 1, 1900
+            const excelYear = 1900;
+            let year = excelYear;
+            let dayOfYear = days;
+            
+            // Calculate year and remaining days
+            while (dayOfYear > 365) {
+                const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+                const daysInYear = isLeapYear ? 366 : 365;
+                if (dayOfYear > daysInYear) {
+                    dayOfYear -= daysInYear;
+                    year++;
+                } else {
+                    break;
+                }
+            }
+            
+            // Calculate month and day
+            const daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+            const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+            if (isLeapYear) daysInMonth[1] = 29;
+            
+            let month = 1;
+            let day = dayOfYear;
+            
+            for (let i = 0; i < 12; i++) {
+                if (day <= daysInMonth[i]) {
+                    month = i + 1;
+                    break;
+                } else {
+                    day -= daysInMonth[i];
+                }
+            }
             
             // Calculate time from fractional part
             const totalSeconds = Math.round(timeFraction * 24 * 60 * 60);
             const hours = Math.floor(totalSeconds / 3600);
             const minutes = Math.floor((totalSeconds % 3600) / 60);
             const seconds = totalSeconds % 60;
-            
-            const year = baseDate.getFullYear();
-            const month = baseDate.getMonth() + 1;
-            const day = baseDate.getDate();
             
             if (year >= 1900 && year <= 2500) {
                 // Check if this has time component
@@ -1477,11 +1546,8 @@ function handleFile(file, num) {
                     // Normalize headers to uppercase first
                     const headersNormalizedJson = normalizeHeaders(json);
                     
-                    // Apply date conversion to all cells (for CSV text dates like "05.01.25")
-                    const dateConvertedJson = headersNormalizedJson.map(row => {
-                        if (!Array.isArray(row)) return row;
-                        return row.map(cell => convertExcelDate(cell));
-                    });
+                    // Apply column-based date conversion (for CSV text dates like "05.01.25")
+                    const dateConvertedJson = processColumnTypes(headersNormalizedJson);
                     
                     setTimeout(() => {
                         // Normalize row lengths
@@ -1593,11 +1659,8 @@ function handleFile(file, num) {
                         // Normalize headers to uppercase
                         json = normalizeHeaders(json);
                         
-                        // Apply date conversion to all cells (for Excel text dates like "05.01.25")
-                        json = json.map(row => {
-                            if (!Array.isArray(row)) return row;
-                            return row.map(cell => convertExcelDate(cell));
-                        });
+                        // Apply column-based date conversion (for Excel text dates like "05.01.25")
+                        json = processColumnTypes(json);
                         
                         setTimeout(() => {
                             json = removeEmptyColumns(json);
