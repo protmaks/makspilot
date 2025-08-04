@@ -203,7 +203,7 @@ function processColumnTypes(data) {
         
         return row.map((cell, colIndex) => {
             if (columnTypes[colIndex] === 'date') {
-                return convertExcelDate(cell, true); // Force date conversion
+                return convertExcelDateNormalized(cell, true); // Force date conversion
             } else {
                 // For non-date columns, don't convert numbers to dates
                 return cell;
@@ -1188,6 +1188,18 @@ function convertExcelDate(value, isInDateColumn = false) {
     return value;
 }
 
+// Wrapper for convertExcelDate that ensures consistent 00:00:00 removal
+function convertExcelDateNormalized(value, isInDateColumn = false) {
+    const result = convertExcelDate(value, isInDateColumn);
+    
+    // If result is a date string (YYYY-MM-DD format), normalize it
+    if (typeof result === 'string' && result.match(/^\d{4}-\d{2}-\d{2}/)) {
+        return normalizeDateTime(result);
+    }
+    
+    return result;
+}
+
 // Function to round decimal numbers to 2 decimal places and remove .0 for integers
 function roundDecimalNumbers(value) {
     // If it's a number, process it
@@ -1301,7 +1313,7 @@ function removeEmptyColumns(data) {
             if (isDateCol) {
                 for (let row = 0; row < result.length; row++) {
                     if (result[row][col] !== null && result[row][col] !== undefined && result[row][col] !== '') {
-                        result[row][col] = convertExcelDate(result[row][col], true);
+                        result[row][col] = convertExcelDateNormalized(result[row][col], true);
                     }
                 }
             }
