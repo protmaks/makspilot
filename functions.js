@@ -227,6 +227,23 @@ function isDateColumn(columnValues, columnHeader = '') {
            combinedDateRatio > 0.6;
 }
 
+// Helper function to format date and time with optional seconds
+function formatDate(year, month, day, hour = null, minute = null, seconds = null) {
+    let result = year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+    
+    // Add time if hour and minute are provided
+    if (hour !== null && minute !== null) {
+        result += ' ' + String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+        
+        // Always add seconds if provided (even if 0)
+        if (seconds !== null) {
+            result += ':' + String(seconds).padStart(2, '0');
+        }
+    }
+    
+    return result;
+}
+
 // Function to convert Excel serial date to proper date format
 function convertExcelDate(value, isInDateColumn = false) {
     // Handle Date objects that might be created by XLSX library
@@ -319,10 +336,8 @@ function convertExcelDate(value, isInDateColumn = false) {
                 let result = year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
                        String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
                 
-                // Add seconds if present in original
-                if (isoDateTimeAMPMMatch[6]) {
-                    result += ':' + String(second).padStart(2, '0');
-                }
+                // Always add seconds to preserve format consistency
+                result += ':' + String(second).padStart(2, '0');
                 
                 return result;
             }
@@ -437,10 +452,8 @@ function convertExcelDate(value, isInDateColumn = false) {
                     let result = year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
                            String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
                     
-                    // Add seconds if present
-                    if (dateTimeMatch[6]) {
-                        result += ':' + String(seconds).padStart(2, '0');
-                    }
+                    // Always add seconds to preserve format consistency
+                    result += ':' + String(seconds).padStart(2, '0');
                     
                     return result;
                 }
@@ -518,10 +531,8 @@ function convertExcelDate(value, isInDateColumn = false) {
                     let result = year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
                            String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
                     
-                    // Add seconds if present
-                    if (dateTimeMatch[6]) {
-                        result += ':' + String(seconds).padStart(2, '0');
-                    }
+                    // Always add seconds to preserve format consistency
+                    result += ':' + String(seconds).padStart(2, '0');
                     
                     return result;
                 }
@@ -570,10 +581,8 @@ function convertExcelDate(value, isInDateColumn = false) {
                     let result = year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
                            String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
                     
-                    // Add seconds if present
-                    if (dateTimeAMPMMatch[6]) {
-                        result += ':' + String(second_time).padStart(2, '0');
-                    }
+                    // Always add seconds to preserve format consistency
+                    result += ':' + String(second_time).padStart(2, '0');
                     
                     return result;
                 }
