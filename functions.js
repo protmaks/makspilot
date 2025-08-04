@@ -253,8 +253,20 @@ function convertExcelDate(value, isInDateColumn = false) {
             const year = value.getFullYear();
             const month = value.getMonth() + 1;
             const day = value.getDate();
+            const hour = value.getHours();
+            const minute = value.getMinutes();
+            const second = value.getSeconds();
+            
             if (year >= 1900 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-                return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+                // Check if this date has time information (not just midnight)
+                if (hour !== 0 || minute !== 0 || second !== 0) {
+                    // Return date with time and seconds
+                    return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
+                           String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0') + ':' + String(second).padStart(2, '0');
+                } else {
+                    // Return just date if it's exactly midnight (likely date-only)
+                    return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+                }
             }
         }
     }
@@ -289,7 +301,17 @@ function convertExcelDate(value, isInDateColumn = false) {
     
     // Check if value is already a date string in various formats
     if (typeof value === 'string') {
-        // First check if it's already in YYYY-MM-DD format - keep it as is
+        // First check if it's already in correct YYYY-MM-DD HH:MM:SS format - keep it as is
+        if (value.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)) {
+            return value; // Already in perfect format
+        }
+        
+        // Check if it's in YYYY-MM-DD HH:MM format - add seconds
+        if (value.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/)) {
+            return value + ':00'; // Add missing seconds
+        }
+        
+        // Check if it's already in YYYY-MM-DD format - keep it as is
         let isoDateMatch = value.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
         if (isoDateMatch) {
             const year = parseInt(isoDateMatch[1]);
