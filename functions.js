@@ -1128,6 +1128,119 @@ function generateLimitErrorMessage(type, current, limit, additionalInfo = '', se
     `;
 }
 
+// Function to create column mapping between two headers
+function createColumnMapping(header1, header2) {
+    const mapping = [];
+    const header1Lower = header1.map(h => (h || '').toString().toLowerCase().trim());
+    const header2Lower = header2.map(h => (h || '').toString().toLowerCase().trim());
+    
+    // Find common columns and their positions
+    const commonColumns = [];
+    const used2 = new Set();
+    
+    header1Lower.forEach((col1, index1) => {
+        if (col1 === '') return; // Skip empty headers
+        
+        const index2 = header2Lower.findIndex((col2, idx) => 
+            col2 === col1 && !used2.has(idx)
+        );
+        
+        if (index2 !== -1) {
+            commonColumns.push({
+                name: header1[index1],
+                index1: index1,
+                index2: index2
+            });
+            used2.add(index2);
+        }
+    });
+    
+    return {
+        commonColumns,
+        onlyInFile1: header1Lower.filter((col, idx) => 
+            col !== '' && !commonColumns.some(c => c.index1 === idx)
+        ),
+        onlyInFile2: header2Lower.filter((col, idx) => 
+            col !== '' && !commonColumns.some(c => c.index2 === idx)
+        )
+    };
+}
+
+// Function to reorder data based on column mapping
+function reorderDataByColumns(data, originalHeader, commonColumns, targetOrder) {
+    if (!data || data.length === 0) return data;
+    
+    // Create new header based on target order
+    const newHeader = targetOrder.map(colInfo => colInfo.name);
+    
+    // Reorder all data rows
+    const reorderedData = [newHeader];
+    
+    for (let i = 1; i < data.length; i++) {
+        const newRow = targetOrder.map(colInfo => {
+            const sourceIndex = colInfo.sourceIndex;
+            return sourceIndex < data[i].length ? data[i][sourceIndex] : '';
+        });
+        reorderedData.push(newRow);
+    }
+    
+    return reorderedData;
+}
+
+// Function to prepare data for comparison with column alignment
+function prepareDataForComparison(data1, data2) {
+    if (!data1.length || !data2.length) {
+        return { data1, data2, columnInfo: null };
+    }
+    
+    const header1 = data1[0] || [];
+    const header2 = data2[0] || [];
+    
+    // Create column mapping
+    const mapping = createColumnMapping(header1, header2);
+    
+    if (mapping.commonColumns.length === 0) {
+        // No common columns found - return original data
+        return { 
+            data1, 
+            data2, 
+            columnInfo: {
+                hasCommonColumns: false,
+                message: "No common column names found. Comparison will be done by position."
+            }
+        };
+    }
+    
+    // Create unified column order based on common columns
+    const unifiedOrder = mapping.commonColumns.map(col => ({
+        name: col.name,
+        sourceIndex: col.index1 // Use file1 as reference
+    }));
+    
+    // Reorder data2 to match data1 column order
+    const reorderedData1 = reorderDataByColumns(data1, header1, mapping.commonColumns, unifiedOrder);
+    
+    // For data2, we need to map the source indices correctly
+    const unifiedOrderForData2 = mapping.commonColumns.map(col => ({
+        name: col.name,
+        sourceIndex: col.index2 // Use file2 indices
+    }));
+    
+    const reorderedData2 = reorderDataByColumns(data2, header2, mapping.commonColumns, unifiedOrderForData2);
+    
+    return {
+        data1: reorderedData1,
+        data2: reorderedData2,
+        columnInfo: {
+            hasCommonColumns: true,
+            commonCount: mapping.commonColumns.length,
+            onlyInFile1: mapping.onlyInFile1,
+            onlyInFile2: mapping.onlyInFile2,
+            reordered: header1.join(',').toLowerCase() !== header2.join(',').toLowerCase()
+        }
+    };
+}
+
 // Function to normalize headers to uppercase
 function normalizeHeaders(data) {
     if (!data || data.length === 0) return data;
@@ -1427,9 +1540,51 @@ function performComparison() {
     const hideNewRows1 = hideNewRows1El ? hideNewRows1El.checked : false; // Hide rows only in file 1
     const hideNewRows2 = hideNewRows2El ? hideNewRows2El.checked : false; // Hide rows only in file 2
     
+    // Prepare data for comparison with column alignment
+    const { data1: alignedData1, data2: alignedData2, columnInfo } = prepareDataForComparison(data1, data2);
+    
+    // Show column alignment info to user
+    if (columnInfo && columnInfo.hasCommonColumns && columnInfo.reordered) {
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'column-alignment-info';
+        infoDiv.style.cssText = 'background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; padding: 12px; margin: 15px 0; border-radius: 6px; font-size: 14px;';
+        infoDiv.innerHTML = `
+            <strong>📊 Column Alignment:</strong> Columns have been automatically aligned by name for accurate comparison. 
+            ${columnInfo.commonCount} common columns found.
+            ${columnInfo.onlyInFile1.length > 0 ? `<br><strong>Only in File 1:</strong> ${columnInfo.onlyInFile1.join(', ')}` : ''}
+            ${columnInfo.onlyInFile2.length > 0 ? `<br><strong>Only in File 2:</strong> ${columnInfo.onlyInFile2.join(', ')}` : ''}
+        `;
+        
+        const summaryEl = document.getElementById('summary');
+        if (summaryEl.firstChild) {
+            summaryEl.insertBefore(infoDiv, summaryEl.firstChild);
+        } else {
+            summaryEl.appendChild(infoDiv);
+        }
+    } else if (columnInfo && !columnInfo.hasCommonColumns) {
+        const warningDiv = document.createElement('div');
+        warningDiv.className = 'column-warning-info';
+        warningDiv.style.cssText = 'background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 12px; margin: 15px 0; border-radius: 6px; font-size: 14px;';
+        warningDiv.innerHTML = `
+            <strong>⚠️ Warning:</strong> No common column names found between files. 
+            Comparison will be done by column position. For more accurate results, ensure both files have matching column headers.
+        `;
+        
+        const summaryEl = document.getElementById('summary');
+        if (summaryEl.firstChild) {
+            summaryEl.insertBefore(warningDiv, summaryEl.firstChild);
+        } else {
+            summaryEl.appendChild(warningDiv);
+        }
+    }
+    
+    // Use aligned data for comparison
+    const workingData1 = alignedData1;
+    const workingData2 = alignedData2;
+    
     // --- Statistics ---
-    let header1 = data1[0] || [];
-    let header2 = data2[0] || [];
+    let header1 = workingData1[0] || [];
+    let header2 = workingData2[0] || [];
     
     // Get excluded column indexes
     const excludedIndexes1 = getExcludedColumnIndexes(header1, excludedColumns);
@@ -1448,8 +1603,8 @@ function performComparison() {
     const finalAllCols = finalHeaders.length;
     
     // Adjust body data with only exclusion filters applied (no column hiding)
-    let body1 = data1.slice(1).map(row => filterRowExcludingColumns(row, excludedIndexes1));
-    let body2 = data2.slice(1).map(row => filterRowExcludingColumns(row, excludedIndexes2));
+    let body1 = workingData1.slice(1).map(row => filterRowExcludingColumns(row, excludedIndexes1));
+    let body2 = workingData2.slice(1).map(row => filterRowExcludingColumns(row, excludedIndexes2));
     
     // Find columns that exist in one file but not in the other (from original filtered headers, before hide filters)
     let header1Set = new Set(filteredHeader1.map(h => h ? h.toString().trim() : ''));
