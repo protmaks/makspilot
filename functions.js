@@ -202,8 +202,8 @@ function isDateColumn(columnValues, columnHeader = '') {
                 dateCount++;
             } else if (typeof value === 'number') {
                 numberCount++;
-                // Check if number could be an Excel date (broader range including fractional)
-                if (value >= 25000 && value <= 80000) {
+                // Check if number could be an Excel date (broader range 1900-2500)
+                if (value >= 1 && value <= 219146) {
                     potentialExcelDates++;
                 }
             }
@@ -272,13 +272,10 @@ function convertExcelDate(value, isInDateColumn = false) {
     }
     
     // Check if value is a number that could be an Excel date serial number
-    if (typeof value === 'number' && value > 1 && value < 100000) {
-        // Convert numbers to dates if we're in a date column context
-        // or if the number looks like a reasonable Excel date
-        const shouldConvert = isInDateColumn || 
-            (value >= 25000 && value <= 80000); // Covers years 1968-2119, broader range
-            
-        if (shouldConvert && value >= 25000 && value <= 80000) { // Around 1968-2119
+    if (typeof value === 'number' && value > 1 && value < 300000) {
+        // Be more aggressive in converting numbers that look like Excel dates
+        // Always convert numbers in the typical Excel date range (1900-2500)
+        if (value >= 1 && value <= 219146) { // Around 1900-2500
             
             // Handle Excel serial numbers with more precision for time parts
             const wholeDays = Math.floor(value);
@@ -301,7 +298,7 @@ function convertExcelDate(value, isInDateColumn = false) {
             const month = baseDate.getMonth() + 1;
             const day = baseDate.getDate();
             
-            if (year >= 1998 && year <= 2100) {
+            if (year >= 1900 && year <= 2500) {
                 // Check if this has time component
                 const hasTime = timeFraction > 0 || hours !== 0 || minutes !== 0 || seconds !== 0;
                 
