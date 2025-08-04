@@ -1749,3 +1749,26 @@ button.compare-btn:hover {
     text-align: center;
 }
 
+/* Column alignment info styles */
+.column-alignment-info {
+    background: #d1ecf1;
+    border: 1px solid #bee5eb;
+    color: #0c5460;
+    padding: 12px;
+    margin: 15px 0;
+    border-radius: 6px;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.column-warning-info {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    color: #856404;
+    padding: 12px;
+    margin: 15px 0;
+    border-radius: 6px;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
