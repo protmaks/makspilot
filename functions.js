@@ -246,8 +246,9 @@ function isDateColumn(columnValues, columnHeader = '') {
                 dateCount++;
             } else if (typeof value === 'number') {
                 numberCount++;
-                // Check if number could be an Excel date (exclude small numbers like 18)
-                if (value >= 1000 && value <= 219146) {
+                // Check if number could be an Excel date (exclude small numbers like 1015, 1011)
+                // Start from 1980 (Excel serial ~29221) to avoid false positives
+                if (value >= 29221 && value <= 219146) {
                     potentialExcelDates++;
                 }
             }
@@ -277,15 +278,32 @@ function formatDate(year, month, day, hour = null, minute = null, seconds = null
     
     // Add time if hour and minute are provided
     if (hour !== null && minute !== null) {
+        // Always remove time if it's 00:00:00 for consistency
+        if (hour === 0 && minute === 0 && (seconds === null || seconds === 0)) {
+            return result; // Return date only
+        }
+        
         result += ' ' + String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
         
-        // Always add seconds if provided (even if 0)
+        // Always add seconds if provided (even if 0, unless it's 00:00:00)
         if (seconds !== null) {
             result += ':' + String(seconds).padStart(2, '0');
         }
     }
     
     return result;
+}
+
+// Helper function to normalize date-time string and remove 00:00:00 consistently
+function normalizeDateTime(dateTimeString) {
+    // Check if it ends with 00:00:00 or 00:00 and remove it
+    if (dateTimeString.match(/\s+00:00:00$/)) {
+        return dateTimeString.replace(/\s+00:00:00$/, '');
+    }
+    if (dateTimeString.match(/\s+00:00$/)) {
+        return dateTimeString.replace(/\s+00:00$/, '');
+    }
+    return dateTimeString;
 }
 
 // Function to convert Excel serial date to proper date format
@@ -302,15 +320,11 @@ function convertExcelDate(value, isInDateColumn = false) {
             const second = value.getSeconds();
             
             if (year >= 1900 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-                // Check if this date has time information (not just midnight)
-                if (hour !== 0 || minute !== 0 || second !== 0) {
-                    // Return date with time and seconds
-                    return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
-                           String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0') + ':' + String(second).padStart(2, '0');
-                } else {
-                    // Return just date if it's exactly midnight (likely date-only)
-                    return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
-                }
+                // Use the new formatDate function for consistency
+                const result = formatDate(year, month, day, hour !== 0 || minute !== 0 || second !== 0 ? hour : null, 
+                                        hour !== 0 || minute !== 0 || second !== 0 ? minute : null, 
+                                        hour !== 0 || minute !== 0 || second !== 0 ? second : null);
+                return result;
             }
         }
     }
@@ -318,8 +332,9 @@ function convertExcelDate(value, isInDateColumn = false) {
     // Check if value is a number that could be an Excel date serial number
     if (typeof value === 'number' && value > 1 && value < 300000) {
         // Only convert numbers to dates if explicitly in a date column context
-        // Don't auto-convert numbers like 174382 or 35 unless we're sure it's a date column
-        if (isInDateColumn && value >= 1000 && value <= 219146) { // Around 1902-2500, exclude small numbers
+        // Don't auto-convert numbers like 1015, 1011 unless we're sure it's a date column
+        // Use realistic date range starting from 1980
+        if (isInDateColumn && value >= 29221 && value <= 219146) { // Around 1980-2500, exclude unrealistic early dates
             
             // Handle Excel serial numbers with more precision for time parts
             const wholeDays = Math.floor(value);
@@ -376,37 +391,23 @@ function convertExcelDate(value, isInDateColumn = false) {
             const seconds = totalSeconds % 60;
             
             if (year >= 1900 && year <= 2500) {
-                // Check if this has time component
+                // Use formatDate for consistent 00:00:00 handling
                 const hasTime = timeFraction > 0 || hours !== 0 || minutes !== 0 || seconds !== 0;
-                
-                if (hasTime) {
-                    // Format as YYYY-MM-DD HH:MM:SS
-                    return year + '-' + 
-                           String(month).padStart(2, '0') + '-' + 
-                           String(day).padStart(2, '0') + ' ' +
-                           String(hours).padStart(2, '0') + ':' + 
-                           String(minutes).padStart(2, '0') + ':' +
-                           String(seconds).padStart(2, '0');
-                } else {
-                    // Format as YYYY-MM-DD (date only)
-                    return year + '-' + 
-                           String(month).padStart(2, '0') + '-' + 
-                           String(day).padStart(2, '0');
-                }
+                return formatDate(year, month, day, hasTime ? hours : null, hasTime ? minutes : null, hasTime ? seconds : null);
             }
         }
     }
     
     // Check if value is already a date string in various formats
     if (typeof value === 'string') {
-        // First check if it's already in correct YYYY-MM-DD HH:MM:SS format - keep it as is
+        // First check if it's already in correct YYYY-MM-DD HH:MM:SS format - normalize it
         if (value.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)) {
-            return value; // Already in perfect format
+            return normalizeDateTime(value); // Remove 00:00:00 if present
         }
         
-        // Check if it's in YYYY-MM-DD HH:MM format - add seconds
+        // Check if it's in YYYY-MM-DD HH:MM format - add seconds and normalize
         if (value.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/)) {
-            return value + ':00'; // Add missing seconds
+            return normalizeDateTime(value + ':00'); // Add missing seconds and normalize
         }
         
         // Check if it's already in YYYY-MM-DD format - keep it as is
@@ -453,12 +454,7 @@ function convertExcelDate(value, isInDateColumn = false) {
             }
             
             if (year >= 1900 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31 && hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59 && second >= 0 && second <= 59) {
-                let result = year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
-                       String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
-                
-                // Always add seconds to preserve format consistency
-                result += ':' + String(second).padStart(2, '0');
-                
+                const result = formatDate(year, month, day, hour, minute, second);
                 return result;
             }
         }
@@ -480,8 +476,7 @@ function convertExcelDate(value, isInDateColumn = false) {
             if (first <= 12 && second <= 31 && hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59 && sec >= 0 && sec <= 59) {
                 const month = first;
                 const day = second;
-                return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
-                       String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+                return formatDate(year, month, day, hour, minute, sec);
             }
         }
         
@@ -611,8 +606,7 @@ function convertExcelDate(value, isInDateColumn = false) {
                 }
                 
                 if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-                    return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
-                           String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+                    return formatDate(year, month, day, hour, minute, sec);
                 }
             }
         }
