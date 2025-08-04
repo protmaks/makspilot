@@ -327,16 +327,46 @@ function convertExcelDate(value, isInDateColumn = false) {
             let year = parseInt(dateTimeMatch[3]);
             const hour = parseInt(dateTimeMatch[4]);
             const minute = parseInt(dateTimeMatch[5]);
+            const seconds = dateTimeMatch[6] ? parseInt(dateTimeMatch[6]) : 0;
             
             // Assume years 00-30 are 2000-2030, years 31-99 are 1931-1999
             year = year <= 30 ? 2000 + year : 1900 + year;
             
-            // For American format like 8/1/22, interpret as MM/DD
-            if (first <= 12 && second <= 31 && hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
-                const month = first;
-                const day = second;
-                return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
-                       String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+            // Smart format detection: prefer MM/DD for typical American patterns
+            if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+                let month, day;
+                
+                // If first > 12, it must be DD/MM (European)
+                if (first > 12 && second <= 12) {
+                    day = first;
+                    month = second;
+                } 
+                // If second > 12, it must be MM/DD (American)
+                else if (second > 12 && first <= 12) {
+                    month = first;
+                    day = second;
+                }
+                // If both <= 12, prefer MM/DD (American) as it's more common with time formats
+                else if (first <= 12 && second <= 12) {
+                    month = first;
+                    day = second;
+                }
+                // If both > 12, invalid date - skip
+                else {
+                    return value;
+                }
+                
+                if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+                    let result = year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
+                           String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+                    
+                    // Add seconds if present
+                    if (dateTimeMatch[6]) {
+                        result += ':' + String(seconds).padStart(2, '0');
+                    }
+                    
+                    return result;
+                }
             }
         }
         
@@ -350,12 +380,30 @@ function convertExcelDate(value, isInDateColumn = false) {
             const minute = parseInt(dateTimeMatchFullSec[5]);
             const sec = parseInt(dateTimeMatchFullSec[6]);
             
-            // For American format, interpret as MM/DD
-            if (first <= 12 && second <= 31 && year >= 1900 && year <= 2100 && hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59 && sec >= 0 && sec <= 59) {
-                const month = first;
-                const day = second;
-                return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
-                       String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+            if (year >= 1900 && year <= 2100 && hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59 && sec >= 0 && sec <= 59) {
+                let month, day;
+                
+                // Smart format detection
+                if (first > 12 && second <= 12) {
+                    // Must be DD/MM
+                    day = first;
+                    month = second;
+                } else if (second > 12 && first <= 12) {
+                    // Must be MM/DD
+                    month = first;
+                    day = second;
+                } else if (first <= 12 && second <= 12) {
+                    // Ambiguous case - prefer MM/DD for American format with time
+                    month = first;
+                    day = second;
+                } else {
+                    return value; // Invalid date
+                }
+                
+                if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+                    return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
+                           String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+                }
             }
         }
         
@@ -367,13 +415,39 @@ function convertExcelDate(value, isInDateColumn = false) {
             const year = parseInt(dateTimeMatch[3]);
             const hour = parseInt(dateTimeMatch[4]);
             const minute = parseInt(dateTimeMatch[5]);
+            const seconds = dateTimeMatch[6] ? parseInt(dateTimeMatch[6]) : 0;
             
-            // For American format, interpret as MM/DD
-            if (first <= 12 && second <= 31 && year >= 1900 && year <= 2100 && hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
-                const month = first;
-                const day = second;
-                return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
-                       String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+            if (year >= 1900 && year <= 2100 && hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+                let month, day;
+                
+                // Smart format detection
+                if (first > 12 && second <= 12) {
+                    // Must be DD/MM
+                    day = first;
+                    month = second;
+                } else if (second > 12 && first <= 12) {
+                    // Must be MM/DD
+                    month = first;
+                    day = second;
+                } else if (first <= 12 && second <= 12) {
+                    // Ambiguous case - prefer MM/DD for American format with time
+                    month = first;
+                    day = second;
+                } else {
+                    return value; // Invalid date
+                }
+                
+                if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+                    let result = year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
+                           String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+                    
+                    // Add seconds if present
+                    if (dateTimeMatch[6]) {
+                        result += ':' + String(seconds).padStart(2, '0');
+                    }
+                    
+                    return result;
+                }
             }
         }
         
@@ -503,41 +577,33 @@ function convertExcelDate(value, isInDateColumn = false) {
             }
         }
         
-        // DD/MM/YYYY format (slashes as separators)
-        dateMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-        if (dateMatch) {
-            const day = parseInt(dateMatch[1]);
-            const month = parseInt(dateMatch[2]);
-            const year = parseInt(dateMatch[3]);
-            if (day <= 31 && month <= 12 && year >= 1900 && year <= 2100) {
-                return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
-            }
-        }
-        
-        // MM/DD/YYYY format (American format)
+        // Handle date formats with slashes (DD/MM/YYYY or MM/DD/YYYY) - smart detection
         dateMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
         if (dateMatch) {
             const first = parseInt(dateMatch[1]);
             const second = parseInt(dateMatch[2]);
             const year = parseInt(dateMatch[3]);
             
-            // Smart interpretation: if first > 12, it's likely DD/MM, not MM/DD
-            if (first > 12 && second <= 12 && year >= 1900 && year <= 2100) {
-                // Definitely DD/MM format
-                const day = first;
-                const month = second;
-                return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
-            } else if (first <= 12 && second <= 12 && year >= 1900 && year <= 2100) {
-                // Ambiguous - could be either MM/DD or DD/MM
-                // For European context, assume DD/MM is more likely
-                const day = first;
-                const month = second;
-                return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
-            } else {
-                // Standard MM/DD interpretation
-                const month = first;
-                const day = second;
-                if (day <= 31 && month <= 12 && year >= 1900 && year <= 2100) {
+            if (year >= 1900 && year <= 2100) {
+                let month, day;
+                
+                if (first > 12 && second <= 12) {
+                    // Must be DD/MM
+                    day = first;
+                    month = second;
+                } else if (second > 12 && first <= 12) {
+                    // Must be MM/DD
+                    month = first;
+                    day = second;
+                } else if (first <= 12 && second <= 12) {
+                    // Ambiguous case - prefer MM/DD (American format for consistency with datetime)
+                    month = first;
+                    day = second;
+                } else {
+                    return value; // Invalid date
+                }
+                
+                if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
                     return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
                 }
             }
@@ -552,10 +618,26 @@ function convertExcelDate(value, isInDateColumn = false) {
             // Assume years 00-30 are 2000-2030, years 31-99 are 1931-1999
             year = year <= 30 ? 2000 + year : 1900 + year;
             
-            // Always interpret as DD/MM for European context
-            const day = first;
-            const month = second;
-            if (day <= 31 && month <= 12) {
+            // Smart format detection for dates without time
+            let month, day;
+            
+            if (first > 12 && second <= 12) {
+                // Must be DD/MM
+                day = first;
+                month = second;
+            } else if (second > 12 && first <= 12) {
+                // Must be MM/DD
+                month = first;
+                day = second;
+            } else if (first <= 12 && second <= 12) {
+                // Ambiguous case - prefer MM/DD (American format)
+                month = first;
+                day = second;
+            } else {
+                return value; // Invalid date
+            }
+            
+            if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
                 return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
             }
         }
