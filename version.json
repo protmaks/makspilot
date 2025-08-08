@@ -1,9 +1,9 @@
 {
-  "version": "v 5.0 Beta",
+  "version": "v 5.1 Beta",
   "releaseDate": "2025-08-08",
   "description": "Application version configuration",
   "changelog": {
-    "v 5.0 Beta": [
+    "v 5.1 Beta": [
       "🆕 Added Excel export functionality with advanced formatting",
       "📊 Export comparison results to Excel with color-coded differences",
       "🎨 Preserved visual styling in exported files",
