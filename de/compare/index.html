@@ -1,35 +1,49 @@
 <!DOCTYPE html>
-<html lang="de" data-placeholder-text="Wählen Sie Dateien auf Ihrem Computer aus und kl                <div class="filter-controls" style="display: none;">
-                    <div class="filter-options">
-                        <label><input type="checkbox" id="hideSameRows"> GLEICHE Zeilen ausblenden</label>
-                        <label><input type="checkbox" id="hideDiffColumns"> VERSCHIEDENE Zeilen ausblenden</label>
-                        <label><input type="checkbox" id="hideNewRows1"> Zeilen nur in Datei 1 ausblenden</label>
-                        <label><input type="checkbox" id="hideNewRows2"> Zeilen nur in Datei 2 ausblenden</label>
-                    </div>
-                    </div>e auf Vergleichen">
+<html lang="de" data-placeholder-text="Wählen Sie Dateien auf Ihrem Computer aus und klicken Sie auf Vergleichen">
 <head>
-    <script src="../../javascript/redirect.js"></script>    <script async src="https://www.googletagmanager.com/gtag/js?id=G-C19L2VS3EH"></script>
+    <script src="../../javascript/redirect.js"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-C19L2VS3EH"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
         gtag('js', new Date());
+
         gtag('config', 'G-C19L2VS3EH');
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MaksPilot - Excel- und CSV-Dateienvergleich</title>
+    <meta name="description" content="Vergleichen Sie mühelos Daten zwischen Excel- und CSV-Dateien. Kostenloses Online-Datenvergleichstool. Laden Sie Ihre Dateien hoch, identifizieren Sie sofort Unterschiede und exportieren Sie detaillierte Berichte.">
+    <meta name="keywords" content="Excel-Vergleich, CSV-Vergleich, Dateivergleich, Online-Tool, Excel-Unterschiede, CSV-Unterschiede, XLS-Vergleich, XLSX-Vergleich, kostenloses Tool, sicherer Vergleich">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="MaxPilot">
+    <meta property="og:title" content="Datenvergleich zwischen Excel- und CSV-Dateien | Kostenloses Online-Tool - MaksPilot">
+    <meta property="og:description" content="Vergleichen Sie mühelos Daten zwischen Excel- und CSV-Dateien. Kostenloses Online-Datenvergleichstool. Laden Sie Ihre Dateien hoch, identifizieren Sie sofort Unterschiede und exportieren Sie detaillierte Berichte.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://makspilot.com/de/compare/">
+    <meta property="og:image" content="https://makspilot.com/img/main.png">
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml">
+    <link rel="canonical" href="https://makspilot.com/de/compare/">
+    <link rel="alternate" hreflang="en" href="https://makspilot.com/compare/">
+    <link rel="alternate" hreflang="ru" href="https://makspilot.com/ru/compare/">
+    <link rel="alternate" hreflang="pl" href="https://makspilot.com/pl/compare/">
+    <link rel="alternate" hreflang="es" href="https://makspilot.com/es/compare/">
+    <link rel="alternate" hreflang="zh-CN" href="https://makspilot.com/zh/compare/">
+    <link rel="alternate" hreflang="ar" href="https://makspilot.com/ar/compare/">
+    <link rel="alternate" hreflang="de" href="https://makspilot.com/de/compare/">
+    <title>MaksPilot - Excel- und CSV-Dateivergleich</title>
     <link rel="icon" type="image/x-icon" href="../../favicon.ico">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../../style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
+    <!-- Mobile Warning -->
     <div class="mobile-warning" id="mobileWarning">
         <div class="mobile-warning-content">
             <span class="mobile-warning-icon">💻</span>
             <h2 class="mobile-warning-title">Desktop Erforderlich</h2>
             <p class="mobile-warning-text">
-                Die Dateienvergleichsfunktion ist für Desktop-Computer optimiert. 
+                Die Dateivergleichsfunktion ist für Desktop-Computer optimiert. 
                 Bitte verwenden Sie einen PC oder Laptop mit größerem Bildschirm für die beste Erfahrung.
             </p>
             <a href="../" class="mobile-warning-button">Zurück zur Startseite</a>
@@ -48,7 +62,7 @@
                 <li><a href="./" class="nav-cta">Vergleich Starten</a></li>
                 <li><a href="../how_use/">Anleitung</a></li>
                 <li><a href="https://medium.com/@protmaks" target="_blank">Mein Blog</a></li>
-                <li><a href="https://www.linkedin.c../protmaks/" class="social-link" title="linkedin" target="_blank">
+                <li><a href="https://www.linkedin.com/in/protmaks/" class="social-link" title="linkedin" target="_blank">
                     <img src="../../img/linkedin.png" alt="linkedin">
                 </a></li>
                 <li class="lang-switcher">
@@ -141,11 +155,18 @@
         </div>
     </div>
 
+    <!-- Load the comparison functions -->
     <script src="../../javascript/functions.js"></script>
+    
+    <!-- Load the export functions -->
     <script src="../../javascript/export.js"></script>
+    
+    <!-- Load the shared header -->
     <script src="../../javascript/script.js"></script>
     
+    <!-- Mobile device detection and warning -->
     <script>
+        // Function to detect mobile devices
         function isMobileDevice() {
             const userAgent = navigator.userAgent;
             const mobileKeywords = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
@@ -154,6 +175,7 @@
             return mobileKeywords.test(userAgent) || screenWidth < 768;
         }
         
+        // Show/hide mobile warning based on device type
         function checkDeviceType() {
             const mobileWarning = document.getElementById('mobileWarning');
             const mainContent = document.querySelector('.main-content');
@@ -166,6 +188,7 @@
                 if (mainContent) mainContent.style.display = 'none';
                 if (result) result.style.display = 'none';
                 if (diffTable) diffTable.style.display = 'none';
+                // Ensure header stays visible on mobile
                 if (header) {
                     header.style.display = 'block';
                     header.style.position = 'fixed';
@@ -177,6 +200,7 @@
                 if (mainContent) mainContent.style.display = 'block';
                 if (result) result.style.display = 'block';
                 if (diffTable) diffTable.style.display = 'block';
+                // Reset header styles for desktop
                 if (header) {
                     header.style.display = 'block';
                     header.style.position = 'fixed';
@@ -186,7 +210,10 @@
             }
         }
         
+        // Check device type on page load
         document.addEventListener('DOMContentLoaded', checkDeviceType);
+        
+        // Check device type on window resize (in case user rotates device or resizes window)
         window.addEventListener('resize', checkDeviceType);
     </script>
 </body>

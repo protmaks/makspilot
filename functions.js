@@ -194,7 +194,7 @@ function processColumnTypes(data) {
         const isDateCol = isDateColumn(columnValues, columnHeader);
         columnTypes[colIndex] = isDateCol ? 'date' : 'other';
         
-        console.log(`Column ${colIndex} (${columnHeader}): ${columnTypes[colIndex]} - Sample values:`, columnValues.slice(0, 3));
+        // Column type detection completed
     }
     
     // Apply conversions based on column types
@@ -1600,8 +1600,7 @@ function handleFile(file, num) {
                 
                 // Show information about sheets if there are multiple
                 if (workbook.SheetNames.length > 1) {
-                    console.log(`Excel file "${file.name}" contains ${workbook.SheetNames.length} sheets:`, workbook.SheetNames);
-                    console.log(`Using first sheet: "${workbook.SheetNames[0]}"`);
+                    // Multiple sheets detected - using first sheet
                 }
                 
                 // Update UI to show sheet information
@@ -2278,6 +2277,12 @@ function performComparison() {
     const filterControls = document.querySelector('.filter-controls');
     if (filterControls) {
         filterControls.style.display = 'block';
+    }
+    
+    // Show export button after successful comparison
+    const exportBtn = document.getElementById('exportExcelBtn');
+    if (exportBtn) {
+        exportBtn.style.display = 'inline-block';
     }
     
     // Don't automatically check "Hide same rows" - let user decide
