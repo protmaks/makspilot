@@ -1,8 +1,9 @@
 // Excel and CSV File Comparison Functions
 
 // Configuration constants
-const MAX_ROWS_LIMIT = 25000; // Maximum allowed rows per file
+const MAX_ROWS_LIMIT = 45000; // Maximum allowed rows per file
 const MAX_COLS_LIMIT = 40; // Maximum allowed columns per file
+const DETAILED_TABLE_LIMIT = 15000; // Limit for showing detailed comparison table (above this only summary and export)
 
 let data1 = [], data2 = [];
 let fileName1 = '', fileName2 = '';
@@ -95,6 +96,9 @@ function populateSheetSelector(sheetNames, fileNum, selectedSheet) {
 
 // Function to process the selected sheet
 function processSelectedSheet(fileNum, selectedSheetName) {
+    // Clear previous comparison results when changing sheets
+    clearComparisonResults();
+    
     const workbook = fileNum === 1 ? workbook1 : workbook2;
     const fileName = fileNum === 1 ? fileName1 : fileName2;
     
@@ -1964,6 +1968,38 @@ function showPlaceholderMessage() {
     }
 }
 
+// Centralized function to clear comparison results and UI state
+function clearComparisonResults() {
+    // Clear result containers
+    document.getElementById('result').innerHTML = '';
+    document.getElementById('summary').innerHTML = '';
+    document.getElementById('diffTable').innerHTML = '';
+    
+    // Hide filter controls
+    const filterControls = document.querySelector('.filter-controls');
+    if (filterControls) {
+        filterControls.style.display = 'none';
+    }
+    
+    // Hide export button
+    const exportBtn = document.getElementById('exportExcelBtn');
+    const buttonsContainer = document.querySelector('.buttons-container');
+    const exportButtonHalf = exportBtn ? exportBtn.closest('.button-half') : null;
+    
+    if (exportBtn && buttonsContainer) {
+        exportBtn.style.display = 'none';
+        if (exportButtonHalf) {
+            exportButtonHalf.classList.add('export-hidden');
+        }
+        buttonsContainer.classList.add('export-hidden');
+    }
+    
+    // Reset global comparison state
+    currentPairs = [];
+    currentSortColumn = -1;
+    currentSortDirection = 'asc';
+}
+
 function restoreTableStructure() {
     document.getElementById('diffTable').innerHTML = `
         <div class="table-container-sync">
@@ -2060,6 +2096,13 @@ function getColumnsToHide(headers, columnTypes, hideDiff, hideNew) {
 }
 
 function compareTables() {
+    // Clear previous results immediately when starting new comparison
+    clearComparisonResults();
+    
+    // Show immediate loading indicator
+    document.getElementById('result').innerHTML = '<div style="text-align: center; padding: 20px; font-size: 16px;">🔄 Starting comparison... Please wait</div>';
+    document.getElementById('summary').innerHTML = '<div style="text-align: center; padding: 10px;">Initializing...</div>';
+    
     if (!data1.length || !data2.length) {
         document.getElementById('result').innerText = 'Please, load both files.';
         document.getElementById('summary').innerHTML = '';
@@ -2121,8 +2164,13 @@ function compareTables() {
     
     // Show loading indicator for large files
     if (totalRows > 1000) {
-        document.getElementById('result').innerHTML = '<div style="text-align: center; padding: 20px; font-size: 16px;">🔄 Comparing large files... Please wait</div>';
-        document.getElementById('summary').innerHTML = '<div style="text-align: center; padding: 10px;">Processing...</div>';
+        const fileInfo = `${data1.length.toLocaleString()} vs ${data2.length.toLocaleString()} rows`;
+        const loadingMessage = totalRows > DETAILED_TABLE_LIMIT ? 
+            `🔄 Processing large files (${fileInfo}) - Summary mode... Please wait` :
+            `🔄 Comparing files (${fileInfo})... Please wait`;
+        
+        document.getElementById('result').innerHTML = `<div style="text-align: center; padding: 20px; font-size: 16px;">${loadingMessage}</div>`;
+        document.getElementById('summary').innerHTML = '<div style="text-align: center; padding: 10px;">Analyzing data...</div>';
     }
     
     // Use setTimeout to allow UI to update
@@ -2297,10 +2345,24 @@ function performComparison() {
     if (hideSameRowsCheckbox) {
         // Reset checkbox state and render all rows initially
         hideSameRowsCheckbox.checked = false;
-        // Use universal rendering function for consistency
-        renderComparisonTable();
     }
     
+    // Check if files are too large for detailed table rendering
+    const totalRowsForCheck = Math.max(body1.length, body2.length);
+    const isLargeFile = totalRowsForCheck > DETAILED_TABLE_LIMIT;
+    
+    if (isLargeFile) {
+        // For large files (15K-45K rows), perform fuzzy matching for export but don't show table
+        performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols, true);
+        return;
+    } else {
+        // For smaller files, continue with detailed comparison table and full processing
+        performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols, false);
+    }
+}
+
+// Function to perform fuzzy matching for both export and display purposes
+function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols, isLargeFile) {
     // --- Fuzzy matching for bottom table ---
     let used2 = new Array(body2.length).fill(false);
     let pairs = [];
@@ -2343,7 +2405,10 @@ function performComparison() {
             // Show progress for large files
             if (body1.length > 1000) {
                 const progress = Math.round((endIndex / body1.length) * 100);
-                document.getElementById('result').innerHTML = `<div style="text-align: center; padding: 20px; font-size: 16px;">🔄 Comparing files... ${progress}% complete</div>`;
+                const progressMessage = isLargeFile ? 
+                    `🔄 Processing large files for export... ${progress}% complete` :
+                    `🔄 Comparing files... ${progress}% complete`;
+                document.getElementById('result').innerHTML = `<div style="text-align: center; padding: 20px; font-size: 16px;">${progressMessage}</div>`;
             }
             setTimeout(() => processBatch(endIndex, batchSize), 10);
         } else {
@@ -2359,8 +2424,13 @@ function performComparison() {
             currentFinalHeaders = finalHeaders;
             currentFinalAllCols = finalAllCols;
             
-            // Continue with rendering using universal function
-            renderComparisonTable();
+            if (isLargeFile) {
+                // Show large file message instead of table
+                showLargeFileMessage(Math.max(body1.length, body2.length));
+            } else {
+                // Continue with rendering using universal function
+                renderComparisonTable();
+            }
         }
     }
     
@@ -3113,4 +3183,54 @@ function forceTableWidthSync() {
     bodyTable.style.width = calculatedTotalWidth + 'px';
     headerTable.style.minWidth = calculatedTotalWidth + 'px';
     bodyTable.style.minWidth = calculatedTotalWidth + 'px';
+}
+
+// Function to show message for large files (15K-45K rows) with summary and export only
+function showLargeFileMessage(totalRows) {
+    // Hide the detailed comparison table
+    document.getElementById('diffTable').innerHTML = `
+        <div style="text-align: center; padding: 40px; background-color: #e7f3ff; border: 1px solid #bee5eb; border-radius: 8px; margin: 20px 0;">
+            <div style="font-size: 24px; margin-bottom: 16px;">📊</div>
+            <div style="font-size: 18px; font-weight: 600; color: #0c5460; margin-bottom: 10px;">Large File Mode</div>
+            <div style="color: #0c5460; margin-bottom: 15px; line-height: 1.5;">
+                Your files contain <strong>${totalRows.toLocaleString()}</strong> rows.<br>
+                For optimal performance, the detailed row-by-row comparison table is hidden.<br>
+                <strong>The comparison has been completed successfully!</strong>
+            </div>
+            <div style="color: #0c5460; font-size: 14px; margin-bottom: 20px;">
+                ✅ View the summary table above for statistics<br>
+                ✅ Use the Export to Excel button to download detailed results<br>
+                ✅ All comparison data is available in the export
+            </div>
+            <div style="background-color: #d1ecf1; padding: 15px; border-radius: 6px; margin-top: 15px;">
+                <strong>💡 Performance Tip:</strong> Files with fewer than ${DETAILED_TABLE_LIMIT.toLocaleString()} rows 
+                will show the detailed comparison table for interactive browsing.
+            </div>
+        </div>
+    `;
+    
+    // Hide filter controls since there's no table to filter
+    const filterControls = document.querySelector('.filter-controls');
+    if (filterControls) {
+        filterControls.style.display = 'none';
+    }
+    
+    // Make sure export button is prominently visible
+    const exportBtn = document.getElementById('exportExcelBtn');
+    const buttonsContainer = document.querySelector('.buttons-container');
+    const exportButtonHalf = exportBtn ? exportBtn.closest('.button-half') : null;
+    
+    if (exportBtn && buttonsContainer) {
+        exportBtn.style.display = 'inline-block';
+        exportBtn.style.fontSize = '16px';
+        exportBtn.style.padding = '12px 24px';
+        exportBtn.style.backgroundColor = '#28a745';
+        exportBtn.style.fontWeight = 'bold';
+        
+        // Remove classes that hide export button container
+        if (exportButtonHalf) {
+            exportButtonHalf.classList.remove('export-hidden');
+        }
+        buttonsContainer.classList.remove('export-hidden');
+    }
 }
