@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es" data-placeholder-text="Elige archivos en tu computadora y haz clic en Comparar">
 <head>
-    <script src="../../redirect.js"></script>    <script async src="https://www.googletagmanager.com/gtag/js?id=G-C19L2VS3EH"></script>
+    <script src="../../javascript/redirect.js"></script>    <script async src="https://www.googletagmanager.com/gtag/js?id=G-C19L2VS3EH"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
@@ -88,7 +88,7 @@
 </header>
     
     <div class="main-content" style="padding-top: 80px;"><!-- Account for fixed header -->
-        <h1>Compara Datos Entre Archivos Excel y CSV - v 4.0 Beta</h1>
+        <h1>Compara Datos Entre Archivos Excel y CSV - v 5.0 Beta</h1>
         <p style="text-align: center; font-size: 14px; color: #666;">
             📝 Lee mi guía detallada 
             <a href="../how_use/" style="color: #ffb17a; text-decoration: none;">aquí</a>
@@ -113,8 +113,15 @@
             </div>
             <div class="controls-container">
                 <div class="exclude-compare-row">
-                    <div class="compare-button-container">
-                        <button class="compare-btn" onclick="compareTables()">Comparar</button>
+                    <div class="buttons-container" style="display: flex; gap: 10px;">
+                        <div class="button-half" style="flex: 1;">
+                            <button class="compare-btn" onclick="compareTables()" style="width: 100%;">Comparar</button>
+                        </div>
+                        <div class="button-half" style="flex: 1;">
+                            <button id="exportExcelBtn" onclick="exportToExcel()" class="export-btn" style="display: none; width: 100%;">
+                                📊 Exportar a Excel
+                            </button>
+                        </div>
                     </div>
                     <div class="exclude-columns-container">
                         <label for="excludeColumns" class="exclude-label">Excluir columnas:</label>
@@ -148,10 +155,11 @@
     </div>
 
     <!-- Load the comparison functions -->
-    <script src="../../functions.js"></script>
+    <script src="../../javascript/functions.js"></script>
+    <script src="../../javascript/export.js"></script>
     
     <!-- Load the shared header -->
-    <script src="../../script.js"></script>
+    <script src="../../javascript/script.js"></script>
     
     <!-- Mobile device detection and warning -->
     <script>

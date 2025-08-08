@@ -1,7 +1,14 @@
 <!DOCTYPE html>
-<html lang="de" data-placeholder-text="Wählen Sie Dateien auf Ihrem Computer aus und klicken Sie auf Vergleichen">
+<html lang="de" data-placeholder-text="Wählen Sie Dateien auf Ihrem Computer aus und kl                <div class="filter-controls" style="display: none;">
+                    <div class="filter-options">
+                        <label><input type="checkbox" id="hideSameRows"> GLEICHE Zeilen ausblenden</label>
+                        <label><input type="checkbox" id="hideDiffColumns"> VERSCHIEDENE Zeilen ausblenden</label>
+                        <label><input type="checkbox" id="hideNewRows1"> Zeilen nur in Datei 1 ausblenden</label>
+                        <label><input type="checkbox" id="hideNewRows2"> Zeilen nur in Datei 2 ausblenden</label>
+                    </div>
+                    </div>e auf Vergleichen">
 <head>
-    <script src="../../redirect.js"></script>    <script async src="https://www.googletagmanager.com/gtag/js?id=G-C19L2VS3EH"></script>
+    <script src="../../javascript/redirect.js"></script>    <script async src="https://www.googletagmanager.com/gtag/js?id=G-C19L2VS3EH"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
@@ -68,7 +75,7 @@
 </header>
     
     <div class="main-content" style="padding-top: 80px;">
-        <h1>Datenvergleich zwischen Excel- und CSV-Dateien - v 4.0 Beta</h1>
+        <h1>Datenvergleich zwischen Excel- und CSV-Dateien - v 5.0 Beta</h1>
         <p style="text-align: center; font-size: 14px; color: #666;">
             📝 Lesen Sie meine detaillierte Anleitung 
             <a href="../how_use/" style="color: #ffb17a; text-decoration: none;">hier</a>
@@ -93,8 +100,15 @@
             </div>
             <div class="controls-container">
                 <div class="exclude-compare-row">
-                    <div class="compare-button-container">
-                        <button class="compare-btn" onclick="compareTables()">Vergleichen</button>
+                    <div class="buttons-container" style="display: flex; gap: 10px;">
+                        <div class="button-half" style="flex: 1;">
+                            <button class="compare-btn" onclick="compareTables()" style="width: 100%;">Vergleichen</button>
+                        </div>
+                        <div class="button-half" style="flex: 1;">
+                            <button id="exportExcelBtn" onclick="exportToExcel()" class="export-btn" style="display: none; width: 100%;">
+                                📊 Nach Excel exportieren
+                            </button>
+                        </div>
                     </div>
                     <div class="exclude-columns-container">
                         <label for="excludeColumns" class="exclude-label">Spalten ausschließen:</label>
@@ -127,8 +141,9 @@
         </div>
     </div>
 
-    <script src="../../functions.js"></script>
-    <script src="../../script.js"></script>
+    <script src="../../javascript/functions.js"></script>
+    <script src="../../javascript/export.js"></script>
+    <script src="../../javascript/script.js"></script>
     
     <script>
         function isMobileDevice() {
