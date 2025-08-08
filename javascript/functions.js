@@ -2281,8 +2281,16 @@ function performComparison() {
     
     // Show export button after successful comparison
     const exportBtn = document.getElementById('exportExcelBtn');
-    if (exportBtn) {
+    const buttonsContainer = document.querySelector('.buttons-container');
+    const exportButtonHalf = exportBtn ? exportBtn.closest('.button-half') : null;
+    
+    if (exportBtn && buttonsContainer) {
         exportBtn.style.display = 'inline-block';
+        // Remove classes that hide export button container
+        if (exportButtonHalf) {
+            exportButtonHalf.classList.remove('export-hidden');
+        }
+        buttonsContainer.classList.remove('export-hidden');
     }
     
     // Don't automatically check "Hide same rows" - let user decide
@@ -2895,6 +2903,17 @@ window.addEventListener('load', function() {
 
 // Initialize file handlers
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize button layout - hide export button container initially
+    const exportBtn = document.getElementById('exportExcelBtn');
+    const buttonsContainer = document.querySelector('.buttons-container');
+    const exportButtonHalf = exportBtn ? exportBtn.closest('.button-half') : null;
+    
+    if (exportBtn && buttonsContainer && exportButtonHalf) {
+        exportBtn.style.display = 'none';
+        exportButtonHalf.classList.add('export-hidden');
+        buttonsContainer.classList.add('export-hidden');
+    }
+    
     document.getElementById('file1').addEventListener('change', function(e) {
         handleFile(e.target.files[0], 1);
     });

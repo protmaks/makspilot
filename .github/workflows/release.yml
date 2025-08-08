@@ -1,0 +1,201 @@
+name: Create Release and Update Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'New version (e.g., v 4.1 Beta)'
+        required: true
+        type: string
+      release_type:
+        description: 'Release type'
+        required: true
+        type: choice
+        options:
+          - 'beta'
+          - 'release'
+          - 'hotfix'
+        default: 'beta'
+
+jobs:
+  update-version-and-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      
+      - name: Configure git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+      
+      - name: Update version files
+        run: |
+          # Update version.json
+          python3 -c "
+          import json
+          from datetime import datetime
+          
+          # Load current config
+          with open('version.json', 'r') as f:
+              config = json.load(f)
+          
+          # Update version and date
+          config['version'] = '${{ github.event.inputs.version }}'
+          config['releaseDate'] = datetime.now().strftime('%Y-%m-%d')
+          
+          # Save updated config
+          with open('version.json', 'w') as f:
+              json.dump(config, f, indent=2)
+          "
+          
+          # Run the update script
+          echo "${{ github.event.inputs.version }}" | python3 -c "
+          import sys
+          import json
+          import os
+          import re
+          from pathlib import Path
+          
+          def update_html_file(file_path, old_version, new_version):
+              try:
+                  with open(file_path, 'r', encoding='utf-8') as f:
+                      content = f.read()
+                  
+                  pattern = r'(<h1>[^<]*?)(' + re.escape(old_version) + r')(.*?</h1>)'
+                  updated_content = re.sub(pattern, r'\1' + new_version + r'\3', content)
+                  
+                  if updated_content != content:
+                      with open(file_path, 'w', encoding='utf-8') as f:
+                          f.write(updated_content)
+                      return True
+                  return False
+              except Exception as e:
+                  print(f'Error updating {file_path}: {e}')
+                  return False
+          
+          def find_html_files():
+              html_files = []
+              for file in Path('.').glob('*.html'):
+                  html_files.append(file)
+              
+              lang_dirs = ['ar', 'de', 'es', 'ja', 'pl', 'pt', 'ru', 'zh', 'compare', 'how_use']
+              for lang_dir in lang_dirs:
+                  if os.path.isdir(lang_dir):
+                      for file in Path(lang_dir).rglob('*.html'):
+                          html_files.append(file)
+              return html_files
+          
+          def get_current_version():
+              html_files = find_html_files()
+              for file_path in html_files:
+                  try:
+                      with open(file_path, 'r', encoding='utf-8') as f:
+                          content = f.read()
+                      match = re.search(r'<h1>[^<]*?(v \d+\.\d+[^<]*?)</h1>', content)
+                      if match:
+                          return match.group(1).strip()
+                  except Exception:
+                      continue
+              return None
+          
+          # Get versions
+          current_version = get_current_version()
+          new_version = sys.stdin.read().strip()
+          
+          if current_version and current_version != new_version:
+              html_files = find_html_files()
+              updated_count = 0
+              for file_path in html_files:
+                  if update_html_file(file_path, current_version, new_version):
+                      updated_count += 1
+              print(f'Updated {updated_count} HTML files from {current_version} to {new_version}')
+          else:
+              print('No version changes needed')
+          "
+      
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if git diff --quiet; then
+            echo "changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "changes=true" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Commit changes
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          git add .
+          git commit -m "🚀 Update version to ${{ github.event.inputs.version }}"
+          git push
+      
+      - name: Create tag
+        run: |
+          # Create a clean tag name
+          TAG_NAME=$(echo "${{ github.event.inputs.version }}" | sed 's/ /-/g' | tr '[:upper:]' '[:lower:]')
+          git tag "$TAG_NAME"
+          git push origin "$TAG_NAME"
+          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
+      
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get commits since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            CHANGELOG=$(git log $LAST_TAG..HEAD --pretty=format:"- %s" --reverse)
+          else
+            CHANGELOG=$(git log --pretty=format:"- %s" --reverse -10)
+          fi
+          
+          # Save changelog to file for multiline output
+          echo "$CHANGELOG" > changelog.txt
+          echo "changelog_file=changelog.txt" >> $GITHUB_OUTPUT
+      
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.TAG_NAME }}
+          release_name: MaxPilot ${{ github.event.inputs.version }}
+          body: |
+            ## 🚀 MaxPilot ${{ github.event.inputs.version }}
+            
+            ### What's New
+            
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ### 📋 Features
+            - Excel and CSV file comparison
+            - Multi-language support (9 languages)
+            - Export results to Excel format
+            - Real-time difference highlighting
+            - No registration required
+            
+            ### 🔗 Links
+            - [Try it now](https://makspilot.com/compare/)
+            - [Documentation](https://makspilot.com/how_use/)
+            
+            ---
+            
+            **Release Type:** ${{ github.event.inputs.release_type }}
+            **Release Date:** $(date +%Y-%m-%d)
+          draft: false
+          prerelease: ${{ github.event.inputs.release_type == 'beta' }}
+      
+      - name: Notify success
+        if: success()
+        run: |
+          echo "✅ Successfully created release ${{ github.event.inputs.version }}"
+          echo "🏷️ Tag: ${{ env.TAG_NAME }}"
+          echo "🔗 View release: https://github.com/${{ github.repository }}/releases/tag/${{ env.TAG_NAME }}"

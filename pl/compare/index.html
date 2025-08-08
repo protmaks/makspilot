@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pl" data-placeholder-text="Wybierz pliki na komputerze i kliknij Porównaj">
 <head>
-    <script src="../../redirect.js"></script>    <script async src="https://www.googletagmanager.com/gtag/js?id=G-C19L2VS3EH"></script>
+    <script src="../../javascript/redirect.js"></script>    <script async src="https://www.googletagmanager.com/gtag/js?id=G-C19L2VS3EH"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
@@ -87,7 +87,7 @@
 </header>
     
     <div class="main-content" style="padding-top: 80px;"><!-- Account for fixed header -->
-        <h1>Porównaj Dane Między Plikami Excel i CSV - v 4.0 Beta</h1>
+        <h1>Porównaj Dane Między Plikami Excel i CSV - v 5.0 Beta</h1>
         <p style="text-align: center; font-size: 14px; color: #666;">
             📝 Przeczytaj mój przewodnik i zostaw swoją opinię lub pytania w komentarzach 
             <a href="https://medium.com/@protmaks/comparing-excel-and-csv-without-loading-online-tool-for-business-5ab689ff1850" target="_blank" style="color: #ffb17a; text-decoration: none;">na Medium</a>
@@ -112,8 +112,15 @@
             </div>
             <div class="controls-container">
                 <div class="exclude-compare-row">
-                    <div class="compare-button-container">
-                        <button class="compare-btn" onclick="compareTables()">Porównaj</button>
+                    <div class="buttons-container" style="display: flex; gap: 10px;">
+                        <div class="button-half" style="flex: 1;">
+                            <button class="compare-btn" onclick="compareTables()" style="width: 100%;">Porównaj</button>
+                        </div>
+                        <div class="button-half" style="flex: 1;">
+                            <button id="exportExcelBtn" onclick="exportToExcel()" class="export-btn" style="display: none; width: 100%;">
+                                📊 Eksportuj do Excel
+                            </button>
+                        </div>
                     </div>
                     <div class="exclude-columns-container">
                         <label for="excludeColumns" class="exclude-label">Wyklucz kolumny:</label>
@@ -127,7 +134,7 @@
                         <label><input type="checkbox" id="hideNewRows1"> Ukryj wiersze tylko w pliku 1</label>
                         <label><input type="checkbox" id="hideNewRows2"> Ukryj wiersze tylko w pliku 2</label>
                     </div>
-                </div>
+                    </div>
             </div>
         </div>
     </div>
@@ -147,10 +154,13 @@
     </div>
 
     <!-- Load the comparison functions -->
-    <script src="../../functions.js"></script>
+    <script src="../../javascript/functions.js"></script>
+    
+    <!-- Load the export functions -->
+    <script src="../../javascript/export.js"></script>
     
     <!-- Load the shared header -->
-    <script src="../../script.js"></script>
+    <script src="../../javascript/script.js"></script>
     
     <!-- Mobile device detection and warning -->
     <script>

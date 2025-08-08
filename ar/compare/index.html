@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl" data-placeholder-text="اختر الملفات على جهازك وانقر مقارنة">
 <head>
-    <script src="../../redirect.js"></script>    <script async src="https://www.googletagmanager.com/gtag/js?id=G-C19L2VS3EH"></script>
+    <script src="../../javascript/redirect.js"></script>    <script async src="https://www.googletagmanager.com/gtag/js?id=G-C19L2VS3EH"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
@@ -85,7 +85,7 @@
 </header>
     
     <div class="main-content" style="padding-top: 80px;">
-        <h1>قارن البيانات بين ملفات Excel و CSV - v 4.0 Beta</h1>
+        <h1>قارن البيانات بين ملفات Excel و CSV - v 5.0 Beta</h1>
         <p style="text-align: center; font-size: 14px; color: #666;">
             📝 اقرأ دليلي المفصل 
             <a href="../how_use/" style="color: #ffb17a; text-decoration: none;">هنا</a>
@@ -110,8 +110,15 @@
             </div>
             <div class="controls-container">
                 <div class="exclude-compare-row">
-                    <div class="compare-button-container">
-                        <button class="compare-btn" onclick="compareTables()">قارن</button>
+                    <div class="buttons-container" style="display: flex; gap: 10px;">
+                        <div class="button-half" style="flex: 1;">
+                            <button class="compare-btn" onclick="compareTables()" style="width: 100%;">مقارنة</button>
+                        </div>
+                        <div class="button-half" style="flex: 1;">
+                            <button id="exportExcelBtn" onclick="exportToExcel()" class="export-btn" style="display: none; width: 100%;">
+                                📊 تصدير إلى Excel
+                            </button>
+                        </div>
                     </div>
                     <div class="exclude-columns-container">
                         <label for="excludeColumns" class="exclude-label">استبعد الأعمدة:</label>
@@ -125,7 +132,7 @@
                         <label><input type="checkbox" id="hideNewRows1"> إخفاء الصفوف في الملف 1 فقط</label>
                         <label><input type="checkbox" id="hideNewRows2"> إخفاء الصفوف في الملف 2 فقط</label>
                     </div>
-                </div>
+                    </div>
             </div>
         </div>
     </div>
@@ -144,8 +151,9 @@
         </div>
     </div>
 
-    <script src="../../functions.js"></script>
-    <script src="../../script.js"></script>
+    <script src="../../javascript/functions.js"></script>
+    <script src="../../javascript/export.js"></script>
+    <script src="../../javascript/script.js"></script>
     
     <script>
         function isMobileDevice() {
