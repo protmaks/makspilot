@@ -820,7 +820,7 @@ button.export-btn {
     border: none;
     border-radius: 5px;
     cursor: pointer;
-    font-weight: 500;
+    font-weight: 800;
     transition: background 0.2s, box-shadow 0.2s;
     box-shadow: 0 2px 6px rgba(40, 167, 69, 0.15);
 }
@@ -887,8 +887,8 @@ button.export-btn:disabled {
 }
 
 .percent-low {
-    background: #d4edda !important;
-    color: #155724;
+    background: #f8d7da !important;
+    color: #721c24;
 }
 
 .percent-medium {
@@ -897,8 +897,9 @@ button.export-btn:disabled {
 }
 
 .percent-high {
-    background: #f8d7da !important;
-    color: #721c24;
+    background: #d4edda !important;
+    color: #155724;
+
 }
 
 #diffTable {
