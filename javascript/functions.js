@@ -2341,8 +2341,8 @@ function performComparison() {
     let totalRows = Math.max(data1.length, data2.length) - 1;
     let maxRows = Math.max(body1.length, body2.length);
     
-    // Calculate percentage difference correctly: different rows / total unique rows
-    // Total unique rows = only1 + only2 + both (all unique rows across both files)
+    // Calculate percentage similarity: identical rows / max rows from both files
+    // This shows how similar the files are (higher % = more similar)
     let totalUniqueRows = only1 + only2 + both;
     let differentRows = only1 + only2;
     let percentDiff, percentClass;
@@ -2352,10 +2352,12 @@ function performComparison() {
         percentDiff = 'Calculating...';
         percentClass = 'percent-low';
     } else {
-        percentDiff = totalUniqueRows > 0 ? Math.min(((differentRows / totalUniqueRows) * 100), 100).toFixed(2) + '%' : '0.00%';
+        // New formula: (identical rows / max rows from both files) * 100
+        percentDiff = maxRows > 0 ? Math.min(((both / maxRows) * 100), 100).toFixed(2) + '%' : '0.00%';
         percentClass = 'percent-low';
-        if (parseFloat(percentDiff) > 30) percentClass = 'percent-high';
-        else if (parseFloat(percentDiff) > 10) percentClass = 'percent-medium';
+        if (parseFloat(percentDiff) > 70) percentClass = 'percent-low';
+        else if (parseFloat(percentDiff) > 30) percentClass = 'percent-medium';
+        else percentClass = 'percent-high';
     }
     
     // Add excluded columns info
@@ -2380,15 +2382,15 @@ function performComparison() {
                            window.location.pathname.includes('/ar/') ? 'ar' : 'en';
                            
         const toleranceMessages = {
-            'ru': 'Режим погрешности активен: Числа с разницей в 1% и даты с одинаковой датой (разное время) показаны',
-            'pl': 'Tryb tolerancji aktywny: Liczby różniące się o 1% i daty z tą samą datą (różny czas) są pokazane',
-            'es': 'Modo de tolerancia activo: Números con diferencia del 1% y fechas con la misma fecha (diferente hora) se muestran',
-            'de': 'Toleranzmodus aktiv: Zahlen mit 1% Unterschied und Daten mit gleichem Datum (unterschiedliche Zeit) werden angezeigt',
-            'ja': '許容差モードがアクティブ: 1%の差がある数値と同じ日付（異なる時刻）の日付が表示されます',
-            'pt': 'Modo de tolerância ativo: Números com diferença de 1% e datas com a mesma data (horário diferente) são mostrados',
-            'zh': '容差模式激活：1%差异的数字和相同日期（不同时间）的日期显示为',
-            'ar': 'وضع التسامح نشط: الأرقام التي تختلف بنسبة 1% والتواريخ بنفس التاريخ (وقت مختلف) تظهر',
-            'en': 'Tolerance Mode Active: Numbers within 1% difference and dates with same date (different time) are shown'
+            'ru': 'Режим погрешности активен: Числа с разницей в 1,5% и даты с одинаковой датой (разное время) показаны',
+            'pl': 'Tryb tolerancji aktywny: Liczby różniące się o 1,5% i daty z tą samą datą (różny czas) są pokazane',
+            'es': 'Modo de tolerancia activo: Números con diferencia del 1,5% y fechas con la misma fecha (diferente hora) se muestran',
+            'de': 'Toleranzmodus aktiv: Zahlen mit 1,5% Unterschied und Daten mit gleichem Datum (unterschiedliche Zeit) werden angezeigt',
+            'ja': '許容差モードがアクティブ: 1,5%の差がある数値と同じ日付（異なる時刻）の日付が表示されます',
+            'pt': 'Modo de tolerância ativo: Números com diferença de 1,5% e datas com a mesma data (horário diferente) são mostrados',
+            'zh': '容差模式激活：1,5%差异的数字和相同日期（不同时间）的日期显示为',
+            'ar': 'وضع التسامح نشط: الأرقام التي تختلف بنسبة 1,5% والتواريخ بنفس التاريخ (وقت مختلف) تظهر',
+            'en': 'Tolerance Mode Active: Numbers within 1.5% difference and dates with same date (different time) are shown'
         };
         
         toleranceInfo = `<div style="background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 12px; margin: 15px 0; border-radius: 6px; font-size: 14px;">
@@ -2400,7 +2402,7 @@ function performComparison() {
         ${excludedInfo}
         ${toleranceInfo}
         <table style="margin-bottom:20px; border: 1px solid #ccc;">
-            <tr><th>File</th><th>Row Count</th><th>Rows only in this file</th><th>Identical rows</th><th>% Difference</th><th>Diff columns</th></tr>
+            <tr><th>File</th><th>Row Count</th><th>Rows only in this file</th><th>Identical rows</th><th>% Similarity</th><th>Diff columns</th></tr>
             <tr><td>${fileName1 || 'File 1'}</td><td>${body1.length}</td><td>${toleranceMode && totalUniqueRows === 0 ? 'Calculating...' : only1}</td><td rowspan="2">${toleranceMode && totalUniqueRows === 0 ? 'Calculating...' : both}</td><td rowspan="2" class="percent-cell ${percentClass}">${percentDiff}</td><td>${diffColumns1Html}</td></tr>
             <tr><td>${fileName2 || 'File 2'}</td><td>${body2.length}</td><td>${toleranceMode && totalUniqueRows === 0 ? 'Calculating...' : only2}</td><td>${diffColumns2Html}</td></tr>
         </table>
@@ -2521,14 +2523,18 @@ function updateSummaryStatistics() {
         };
     }
     
-    // Recalculate percentage
-    const totalUniqueRows = window.summaryStats.only1 + window.summaryStats.only2 + window.summaryStats.both;
-    const differentRows = window.summaryStats.only1 + window.summaryStats.only2;
-    const percentDiff = totalUniqueRows > 0 ? Math.min(((differentRows / totalUniqueRows) * 100), 100).toFixed(2) : '0.00';
+    // Recalculate percentage based on similarity (identical rows / max rows)
+    // Calculate max rows from current data
+    const maxRows = Math.max(
+        window.summaryStats.only1 + window.summaryStats.both,  // total rows in file1
+        window.summaryStats.only2 + window.summaryStats.both   // total rows in file2
+    );
+    const percentDiff = maxRows > 0 ? Math.min(((window.summaryStats.both / maxRows) * 100), 100).toFixed(2) : '0.00';
     
     let percentClass = 'percent-low';
-    if (parseFloat(percentDiff) > 30) percentClass = 'percent-high';
-    else if (parseFloat(percentDiff) > 10) percentClass = 'percent-medium';
+    if (parseFloat(percentDiff) > 70) percentClass = 'percent-low';
+    else if (parseFloat(percentDiff) > 30) percentClass = 'percent-medium';
+    else percentClass = 'percent-high';
     
     // Update the summary table HTML
     updateSummaryTable(window.summaryStats.only1, window.summaryStats.only2, window.summaryStats.both, percentDiff, percentClass);
@@ -2559,7 +2565,7 @@ function updateSummaryTable(only1, only2, both, percentDiff, percentClass) {
         ${excludedInfo}
         ${toleranceInfo}
         <table style="margin-bottom:20px; border: 1px solid #ccc;">
-            <tr><th>File</th><th>Row Count</th><th>Rows only in this file</th><th>Identical rows</th><th>% Difference</th><th>Diff columns</th></tr>
+            <tr><th>File</th><th>Row Count</th><th>Rows only in this file</th><th>Identical rows</th><th>% Similarity</th><th>Diff columns</th></tr>
             <tr><td>${fileName1 || 'File 1'}</td><td>${currentPairs.filter(p => p.row1).length}</td><td>${only1}</td><td rowspan="2">${both}</td><td rowspan="2" class="percent-cell ${percentClass}">${percentDiff}%</td><td>${diffColumns1Html}</td></tr>
             <tr><td>${fileName2 || 'File 2'}</td><td>${currentPairs.filter(p => p.row2).length}</td><td>${only2}</td><td>${diffColumns2Html}</td></tr>
         </table>
@@ -2751,7 +2757,7 @@ function parseNumber(str) {
     return parseFloat(cleanStr) || 0;
 }
 
-function isWithinTolerance(val1, val2, tolerance = 0.01) {
+function isWithinTolerance(val1, val2, tolerance = 0.015) {
     const num1 = parseNumber(val1);
     const num2 = parseNumber(val2);
     
@@ -2788,8 +2794,8 @@ function compareValuesWithTolerance(v1, v2) {
     
     // Check if both are numbers
     if (isNumericString(str1) && isNumericString(str2)) {
-        if (isWithinTolerance(str1, str2, 0.01)) {
-            return 'tolerance'; // Within 1% tolerance
+        if (isWithinTolerance(str1, str2, 0.015)) {
+            return 'tolerance'; // Within 1.5% tolerance
         }
     }
     
@@ -3423,7 +3429,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize table with empty values on page load
     let htmlSummary = `
         <table style="margin-bottom:20px; border: 1px solid #ccc;">
-            <tr><th>File</th><th>Row Count</th><th>Rows only in this file</th><th>Identical rows</th><th>% Difference</th><th>Diff columns</th></tr>
+            <tr><th>File</th><th>Row Count</th><th>Rows only in this file</th><th>Identical rows</th><th>% Similarity</th><th>Diff columns</th></tr>
             <tr><td>-</td><td>-</td><td>-</td><td rowspan="2">-</td><td rowspan="2" class="percent-cell">-</td><td>-</td></tr>
             <tr><td>-</td><td>-</td><td>-</td><td>-</td></tr>
         </table>
