@@ -19,6 +19,123 @@ let currentFinalAllCols = 0;
 let currentDiffColumns1 = '-';
 let currentDiffColumns2 = '-';
 
+// Function to get translated summary table headers
+function getSummaryTableHeaders() {
+    // Detect current language based on page URL
+    const currentLang = window.location.pathname.includes('/ru/') ? 'ru' : 
+                       window.location.pathname.includes('/pl/') ? 'pl' :
+                       window.location.pathname.includes('/es/') ? 'es' :
+                       window.location.pathname.includes('/de/') ? 'de' :
+                       window.location.pathname.includes('/ja/') ? 'ja' :
+                       window.location.pathname.includes('/pt/') ? 'pt' :
+                       window.location.pathname.includes('/zh/') ? 'zh' :
+                       window.location.pathname.includes('/ar/') ? 'ar' : 'en';
+                       
+    const translations = {
+        'ru': {
+            file: 'Файл',
+            rowCount: 'Количество строк',
+            rowsOnlyInFile: 'Строки только в этом файле',
+            identicalRows: 'Идентичные строки',
+            similarity: '% Сходство',
+            diffColumns: 'Различающиеся колонки',
+            file1: 'Файл 1',
+            file2: 'Файл 2',
+            calculating: 'Вычисляется...'
+        },
+        'pl': {
+            file: 'Plik',
+            rowCount: 'Liczba wierszy',
+            rowsOnlyInFile: 'Wiersze tylko w tym pliku',
+            identicalRows: 'Identyczne wiersze',
+            similarity: '% Podobieństwo',
+            diffColumns: 'Różne kolumny',
+            file1: 'Plik 1',
+            file2: 'Plik 2',
+            calculating: 'Obliczanie...'
+        },
+        'es': {
+            file: 'Archivo',
+            rowCount: 'Número de filas',
+            rowsOnlyInFile: 'Filas solo en este archivo',
+            identicalRows: 'Filas idénticas',
+            similarity: '% Similitud',
+            diffColumns: 'Columnas diferentes',
+            file1: 'Archivo 1',
+            file2: 'Archivo 2',
+            calculating: 'Calculando...'
+        },
+        'de': {
+            file: 'Datei',
+            rowCount: 'Anzahl Zeilen',
+            rowsOnlyInFile: 'Zeilen nur in dieser Datei',
+            identicalRows: 'Identische Zeilen',
+            similarity: '% Ähnlichkeit',
+            diffColumns: 'Unterschiedliche Spalten',
+            file1: 'Datei 1',
+            file2: 'Datei 2',
+            calculating: 'Berechnung...'
+        },
+        'ja': {
+            file: 'ファイル',
+            rowCount: '行数',
+            rowsOnlyInFile: 'このファイルのみの行',
+            identicalRows: '同一行',
+            similarity: '% 類似度',
+            diffColumns: '異なる列',
+            file1: 'ファイル 1',
+            file2: 'ファイル 2',
+            calculating: '計算中...'
+        },
+        'pt': {
+            file: 'Arquivo',
+            rowCount: 'Número de linhas',
+            rowsOnlyInFile: 'Linhas apenas neste arquivo',
+            identicalRows: 'Linhas idênticas',
+            similarity: '% Similaridade',
+            diffColumns: 'Colunas diferentes',
+            file1: 'Arquivo 1',
+            file2: 'Arquivo 2',
+            calculating: 'Calculando...'
+        },
+        'zh': {
+            file: '文件',
+            rowCount: '行数',
+            rowsOnlyInFile: '仅此文件中的行',
+            identicalRows: '相同行',
+            similarity: '% 相似度',
+            diffColumns: '不同列',
+            file1: '文件 1',
+            file2: '文件 2',
+            calculating: '计算中...'
+        },
+        'ar': {
+            file: 'ملف',
+            rowCount: 'عدد الصفوف',
+            rowsOnlyInFile: 'الصفوف في هذا الملف فقط',
+            identicalRows: 'الصفوف المتطابقة',
+            similarity: '% التشابه',
+            diffColumns: 'الأعمدة المختلفة',
+            file1: 'ملف 1',
+            file2: 'ملف 2',
+            calculating: 'جاري الحساب...'
+        },
+        'en': {
+            file: 'File',
+            rowCount: 'Row Count',
+            rowsOnlyInFile: 'Rows only in this file',
+            identicalRows: 'Identical rows',
+            similarity: '% Similarity',
+            diffColumns: 'Diff columns',
+            file1: 'File 1',
+            file2: 'File 2',
+            calculating: 'Calculating...'
+        }
+    };
+    
+    return translations[currentLang] || translations['en'];
+}
+
 // Function to update sheet information display
 function updateSheetInfo(fileName, sheetNames, selectedSheet, fileNum) {
     const sheetInfoContainer = document.getElementById('sheetInfo');
@@ -2190,6 +2307,9 @@ function compareTables(useTolerance = false) {
 }
 
 function performComparison() {
+    // Get translated table headers
+    const tableHeaders = getSummaryTableHeaders();
+    
     // Restore table structure for comparison results
     restoreTableStructure();
     
@@ -2285,7 +2405,6 @@ function performComparison() {
         // Use pre-calculated column differences from prepareDataForComparison
         onlyInFile1 = columnInfo.onlyInFile1 || [];
         onlyInFile2 = columnInfo.onlyInFile2 || [];
-        console.log('Using columnInfo:', { onlyInFile1, onlyInFile2, columnInfo });
     } else {
         // Calculate manually for cases where no column alignment was done
         let header1Set = new Set(filteredHeader1.map(h => h ? h.toString().trim().toLowerCase() : ''));
@@ -2293,13 +2412,10 @@ function performComparison() {
         
         onlyInFile1 = filteredHeader1.filter(h => h && h.toString().trim() !== '' && !header2Set.has(h.toString().trim().toLowerCase()));
         onlyInFile2 = filteredHeader2.filter(h => h && h.toString().trim() !== '' && !header1Set.has(h.toString().trim().toLowerCase()));
-        console.log('Calculated manually:', { onlyInFile1, onlyInFile2, filteredHeader1, filteredHeader2 });
     }
     
     let diffColumns1 = onlyInFile1.length > 0 ? onlyInFile1.join(', ') : '-';
     let diffColumns2 = onlyInFile2.length > 0 ? onlyInFile2.join(', ') : '-';
-    
-    console.log('Final diff columns:', { diffColumns1, diffColumns2, onlyInFile1, onlyInFile2 });
     
     // Save diff columns info globally for later use
     currentDiffColumns1 = diffColumns1;
@@ -2341,7 +2457,7 @@ function performComparison() {
     let totalRows = Math.max(data1.length, data2.length) - 1;
     let maxRows = Math.max(body1.length, body2.length);
     
-    // Calculate percentage similarity: identical rows / max rows from both files
+    // Calculate percentage similarity: identical rows / max file size
     // This shows how similar the files are (higher % = more similar)
     let totalUniqueRows = only1 + only2 + both;
     let differentRows = only1 + only2;
@@ -2349,14 +2465,15 @@ function performComparison() {
     
     if (toleranceMode && totalUniqueRows === 0) {
         // In tolerance mode, show temporary message until matching is complete
-        percentDiff = 'Calculating...';
+        percentDiff = tableHeaders.calculating;
         percentClass = 'percent-low';
     } else {
-        // New formula: (identical rows / max rows from both files) * 100
-        percentDiff = maxRows > 0 ? Math.min(((both / maxRows) * 100), 100).toFixed(2) + '%' : '0.00%';
-        percentClass = 'percent-low';
-        if (parseFloat(percentDiff) > 70) percentClass = 'percent-low';
-        else if (parseFloat(percentDiff) > 30) percentClass = 'percent-medium';
+        // Use max file size as denominator: (identical rows / max file size) * 100
+        const maxFileSize = Math.max(body1.length, body2.length);
+        percentDiff = maxFileSize > 0 ? Math.min(((both / maxFileSize) * 100), 100).toFixed(2) + '%' : '0.00%';
+        percentClass = 'percent-high';
+        if (parseFloat(percentDiff) < 30) percentClass = 'percent-low';
+        else if (parseFloat(percentDiff) < 70) percentClass = 'percent-medium';
         else percentClass = 'percent-high';
     }
     
@@ -2402,9 +2519,9 @@ function performComparison() {
         ${excludedInfo}
         ${toleranceInfo}
         <table style="margin-bottom:20px; border: 1px solid #ccc;">
-            <tr><th>File</th><th>Row Count</th><th>Rows only in this file</th><th>Identical rows</th><th>% Similarity</th><th>Diff columns</th></tr>
-            <tr><td>${fileName1 || 'File 1'}</td><td>${body1.length}</td><td>${toleranceMode && totalUniqueRows === 0 ? 'Calculating...' : only1}</td><td rowspan="2">${toleranceMode && totalUniqueRows === 0 ? 'Calculating...' : both}</td><td rowspan="2" class="percent-cell ${percentClass}">${percentDiff}</td><td>${diffColumns1Html}</td></tr>
-            <tr><td>${fileName2 || 'File 2'}</td><td>${body2.length}</td><td>${toleranceMode && totalUniqueRows === 0 ? 'Calculating...' : only2}</td><td>${diffColumns2Html}</td></tr>
+            <tr><th>${tableHeaders.file}</th><th>${tableHeaders.rowCount}</th><th>${tableHeaders.rowsOnlyInFile}</th><th>${tableHeaders.identicalRows}</th><th>${tableHeaders.similarity}</th><th>${tableHeaders.diffColumns}</th></tr>
+            <tr><td>${fileName1 || tableHeaders.file1}</td><td>${body1.length}</td><td>${toleranceMode && totalUniqueRows === 0 ? tableHeaders.calculating : only1}</td><td rowspan="2">${toleranceMode && totalUniqueRows === 0 ? tableHeaders.calculating : both}</td><td rowspan="2" class="percent-cell ${percentClass}">${percentDiff}</td><td>${diffColumns1Html}</td></tr>
+            <tr><td>${fileName2 || tableHeaders.file2}</td><td>${body2.length}</td><td>${toleranceMode && totalUniqueRows === 0 ? tableHeaders.calculating : only2}</td><td>${diffColumns2Html}</td></tr>
         </table>
     `;
     document.getElementById('summary').innerHTML = htmlSummary;
@@ -2441,16 +2558,16 @@ function performComparison() {
     
     if (isLargeFile) {
         // For large files (15K-45K rows), perform fuzzy matching for export but don't show table
-        performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols, true);
+        performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols, true, tableHeaders);
         return;
     } else {
         // For smaller files, continue with detailed comparison table and full processing
-        performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols, false);
+        performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols, false, tableHeaders);
     }
 }
 
 // Function to update summary statistics based on actual matching results
-function updateSummaryStatistics() {
+function updateSummaryStatistics(tableHeaders, file1Size = null, file2Size = null) {
     if (!currentPairs || currentPairs.length === 0) return;
     
     let identicalCount = 0;
@@ -2523,25 +2640,22 @@ function updateSummaryStatistics() {
         };
     }
     
-    // Recalculate percentage based on similarity (identical rows / max rows)
-    // Calculate max rows from current data
-    const maxRows = Math.max(
-        window.summaryStats.only1 + window.summaryStats.both,  // total rows in file1
-        window.summaryStats.only2 + window.summaryStats.both   // total rows in file2
-    );
-    const percentDiff = maxRows > 0 ? Math.min(((window.summaryStats.both / maxRows) * 100), 100).toFixed(2) : '0.00';
+    // Recalculate percentage based on similarity (identical rows / max file size)
+    // Use the maximum number of rows between the two files as the denominator
+    const maxFileSize = file1Size && file2Size ? Math.max(file1Size, file2Size) : (window.summaryStats.only1 + window.summaryStats.only2 + window.summaryStats.both);
+    const percentDiff = maxFileSize > 0 ? Math.min(((window.summaryStats.both / maxFileSize) * 100), 100).toFixed(2) : '0.00';
     
-    let percentClass = 'percent-low';
-    if (parseFloat(percentDiff) > 70) percentClass = 'percent-low';
-    else if (parseFloat(percentDiff) > 30) percentClass = 'percent-medium';
+    let percentClass = 'percent-high';
+    if (parseFloat(percentDiff) < 30) percentClass = 'percent-low';
+    else if (parseFloat(percentDiff) < 70) percentClass = 'percent-medium';
     else percentClass = 'percent-high';
     
     // Update the summary table HTML
-    updateSummaryTable(window.summaryStats.only1, window.summaryStats.only2, window.summaryStats.both, percentDiff, percentClass);
+    updateSummaryTable(window.summaryStats.only1, window.summaryStats.only2, window.summaryStats.both, percentDiff, percentClass, tableHeaders);
 }
 
 // Function to update the summary table HTML
-function updateSummaryTable(only1, only2, both, percentDiff, percentClass) {
+function updateSummaryTable(only1, only2, both, percentDiff, percentClass, tableHeaders) {
     // Get existing excluded info and tolerance info
     const summaryDiv = document.getElementById('summary');
     const existingHTML = summaryDiv.innerHTML;
@@ -2565,9 +2679,9 @@ function updateSummaryTable(only1, only2, both, percentDiff, percentClass) {
         ${excludedInfo}
         ${toleranceInfo}
         <table style="margin-bottom:20px; border: 1px solid #ccc;">
-            <tr><th>File</th><th>Row Count</th><th>Rows only in this file</th><th>Identical rows</th><th>% Similarity</th><th>Diff columns</th></tr>
-            <tr><td>${fileName1 || 'File 1'}</td><td>${currentPairs.filter(p => p.row1).length}</td><td>${only1}</td><td rowspan="2">${both}</td><td rowspan="2" class="percent-cell ${percentClass}">${percentDiff}%</td><td>${diffColumns1Html}</td></tr>
-            <tr><td>${fileName2 || 'File 2'}</td><td>${currentPairs.filter(p => p.row2).length}</td><td>${only2}</td><td>${diffColumns2Html}</td></tr>
+            <tr><th>${tableHeaders.file}</th><th>${tableHeaders.rowCount}</th><th>${tableHeaders.rowsOnlyInFile}</th><th>${tableHeaders.identicalRows}</th><th>${tableHeaders.similarity}</th><th>${tableHeaders.diffColumns}</th></tr>
+            <tr><td>${fileName1 || tableHeaders.file1}</td><td>${currentPairs.filter(p => p.row1).length}</td><td>${only1}</td><td rowspan="2">${both}</td><td rowspan="2" class="percent-cell ${percentClass}">${percentDiff}%</td><td>${diffColumns1Html}</td></tr>
+            <tr><td>${fileName2 || tableHeaders.file2}</td><td>${currentPairs.filter(p => p.row2).length}</td><td>${only2}</td><td>${diffColumns2Html}</td></tr>
         </table>
     `;
     
@@ -2575,7 +2689,8 @@ function updateSummaryTable(only1, only2, both, percentDiff, percentClass) {
 }
 
 // Function to perform fuzzy matching for both export and display purposes
-function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols, isLargeFile) {
+function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols, isLargeFile, tableHeaders) {
+    
     // --- Fuzzy matching for bottom table ---
     let used2 = new Array(body2.length).fill(false);
     let pairs = [];
@@ -2655,8 +2770,14 @@ function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols,
             // Key columns = 70% of total columns, require at least 60% match in key columns
             // OR at least 50% match in all columns with weighted scoring
             const keyColumnsCount = Math.max(1, Math.min(finalAllCols, Math.ceil(finalAllCols * 0.7)));
-            const minKeyMatches = Math.ceil(keyColumnsCount * 0.6) * 3; // 60% of key columns with 3x weight
-            const minTotalMatches = Math.ceil(finalAllCols * 0.5); // 50% of all columns
+            let minKeyMatches = Math.ceil(keyColumnsCount * 0.6) * 3; // 60% of key columns with 3x weight
+            let minTotalMatches = Math.ceil(finalAllCols * 0.5); // 50% of all columns
+            
+            // In tolerance mode, require higher threshold since tolerance matches have reduced weight
+            if (toleranceMode) {
+                minKeyMatches = Math.ceil(keyColumnsCount * 0.8) * 3; // 80% of key columns with 3x weight
+                minTotalMatches = Math.ceil(finalAllCols * 0.7); // 70% of all columns
+            }
             
             if (bestScore >= minKeyMatches || bestScore >= minTotalMatches) {
                 pairs.push({row1: body1[i], row2: body2[bestIdx]});
@@ -2691,7 +2812,7 @@ function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols,
             currentFinalAllCols = finalAllCols;
             
             // Update summary statistics based on actual matching results
-            updateSummaryStatistics();
+            updateSummaryStatistics(tableHeaders, body1.length, body2.length);
             
             if (isLargeFile) {
                 // Show large file message instead of table
@@ -3427,9 +3548,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Initialize table with empty values on page load
+    const tableHeaders = getSummaryTableHeaders();
     let htmlSummary = `
         <table style="margin-bottom:20px; border: 1px solid #ccc;">
-            <tr><th>File</th><th>Row Count</th><th>Rows only in this file</th><th>Identical rows</th><th>% Similarity</th><th>Diff columns</th></tr>
+            <tr><th>${tableHeaders.file}</th><th>${tableHeaders.rowCount}</th><th>${tableHeaders.rowsOnlyInFile}</th><th>${tableHeaders.identicalRows}</th><th>${tableHeaders.similarity}</th><th>${tableHeaders.diffColumns}</th></tr>
             <tr><td>-</td><td>-</td><td>-</td><td rowspan="2">-</td><td rowspan="2" class="percent-cell">-</td><td>-</td></tr>
             <tr><td>-</td><td>-</td><td>-</td><td>-</td></tr>
         </table>
