@@ -6,15 +6,9 @@ function exportToExcel() {
     }
     
     try {
-        // Prepare data for export
         const exportData = prepareDataForExport();
-        
-        // Create HTML table with styling
-        let htmlContent = createStyledHTMLTable(exportData);
-        
-        // Create and download Excel file using HTML
+        const htmlContent = createStyledHTMLTable(exportData);
         downloadExcelFromHTML(htmlContent);
-        
     } catch (error) {
         console.error('Export error:', error);
         alert('Error exporting to Excel: ' + error.message);
@@ -31,11 +25,18 @@ function createStyledHTMLTable(exportData) {
             .thick-top { border-top: 2pt solid black !important; }
             .thick-bottom { border-bottom: 2pt solid black !important; }
             .thin-border { border: 0.5pt solid #D4D4D4; }
+            .text-format { mso-number-format:"@"; mso-data-type:string; white-space: pre; }
+            td { mso-number-format:"@"; white-space: pre; mso-data-type: string; }
+            table td { mso-number-format: "@"; mso-data-type: string; }
         </style>
-        <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Comparison Results</x:Name><x:WorksheetOptions><x:DisplayGridlines/><x:Selected/><x:Panes><x:Pane><x:Number>0</x:Number><x:ActiveRow>0</x:ActiveRow><x:ActiveCol>0</x:ActiveCol></x:Pane></x:Panes></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+        <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Comparison Results</x:Name><x:WorksheetOptions><x:DisplayGridlines/><x:Selected/><x:DefaultRowHeight>255</x:DefaultRowHeight><x:Panes><x:Pane><x:Number>0</x:Number><x:ActiveRow>0</x:ActiveRow><x:ActiveCol>0</x:ActiveCol></x:Pane></x:Panes></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
     </head>
     <body>
         <table border="0" style="border-collapse: collapse;" x:publishsource="Excel">
+            <!-- XML Schema directive to force all columns as text -->
+            <colgroup>
+                <col style="mso-number-format:'@';" />
+            </colgroup>
     `;
     
     // Add table rows with data and formatting
@@ -55,83 +56,31 @@ function createStyledHTMLTable(exportData) {
             
             // Check for thick borders from formatting
             if (formatting && formatting.border) {
-                let borderStyle = 'border: ';
                 if (formatting.border.top && formatting.border.top.style === 'thick') {
-                    borderStyle = 'border-top: 2pt solid #000000; border-bottom: 0.5pt solid #D4D4D4; border-left: 0.5pt solid #D4D4D4; border-right: 0.5pt solid #D4D4D4; ';
+                    style = 'border-top: 2pt solid #000; border-bottom: 0.5pt solid #D4D4D4; border-left: 0.5pt solid #D4D4D4; border-right: 0.5pt solid #D4D4D4; padding:4px; vertical-align:top;';
                 } else if (formatting.border.bottom && formatting.border.bottom.style === 'thick') {
-                    borderStyle = 'border-top: 0.5pt solid #D4D4D4; border-bottom: 2pt solid #000000; border-left: 0.5pt solid #D4D4D4; border-right: 0.5pt solid #D4D4D4; ';
-                } else {
-                    borderStyle = 'border: 0.5pt solid #D4D4D4; ';
-                }
-                style = borderStyle + 'padding: 4px; vertical-align: top;';
-            }
-            
-            if (formatting) {
-                if (formatting.fill && formatting.fill.fgColor) {
-                    // Use the same colors as in the comparison table
-                    let bgColor = formatting.fill.fgColor.rgb;
-                    
-                    // Map bright colors to muted ones from CSS
-                    switch(bgColor) {
-                        case 'FF6B6B': // Red differences -> muted red
-                            bgColor = 'f8d7da';
-                            break;
-                        case '4CAF50': // Green identical -> muted green
-                            bgColor = 'd4edda';
-                            break;
-                        case 'd4edda': // Already correct muted green for identical
-                            bgColor = 'd4edda';
-                            break;
-                        case '2196F3': // Blue file 1 -> muted yellow
-                            bgColor = 'fff3cd';
-                            break;
-                        case 'FFC107': // Yellow file 2 -> muted yellow
-                            bgColor = 'fff3cd';
-                            break;
-                        case 'fff3cd': // Already correct muted yellow for unique
-                            bgColor = 'fff3cd';
-                            break;
-                        case 'f8d7da': // Already correct muted red for differences
-                            bgColor = 'f8d7da';
-                            break;
-                        case 'f8f9fa': // Already correct muted gray for headers
-                            bgColor = 'f8f9fa';
-                            break;
-                        case 'D3D3D3': // Gray header
-                            bgColor = 'f8f9fa';
-                            break;
-                    }
-                    style += ` background-color: #${bgColor};`;
-                }
-                if (formatting.font) {
-                    if (formatting.font.color && formatting.fill && formatting.fill.fgColor.rgb !== 'D3D3D3') {
-                        // For colored cells, use dark text instead of white for better readability
-                        style += ' color: #212529;';
-                    } else if (formatting.font.color) {
-                        style += ` color: #${formatting.font.color.rgb};`;
-                    }
-                    if (formatting.font.bold) {
-                        style += ' font-weight: bold;';
-                    }
+                    style = 'border-top: 0.5pt solid #D4D4D4; border-bottom: 2pt solid #000; border-left: 0.5pt solid #D4D4D4; border-right: 0.5pt solid #D4D4D4; padding:4px; vertical-align:top;';
                 }
             }
-            
-            // Add CSS classes for thick borders
-            let cssClass = '';
-            if (formatting && formatting.border) {
-                if (formatting.border.top && formatting.border.top.style === 'thick') {
-                    cssClass += ' thick-top';
+            if (formatting && formatting.fill && formatting.fill.fgColor) {
+                let bgColor = formatting.fill.fgColor.rgb;
+                switch (bgColor) {
+                    case 'FF6B6B': bgColor = 'f8d7da'; break; // bright red -> muted red
+                    case '4CAF50': bgColor = 'd4edda'; break; // bright green -> muted green
+                    case 'ffeaa7': bgColor = 'ffeaa7'; break; // keep tolerance orange as orange
                 }
-                if (formatting.border.bottom && formatting.border.bottom.style === 'thick') {
-                    cssClass += ' thick-bottom';
-                }
+                style += ` background-color:#${bgColor};`;
             }
-            
-            // Add autofilter attribute to header cells
+            if (formatting && formatting.font) {
+                if (formatting.font.bold) style += ' font-weight:bold;';
+                style += ' color:#212529;';
+            }
+            const safeValue = String(cellValue || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
             if (rowIndex === 0) {
-                html += `<td style="${style}" class="thin-border${cssClass}" x:autofilter="all">${cellValue || ''}</td>`;
+                html += `<td style="${style}" class="thin-border" x:autofilter="all">${safeValue}</td>`;
             } else {
-                html += `<td style="${style}" class="thin-border${cssClass}">${cellValue || ''}</td>`;
+                const textValue = ' \t' + safeValue;
+                html += `<td style="${style}mso-number-format:'@';mso-data-type:string;white-space:pre;" class="thin-border text-format" x:str="${safeValue}" x:format="@">${textValue}</td>`;
             }
         });
         html += '</tr>';
@@ -179,240 +128,37 @@ function downloadExcelFromHTML(htmlContent) {
 
 // Function to prepare data for Excel export
 function prepareDataForExport() {
+    return prepareDataFromRawData();
+}
+
+// Function to prepare data from already rendered table
+function prepareDataFromRenderedTable() {
+    const tableBody = document.querySelector('.diff-table-body tbody');
+    const tableHeader = document.querySelector('.diff-table-header thead');
+    
+    if (!tableBody || !tableHeader) {
+        return null;
+    }
+    
     const data = [];
     const formatting = {};
     const colWidths = [];
     
-    // Get filter states
-    const hideSameEl = document.getElementById('hideSameRows');
-    const hideDiffEl = document.getElementById('hideDiffColumns');
-    const hideNewRows1El = document.getElementById('hideNewRows1');
-    const hideNewRows2El = document.getElementById('hideNewRows2');
-    
-    const hideSame = hideSameEl ? hideSameEl.checked : false;
-    const hideDiffRows = hideDiffEl ? hideDiffEl.checked : false;
-    const hideNewRows1 = hideNewRows1El ? hideNewRows1El.checked : false;
-    const hideNewRows2 = hideNewRows2El ? hideNewRows2El.checked : false;
-    
-    // Add headers
-    const headers = ['Source'];
-    for (let c = 0; c < currentFinalAllCols; c++) {
-        headers.push(currentFinalHeaders[c] || '');
-    }
-    data.push(headers);
-    
-    // Set column widths (Source column wider, data columns standard)
-    colWidths.push({ wch: 20 }); // Source column
-    for (let c = 0; c < currentFinalAllCols; c++) {
-        colWidths.push({ wch: 15 }); // Data columns
-    }
-    
-    // Add header formatting
-    for (let col = 0; col < headers.length; col++) {
-        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
-        formatting[cellAddress] = {
-            fill: { fgColor: { rgb: "f8f9fa" } }, // Light gray background (same as CSS)
-            font: { bold: true, color: { rgb: "212529" } }, // Dark bold text
-            border: {
-                top: { style: "thin", color: { rgb: "D4D4D4" } },
-                bottom: { style: "thin", color: { rgb: "D4D4D4" } },
-                left: { style: "thin", color: { rgb: "D4D4D4" } },
-                right: { style: "thin", color: { rgb: "D4D4D4" } }
-            }
-        };
-    }
-    
-    let rowIndex = 1; // Start from row 1 (0 is headers)
-    
-    // Process comparison pairs
-    currentPairs.forEach(pair => {
-        const row1 = pair.row1;
-        const row2 = pair.row2;
+    // Get headers from rendered table
+    const headerRow = tableHeader.querySelector('tr');
+    if (headerRow) {
+        const headers = Array.from(headerRow.querySelectorAll('th')).map(th => String(th.textContent || '')); // Ensure string format
+        data.push(headers);
         
-        // Pre-convert values to uppercase for comparison
-        const row1Upper = row1 ? row1.map(val => (val !== undefined ? val.toString().toUpperCase() : '')) : null;
-        const row2Upper = row2 ? row2.map(val => (val !== undefined ? val.toString().toUpperCase() : '')) : null;
+        // Set column widths
+        headers.forEach(() => colWidths.push({ wch: 15 }));
         
-        let isEmpty = true;
-        let hasWarn = false;
-        let allSame = true;
-        
-        // Check if row should be filtered out
-        for (let c = 0; c < currentFinalAllCols; c++) {
-            const v1 = row1 ? (row1[c] !== undefined ? row1[c] : '') : '';
-            const v2 = row2 ? (row2[c] !== undefined ? row2[c] : '') : '';
-            if ((v1 && v1.toString().trim() !== '') || (v2 && v2.toString().trim() !== '')) {
-                isEmpty = false;
-            }
-            if (row1 && row2) {
-                if (row1Upper[c] !== row2Upper[c]) {
-                    hasWarn = true;
-                    allSame = false;
-                }
-            } else {
-                allSame = false;
-            }
-        }
-        
-        if (isEmpty) return;
-        if (hideSame && row1 && row2 && allSame) return;
-        if (hideNewRows1 && row1 && !row2) return;
-        if (hideNewRows2 && !row1 && row2) return;
-        if (hideDiffRows && row1 && row2 && hasWarn) return;
-        
-        // Add rows to export data
-        if (row1 && row2 && hasWarn) {
-            // Different data - create two rows
-            // Row 1 data
-            const dataRow1 = [fileName1 || 'File 1'];
-            for (let c = 0; c < currentFinalAllCols; c++) {
-                const v1 = row1[c] !== undefined ? row1[c] : '';
-                const v2 = row2[c] !== undefined ? row2[c] : '';
-                const v1Upper = row1Upper[c] || '';
-                const v2Upper = row2Upper[c] || '';
-                
-                dataRow1.push(v1);
-                
-                // Apply formatting for different cells
-                if (v1Upper !== v2Upper) {
-                    const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: c + 1 });
-                    formatting[cellAddress] = {
-                        fill: { fgColor: { rgb: "f8d7da" } }, // Muted red background for differences (same as CSS)
-                        font: { color: { rgb: "212529" } }, // Dark text
-                        border: {
-                            top: { style: "thick", color: { rgb: "000000" } }, // Thick top border for comparison group
-                            bottom: { style: "thin", color: { rgb: "D4D4D4" } },
-                            left: { style: "thin", color: { rgb: "D4D4D4" } },
-                            right: { style: "thin", color: { rgb: "D4D4D4" } }
-                        }
-                    };
-                } else {
-                    const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: c + 1 });
-                    formatting[cellAddress] = {
-                        border: {
-                            top: { style: "thick", color: { rgb: "000000" } }, // Thick top border for comparison group
-                            bottom: { style: "thin", color: { rgb: "D4D4D4" } },
-                            left: { style: "thin", color: { rgb: "D4D4D4" } },
-                            right: { style: "thin", color: { rgb: "D4D4D4" } }
-                        }
-                    };
-                }
-            }
-            data.push(dataRow1);
-            
-            // Source cell formatting for File 1
-            const sourceCell1 = XLSX.utils.encode_cell({ r: rowIndex, c: 0 });
-            formatting[sourceCell1] = {
-                fill: { fgColor: { rgb: "f8d7da" } }, // Muted red background
-                font: { color: { rgb: "212529" }, bold: true }, // Dark bold text
-                border: {
-                    top: { style: "thick", color: { rgb: "000000" } }, // Thick top border for comparison group
-                    bottom: { style: "thin", color: { rgb: "D4D4D4" } },
-                    left: { style: "thin", color: { rgb: "D4D4D4" } },
-                    right: { style: "thin", color: { rgb: "D4D4D4" } }
-                }
-            };
-            rowIndex++;
-            
-            // Row 2 data
-            const dataRow2 = [fileName2 || 'File 2'];
-            for (let c = 0; c < currentFinalAllCols; c++) {
-                const v1 = row1[c] !== undefined ? row1[c] : '';
-                const v2 = row2[c] !== undefined ? row2[c] : '';
-                const v1Upper = row1Upper[c] || '';
-                const v2Upper = row2Upper[c] || '';
-                
-                dataRow2.push(v2);
-                
-                // Apply formatting for different cells
-                if (v1Upper !== v2Upper) {
-                    const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: c + 1 });
-                    formatting[cellAddress] = {
-                        fill: { fgColor: { rgb: "f8d7da" } }, // Muted red background for differences
-                        font: { color: { rgb: "212529" } }, // Dark text
-                        border: {
-                            top: { style: "thin", color: { rgb: "D4D4D4" } },
-                            bottom: { style: "thick", color: { rgb: "000000" } }, // Thick bottom border for comparison group
-                            left: { style: "thin", color: { rgb: "D4D4D4" } },
-                            right: { style: "thin", color: { rgb: "D4D4D4" } }
-                        }
-                    };
-                } else {
-                    const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: c + 1 });
-                    formatting[cellAddress] = {
-                        border: {
-                            top: { style: "thin", color: { rgb: "D4D4D4" } },
-                            bottom: { style: "thick", color: { rgb: "000000" } }, // Thick bottom border for comparison group
-                            left: { style: "thin", color: { rgb: "D4D4D4" } },
-                            right: { style: "thin", color: { rgb: "D4D4D4" } }
-                        }
-                    };
-                }
-            }
-            data.push(dataRow2);
-            
-            // Source cell formatting for File 2
-            const sourceCell2 = XLSX.utils.encode_cell({ r: rowIndex, c: 0 });
-            formatting[sourceCell2] = {
-                fill: { fgColor: { rgb: "f8d7da" } }, // Muted red background
-                font: { color: { rgb: "212529" }, bold: true }, // Dark bold text
-                border: {
-                    top: { style: "thin", color: { rgb: "D4D4D4" } },
-                    bottom: { style: "thick", color: { rgb: "000000" } }, // Thick bottom border for comparison group
-                    left: { style: "thin", color: { rgb: "D4D4D4" } },
-                    right: { style: "thin", color: { rgb: "D4D4D4" } }
-                }
-            };
-            rowIndex++;
-            
-        } else {
-            // Single row for identical data or data from only one file
-            let source = '';
-            let fillColor = '';
-            
-            if (row1 && row2 && allSame) {
-                source = 'Both files';
-                fillColor = "d4edda"; // Muted green for identical (same as CSS)
-            } else if (row1 && !row2) {
-                source = fileName1 || 'File 1';
-                fillColor = "fff3cd"; // Muted yellow for new in file 1 (same as CSS)
-            } else if (!row1 && row2) {
-                source = fileName2 || 'File 2';
-                fillColor = "fff3cd"; // Muted yellow for new in file 2 (same as CSS)
-            }
-            
-            const dataRow = [source];
-            for (let c = 0; c < currentFinalAllCols; c++) {
-                let cellValue = '';
-                if (row1 && !row2) {
-                    cellValue = row1[c] !== undefined ? row1[c] : '';
-                } else if (!row1 && row2) {
-                    cellValue = row2[c] !== undefined ? row2[c] : '';
-                } else if (row1 && row2) {
-                    cellValue = row1[c] !== undefined ? row1[c] : '';
-                }
-                dataRow.push(cellValue);
-                
-                // Apply cell formatting
-                const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: c + 1 });
-                formatting[cellAddress] = {
-                    fill: { fgColor: { rgb: fillColor } },
-                    font: { color: { rgb: "212529" } }, // Dark text for better readability
-                    border: {
-                        top: { style: "thin", color: { rgb: "D4D4D4" } },
-                        bottom: { style: "thin", color: { rgb: "D4D4D4" } },
-                        left: { style: "thin", color: { rgb: "D4D4D4" } },
-                        right: { style: "thin", color: { rgb: "D4D4D4" } }
-                    }
-                };
-            }
-            data.push(dataRow);
-            
-            // Source cell formatting
-            const sourceCell = XLSX.utils.encode_cell({ r: rowIndex, c: 0 });
-            formatting[sourceCell] = {
-                fill: { fgColor: { rgb: fillColor } },
-                font: { color: { rgb: "212529" }, bold: true }, // Dark bold text
+        // Add header formatting
+        headers.forEach((header, col) => {
+            const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+            formatting[cellAddress] = {
+                fill: { fgColor: { rgb: "f8f9fa" } },
+                font: { bold: true, color: { rgb: "212529" } },
                 border: {
                     top: { style: "thin", color: { rgb: "D4D4D4" } },
                     bottom: { style: "thin", color: { rgb: "D4D4D4" } },
@@ -420,44 +166,215 @@ function prepareDataForExport() {
                     right: { style: "thin", color: { rgb: "D4D4D4" } }
                 }
             };
-            rowIndex++;
-        }
+        });
+    }
+    
+    // Get data from rendered table rows
+    const rows = Array.from(tableBody.querySelectorAll('tr'));
+    
+    rows.forEach((row, rowIndex) => {
+        const cells = Array.from(row.querySelectorAll('td'));
+        const rowData = cells.map(cell => {
+            // Force all values to be strings and preserve original formatting
+            const cellText = cell.textContent || '';
+            // Preserve any leading/trailing spaces and ensure string format
+            return String(cellText); // Keep as string, we'll handle Excel formatting in HTML
+        });
+        data.push(rowData);
+        
+        // Get formatting from rendered table
+        cells.forEach((cell, colIndex) => {
+            const cellAddress = XLSX.utils.encode_cell({ r: rowIndex + 1, c: colIndex });
+            let bgColor = "ffffff"; // Default white
+            
+            // Check for CSS classes that indicate color
+            if (cell.classList.contains('warn-cell')) {
+                bgColor = "f8d7da"; // Red for differences
+            } else if (cell.classList.contains('tolerance-cell')) {
+                bgColor = "ffeaa7"; // Orange for tolerance differences
+            } else if (cell.classList.contains('identical')) {
+                bgColor = "d4edda"; // Green for same
+            } else if (cell.classList.contains('new-cell1')) {
+                bgColor = "65add7"; // Blue for data from file 1
+            } else if (cell.classList.contains('new-cell2')) {
+                bgColor = "63cfbf"; // Teal for data from file 2
+            } else if (cell.classList.contains('new-cell')) {
+                bgColor = "65add7"; // Blue for compatibility with old code
+            } else if (cell.classList.contains('unique-cell')) {
+                // Check if it's specifically only-in-file1 or only-in-file2
+                if (cell.classList.contains('only-in-file1') || cell.classList.contains('new-cell1')) {
+                    bgColor = "65add7"; // Blue for data only in file 1
+                } else if (cell.classList.contains('only-in-file2') || cell.classList.contains('new-cell2')) {
+                    bgColor = "63cfbf"; // Teal for data only in file 2
+                } else {
+                    bgColor = "cdedff"; // General blue for other unique data
+                }
+            } else if (cell.classList.contains('only-in-file1')) {
+                bgColor = "65add7"; // Blue for data only in file 1
+            } else if (cell.classList.contains('only-in-file2')) {
+                bgColor = "63cfbf"; // Teal for data only in file 2
+            }
+            
+            // Also check computed background color if no class found
+            if (bgColor === "ffffff") {
+                const computedStyle = window.getComputedStyle(cell);
+                const bgColorStyle = computedStyle.backgroundColor;
+                
+                if (bgColorStyle.includes('255, 234, 167') || bgColorStyle.includes('ffeaa7')) {
+                    bgColor = "ffeaa7"; // Orange for tolerance differences
+                } else if (bgColorStyle.includes('248, 215, 218') || bgColorStyle.includes('f8d7da')) {
+                    bgColor = "f8d7da"; // Red for differences  
+                } else if (bgColorStyle.includes('212, 237, 218') || bgColorStyle.includes('d4edda')) {
+                    bgColor = "d4edda"; // Green same
+                } else if (bgColorStyle.includes('99, 207, 191') || bgColorStyle.includes('63cfbf')) {
+                    bgColor = "63cfbf"; // Teal for file 2
+                } else if (bgColorStyle.includes('101, 173, 215') || bgColorStyle.includes('65add7')) {
+                    bgColor = "65add7"; // Blue for file 1
+                }
+            }
+            
+            formatting[cellAddress] = {
+                fill: { fgColor: { rgb: bgColor } },
+                font: { color: { rgb: "212529" } },
+                border: {
+                    top: { style: "thin", color: { rgb: "D4D4D4" } },
+                    bottom: { style: "thin", color: { rgb: "D4D4D4" } },
+                    left: { style: "thin", color: { rgb: "D4D4D4" } },
+                    right: { style: "thin", color: { rgb: "D4D4D4" } }
+                }
+            };
+        });
     });
     
     return { data, formatting, colWidths };
 }
 
-// Function to set column widths
-function setColumnWidths(ws, colWidths) {
-    ws['!cols'] = colWidths;
+// Function to prepare data from raw data (fallback)
+function prepareDataFromRawData() {
+    const data = []; const formatting = []; const colWidths = [];
+    const hideSame = document.getElementById('hideSameRows')?.checked || false;
+    const hideDiffRows = document.getElementById('hideDiffColumns')?.checked || false;
+    const hideNewRows1 = document.getElementById('hideNewRows1')?.checked || false;
+    const hideNewRows2 = document.getElementById('hideNewRows2')?.checked || false;
+    const headers = ['Source'];
+    for (let c = 0; c < currentFinalAllCols; c++) headers.push(String(currentFinalHeaders[c] || ''));
+    data.push(headers); colWidths.push({ wch: 20 }); for (let c = 0; c < currentFinalAllCols; c++) colWidths.push({ wch: 15 });
+    headers.forEach((_, col) => { const addr = XLSX.utils.encode_cell({ r:0, c:col }); formatting[addr] = { fill:{ fgColor:{ rgb:'f8f9fa'}}, font:{ bold:true, color:{rgb:'212529'}}, border:{ top:{style:'thin',color:{rgb:'D4D4D4'}}, bottom:{style:'thin',color:{rgb:'D4D4D4'}}, left:{style:'thin',color:{rgb:'D4D4D4'}}, right:{style:'thin',color:{rgb:'D4D4D4'}} } }; });
+    let rowIndex = 1;
+    currentPairs.forEach(pair => {
+        const row1 = pair.row1, row2 = pair.row2;
+        const row1Upper = row1 ? row1.map(v => v !== undefined ? v.toString().toUpperCase() : '') : null;
+        const row2Upper = row2 ? row2.map(v => v !== undefined ? v.toString().toUpperCase() : '') : null;
+        let isEmpty = true, hasDiff = false, allSame = true, hasTolerance = false;
+        
+        // Store comparison results for each column
+        let columnComparisons = [];
+        
+        for (let c = 0; c < currentFinalAllCols; c++) {
+            const v1 = row1 ? (row1[c] ?? '') : ''; 
+            const v2 = row2 ? (row2[c] ?? '') : '';
+            if ((v1 && v1.toString().trim() !== '') || (v2 && v2.toString().trim() !== '')) isEmpty = false;
+            
+            if (row1 && row2) {
+                if (toleranceMode && typeof compareValuesWithTolerance === 'function') {
+                    // Use tolerance comparison
+                    const comparisonResult = compareValuesWithTolerance(v1, v2);
+                    columnComparisons[c] = comparisonResult;
+                    
+                    if (comparisonResult === 'different') {
+                        hasDiff = true;
+                        allSame = false;
+                    } else if (comparisonResult === 'tolerance') {
+                        hasTolerance = true;
+                        allSame = false;
+                    }
+                } else {
+                    // Use exact comparison
+                    if (row1Upper[c] !== row2Upper[c]) {
+                        hasDiff = true;
+                        allSame = false;
+                        columnComparisons[c] = 'different';
+                    } else {
+                        columnComparisons[c] = 'identical';
+                    }
+                }
+            } else { 
+                allSame = false; 
+                columnComparisons[c] = 'different';
+            }
+        }
+        if (isEmpty) return;
+        if (hideSame && row1 && row2 && allSame) return;
+        if (hideNewRows1 && row1 && !row2) return;
+        if (hideNewRows2 && !row1 && row2) return;
+        if (hideDiffRows && row1 && row2 && (hasDiff || hasTolerance)) return;
+        
+        if (row1 && row2 && (hasDiff || hasTolerance)) {
+            const dataRow1 = [fileName1 || 'File 1'];
+            for (let c = 0; c < currentFinalAllCols; c++) {
+                const v1 = row1[c] ?? ''; const v2 = row2[c] ?? ''; dataRow1.push(String(v1));
+                const addr = XLSX.utils.encode_cell({ r: rowIndex, c: c + 1 });
+                const compResult = columnComparisons[c];
+                
+                if (compResult === 'different') {
+                    formatting[addr] = { fill:{ fgColor:{ rgb:'f8d7da'}}, font:{ color:{rgb:'212529'}}, border:{ top:{style:'thick',color:{rgb:'000000'}}, bottom:{style:'thin',color:{rgb:'D4D4D4'}}, left:{style:'thin',color:{rgb:'D4D4D4'}}, right:{style:'thin',color:{rgb:'D4D4D4'}} } };
+                } else if (compResult === 'tolerance') {
+                    formatting[addr] = { fill:{ fgColor:{ rgb:'ffeaa7'}}, font:{ color:{rgb:'212529'}}, border:{ top:{style:'thick',color:{rgb:'000000'}}, bottom:{style:'thin',color:{rgb:'D4D4D4'}}, left:{style:'thin',color:{rgb:'D4D4D4'}}, right:{style:'thin',color:{rgb:'D4D4D4'}} } };
+                } else {
+                    formatting[addr] = { border:{ top:{style:'thick',color:{rgb:'000000'}}, bottom:{style:'thin',color:{rgb:'D4D4D4'}}, left:{style:'thin',color:{rgb:'D4D4D4'}}, right:{style:'thin',color:{rgb:'D4D4D4'}} } };
+                }
+            }
+            data.push(dataRow1);
+            const source1 = XLSX.utils.encode_cell({ r: rowIndex, c: 0 });
+            formatting[source1] = { fill:{ fgColor:{ rgb:'f8d7da'}}, font:{ color:{rgb:'212529'}, bold:true}, border:{ top:{style:'thick',color:{rgb:'000000'}}, bottom:{style:'thin',color:{rgb:'D4D4D4'}}, left:{style:'thin',color:{rgb:'D4D4D4'}}, right:{style:'thin',color:{rgb:'D4D4D4'}} } };
+            rowIndex++;
+            const dataRow2 = [fileName2 || 'File 2'];
+            for (let c = 0; c < currentFinalAllCols; c++) {
+                const v2 = row2[c] ?? ''; dataRow2.push(String(v2));
+                const addr = XLSX.utils.encode_cell({ r: rowIndex, c: c + 1 });
+                const compResult = columnComparisons[c];
+                
+                if (compResult === 'different') {
+                    formatting[addr] = { fill:{ fgColor:{ rgb:'f8d7da'}}, font:{ color:{rgb:'212529'}}, border:{ top:{style:'thin',color:{rgb:'D4D4D4'}}, bottom:{style:'thick',color:{rgb:'000000'}}, left:{style:'thin',color:{rgb:'D4D4D4'}}, right:{style:'thin',color:{rgb:'D4D4D4'}} } };
+                } else if (compResult === 'tolerance') {
+                    formatting[addr] = { fill:{ fgColor:{ rgb:'ffeaa7'}}, font:{ color:{rgb:'212529'}}, border:{ top:{style:'thin',color:{rgb:'D4D4D4'}}, bottom:{style:'thick',color:{rgb:'000000'}}, left:{style:'thin',color:{rgb:'D4D4D4'}}, right:{style:'thin',color:{rgb:'D4D4D4'}} } };
+                } else {
+                    formatting[addr] = { border:{ top:{style:'thin',color:{rgb:'D4D4D4'}}, bottom:{style:'thick',color:{rgb:'000000'}}, left:{style:'thin',color:{rgb:'D4D4D4'}}, right:{style:'thin',color:{rgb:'D4D4D4'}} } };
+                }
+            }
+            data.push(dataRow2);
+            const source2 = XLSX.utils.encode_cell({ r: rowIndex, c: 0 });
+            formatting[source2] = { fill:{ fgColor:{ rgb:'f8d7da'}}, font:{ color:{rgb:'212529'}, bold:true}, border:{ top:{style:'thin',color:{rgb:'D4D4D4'}}, bottom:{style:'thick',color:{rgb:'000000'}}, left:{style:'thin',color:{rgb:'D4D4D4'}}, right:{style:'thin',color:{rgb:'D4D4D4'}} } };
+            rowIndex++;
+        } else {
+            let source = '', fillColor = '';
+            if (row1 && row2 && allSame) { source = 'Both files'; fillColor = 'd4edda'; }
+            else if (row1 && !row2) { source = fileName1 || 'File 1'; fillColor = '65add7'; }
+            else if (!row1 && row2) { source = fileName2 || 'File 2'; fillColor = '63cfbf'; }
+            const dataRow = [source];
+            for (let c = 0; c < currentFinalAllCols; c++) {
+                let v = ''; if (row1 && !row2) v = row1[c] ?? ''; else if (!row1 && row2) v = row2[c] ?? ''; else if (row1 && row2) v = row1[c] ?? '';
+                dataRow.push(String(v));
+                const addr = XLSX.utils.encode_cell({ r: rowIndex, c: c + 1 });
+                formatting[addr] = { fill:{ fgColor:{ rgb:fillColor } }, font:{ color:{rgb:'212529'}}, border:{ top:{style:'thin',color:{rgb:'D4D4D4'}}, bottom:{style:'thin',color:{rgb:'D4D4D4'}}, left:{style:'thin',color:{rgb:'D4D4D4'}}, right:{style:'thin',color:{rgb:'D4D4D4'}} } };
+            }
+            data.push(dataRow);
+            const sourceAddr = XLSX.utils.encode_cell({ r: rowIndex, c: 0 });
+            formatting[sourceAddr] = { fill:{ fgColor:{ rgb:fillColor } }, font:{ color:{rgb:'212529'}, bold:true}, border:{ top:{style:'thin',color:{rgb:'D4D4D4'}}, bottom:{style:'thin',color:{rgb:'D4D4D4'}}, left:{style:'thin',color:{rgb:'D4D4D4'}}, right:{style:'thin',color:{rgb:'D4D4D4'}} } };
+            rowIndex++;
+        }
+    });
+    return { data, formatting, colWidths };
 }
 
+// Function to set column widths
+function setColumnWidths(ws, colWidths) { ws['!cols'] = colWidths; }
+
 // Function to show export success message
-function showExportSuccess(filename) {
-    // Create a temporary success message
+function showExportSuccess() {
     const successDiv = document.createElement('div');
-    successDiv.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: #d4edda;
-        color: #155724;
-        padding: 12px 20px;
-        border: 1px solid #c3e6cb;
-        border-radius: 5px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        z-index: 10000;
-        font-size: 14px;
-        font-weight: 500;
-    `;
-    successDiv.innerHTML = `✅ Excel file exported successfully: ${filename}`;
-    
+    successDiv.style.cssText = 'position:fixed;top:20px;right:20px;background:#d4edda;color:#155724;padding:15px 25px;border:1px solid #c3e6cb;border-radius:8px;box-shadow:0 4px 15px rgba(0,0,0,0.15);z-index:10000;font-size:14px;font-weight:500;max-width:350px;line-height:1.4;';
+    successDiv.innerHTML = '✅ <strong>Excel exported!</strong>';
     document.body.appendChild(successDiv);
-    
-    // Remove message after 3 seconds
-    setTimeout(() => {
-        if (successDiv && successDiv.parentNode) {
-            successDiv.parentNode.removeChild(successDiv);
-        }
-    }, 3000);
+    setTimeout(() => { successDiv.parentNode && successDiv.parentNode.removeChild(successDiv); }, 5000);
 }

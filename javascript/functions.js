@@ -8,6 +8,7 @@ const DETAILED_TABLE_LIMIT = 15000; // Limit for showing detailed comparison tab
 let data1 = [], data2 = [];
 let fileName1 = '', fileName2 = '';
 let workbook1 = null, workbook2 = null; // Store workbooks for sheet selection
+let toleranceMode = false; // Global variable for tolerance comparison mode
 
 // Global variables for sorting
 let currentSortColumn = -1;
@@ -15,6 +16,8 @@ let currentSortDirection = 'asc';
 let currentPairs = [];
 let currentFinalHeaders = [];
 let currentFinalAllCols = 0;
+let currentDiffColumns1 = '-';
+let currentDiffColumns2 = '-';
 
 // Function to update sheet information display
 function updateSheetInfo(fileName, sheetNames, selectedSheet, fileNum) {
@@ -1774,11 +1777,11 @@ function createColumnMapping(header1, header2) {
     
     return {
         commonColumns,
-        onlyInFile1: header1Lower.filter((col, idx) => 
-            col !== '' && !commonColumns.some(c => c.index1 === idx)
+        onlyInFile1: header1.filter((col, idx) => 
+            header1Lower[idx] !== '' && !commonColumns.some(c => c.index1 === idx)
         ),
-        onlyInFile2: header2Lower.filter((col, idx) => 
-            col !== '' && !commonColumns.some(c => c.index2 === idx)
+        onlyInFile2: header2.filter((col, idx) => 
+            header2Lower[idx] !== '' && !commonColumns.some(c => c.index2 === idx)
         )
     };
 }
@@ -1817,12 +1820,14 @@ function prepareDataForComparison(data1, data2) {
     const mapping = createColumnMapping(header1, header2);
     
     if (mapping.commonColumns.length === 0) {
-        // No common columns found - return original data
+        // No common columns found - return original data with column differences
         return { 
             data1, 
             data2, 
             columnInfo: {
                 hasCommonColumns: false,
+                onlyInFile1: mapping.onlyInFile1,
+                onlyInFile2: mapping.onlyInFile2,
                 message: "No common column names found. Comparison will be done by position."
             }
         };
@@ -1998,6 +2003,8 @@ function clearComparisonResults() {
     currentPairs = [];
     currentSortColumn = -1;
     currentSortDirection = 'asc';
+    currentDiffColumns1 = '-';
+    currentDiffColumns2 = '-';
 }
 
 function restoreTableStructure() {
@@ -2095,7 +2102,10 @@ function getColumnsToHide(headers, columnTypes, hideDiff, hideNew) {
     return columnsToHide;
 }
 
-function compareTables() {
+function compareTables(useTolerance = false) {
+    // Set tolerance mode
+    toleranceMode = useTolerance;
+    
     // Clear previous results immediately when starting new comparison
     clearComparisonResults();
     
@@ -2267,15 +2277,33 @@ function performComparison() {
     let body1 = workingData1.slice(1).map(row => filterRowExcludingColumns(row, excludedIndexes1));
     let body2 = workingData2.slice(1).map(row => filterRowExcludingColumns(row, excludedIndexes2));
     
-    // Find columns that exist in one file but not in the other (from original filtered headers, before hide filters)
-    let header1Set = new Set(filteredHeader1.map(h => h ? h.toString().trim() : ''));
-    let header2Set = new Set(filteredHeader2.map(h => h ? h.toString().trim() : ''));
+    // Find columns that exist in one file but not in the other
+    // Use columnInfo if available (from prepareDataForComparison), otherwise calculate manually
+    let onlyInFile1, onlyInFile2;
     
-    let onlyInFile1 = filteredHeader1.filter(h => h && h.toString().trim() !== '' && !header2Set.has(h.toString().trim()));
-    let onlyInFile2 = filteredHeader2.filter(h => h && h.toString().trim() !== '' && !header1Set.has(h.toString().trim()));
+    if (columnInfo && (columnInfo.hasCommonColumns || columnInfo.onlyInFile1 || columnInfo.onlyInFile2)) {
+        // Use pre-calculated column differences from prepareDataForComparison
+        onlyInFile1 = columnInfo.onlyInFile1 || [];
+        onlyInFile2 = columnInfo.onlyInFile2 || [];
+        console.log('Using columnInfo:', { onlyInFile1, onlyInFile2, columnInfo });
+    } else {
+        // Calculate manually for cases where no column alignment was done
+        let header1Set = new Set(filteredHeader1.map(h => h ? h.toString().trim().toLowerCase() : ''));
+        let header2Set = new Set(filteredHeader2.map(h => h ? h.toString().trim().toLowerCase() : ''));
+        
+        onlyInFile1 = filteredHeader1.filter(h => h && h.toString().trim() !== '' && !header2Set.has(h.toString().trim().toLowerCase()));
+        onlyInFile2 = filteredHeader2.filter(h => h && h.toString().trim() !== '' && !header1Set.has(h.toString().trim().toLowerCase()));
+        console.log('Calculated manually:', { onlyInFile1, onlyInFile2, filteredHeader1, filteredHeader2 });
+    }
     
     let diffColumns1 = onlyInFile1.length > 0 ? onlyInFile1.join(', ') : '-';
     let diffColumns2 = onlyInFile2.length > 0 ? onlyInFile2.join(', ') : '-';
+    
+    console.log('Final diff columns:', { diffColumns1, diffColumns2, onlyInFile1, onlyInFile2 });
+    
+    // Save diff columns info globally for later use
+    currentDiffColumns1 = diffColumns1;
+    currentDiffColumns2 = diffColumns2;
     
     // Apply red highlighting if there are diff columns
     let diffColumns1Html = onlyInFile1.length > 0 ? `<span style="color: red; font-weight: bold;">${diffColumns1}</span>` : diffColumns1;
@@ -2283,13 +2311,32 @@ function performComparison() {
     
     // Form keys for exact match with case-insensitive comparison
     function rowKey(row) { 
-        return JSON.stringify(row.map(x => (x !== undefined ? x.toString().toUpperCase() : ''))); 
+        if (toleranceMode) {
+            // In tolerance mode, we cannot use simple string comparison for stats
+            // We'll need to compare rows individually in the matching logic
+            return JSON.stringify(row.map(x => (x !== undefined ? x.toString() : ''))); 
+        } else {
+            return JSON.stringify(row.map(x => (x !== undefined ? x.toString().toUpperCase() : ''))); 
+        }
     }
-    let set1 = new Set(body1.map(rowKey));
-    let set2 = new Set(body2.map(rowKey));
-    let only1 = 0, only2 = 0, both = 0;
-    set1.forEach(k => { if (set2.has(k)) both++; else only1++; });
-    set2.forEach(k => { if (!set1.has(k)) only2++; });
+    
+    let set1, set2, only1, only2, both;
+    
+    if (toleranceMode) {
+        // In tolerance mode, we need to compare each row individually
+        // Show temporary statistics until actual matching is completed
+        set1 = new Set(body1.map((row, index) => `row1_${index}`));
+        set2 = new Set(body2.map((row, index) => `row2_${index}`));
+        only1 = 0; // Will be calculated after matching
+        only2 = 0; // Will be calculated after matching
+        both = 0; // Will be calculated after matching
+    } else {
+        set1 = new Set(body1.map(rowKey));
+        set2 = new Set(body2.map(rowKey));
+        only1 = 0; only2 = 0; both = 0;
+        set1.forEach(k => { if (set2.has(k)) both++; else only1++; });
+        set2.forEach(k => { if (!set1.has(k)) only2++; });
+    }
     // --- Top table ---
     let totalRows = Math.max(data1.length, data2.length) - 1;
     let maxRows = Math.max(body1.length, body2.length);
@@ -2298,11 +2345,18 @@ function performComparison() {
     // Total unique rows = only1 + only2 + both (all unique rows across both files)
     let totalUniqueRows = only1 + only2 + both;
     let differentRows = only1 + only2;
-    let percentDiff = totalUniqueRows > 0 ? Math.min(((differentRows / totalUniqueRows) * 100), 100).toFixed(2) : '0.00';
+    let percentDiff, percentClass;
     
-    let percentClass = 'percent-low';
-    if (parseFloat(percentDiff) > 30) percentClass = 'percent-high';
-    else if (parseFloat(percentDiff) > 10) percentClass = 'percent-medium';
+    if (toleranceMode && totalUniqueRows === 0) {
+        // In tolerance mode, show temporary message until matching is complete
+        percentDiff = 'Calculating...';
+        percentClass = 'percent-low';
+    } else {
+        percentDiff = totalUniqueRows > 0 ? Math.min(((differentRows / totalUniqueRows) * 100), 100).toFixed(2) + '%' : '0.00%';
+        percentClass = 'percent-low';
+        if (parseFloat(percentDiff) > 30) percentClass = 'percent-high';
+        else if (parseFloat(percentDiff) > 10) percentClass = 'percent-medium';
+    }
     
     // Add excluded columns info
     let excludedInfo = '';
@@ -2311,12 +2365,44 @@ function performComparison() {
             <strong>Excluded from comparison:</strong> ${excludedColumns.join(', ')}
         </div>`;
     }
+    
+    // Add tolerance mode info
+    let toleranceInfo = '';
+    if (toleranceMode) {
+        // Detect current language based on page URL or title
+        const currentLang = window.location.pathname.includes('/ru/') ? 'ru' : 
+                           window.location.pathname.includes('/pl/') ? 'pl' :
+                           window.location.pathname.includes('/es/') ? 'es' :
+                           window.location.pathname.includes('/de/') ? 'de' :
+                           window.location.pathname.includes('/ja/') ? 'ja' :
+                           window.location.pathname.includes('/pt/') ? 'pt' :
+                           window.location.pathname.includes('/zh/') ? 'zh' :
+                           window.location.pathname.includes('/ar/') ? 'ar' : 'en';
+                           
+        const toleranceMessages = {
+            'ru': 'Режим погрешности активен: Числа с разницей в 1% и даты с одинаковой датой (разное время) показаны',
+            'pl': 'Tryb tolerancji aktywny: Liczby różniące się o 1% i daty z tą samą datą (różny czas) są pokazane',
+            'es': 'Modo de tolerancia activo: Números con diferencia del 1% y fechas con la misma fecha (diferente hora) se muestran',
+            'de': 'Toleranzmodus aktiv: Zahlen mit 1% Unterschied und Daten mit gleichem Datum (unterschiedliche Zeit) werden angezeigt',
+            'ja': '許容差モードがアクティブ: 1%の差がある数値と同じ日付（異なる時刻）の日付が表示されます',
+            'pt': 'Modo de tolerância ativo: Números com diferença de 1% e datas com a mesma data (horário diferente) são mostrados',
+            'zh': '容差模式激活：1%差异的数字和相同日期（不同时间）的日期显示为',
+            'ar': 'وضع التسامح نشط: الأرقام التي تختلف بنسبة 1% والتواريخ بنفس التاريخ (وقت مختلف) تظهر',
+            'en': 'Tolerance Mode Active: Numbers within 1% difference and dates with same date (different time) are shown'
+        };
+        
+        toleranceInfo = `<div style="background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 12px; margin: 15px 0; border-radius: 6px; font-size: 14px;">
+            <strong>🔄 ${toleranceMessages[currentLang]}</strong> <span style="background: #ffeaa7; padding: 2px 4px; border-radius: 3px;">${currentLang === 'ru' ? 'оранжевым' : currentLang === 'pl' ? 'na pomarańczowo' : currentLang === 'es' ? 'en naranja' : currentLang === 'de' ? 'in Orange' : currentLang === 'ja' ? 'オレンジ色で' : currentLang === 'pt' ? 'em laranja' : currentLang === 'zh' ? '橙色' : currentLang === 'ar' ? 'باللون البرتقالي' : 'in orange'}</span> ${currentLang === 'ru' ? 'вместо красного' : currentLang === 'pl' ? 'zamiast na czerwono' : currentLang === 'es' ? 'en lugar de rojo' : currentLang === 'de' ? 'statt in Rot' : currentLang === 'ja' ? '赤の代わりに' : currentLang === 'pt' ? 'em vez de vermelho' : currentLang === 'zh' ? '而不是红色' : currentLang === 'ar' ? 'بدلاً من الأحمر' : 'instead of red'}.
+        </div>`;
+    }
+    
     let htmlSummary = `
         ${excludedInfo}
+        ${toleranceInfo}
         <table style="margin-bottom:20px; border: 1px solid #ccc;">
             <tr><th>File</th><th>Row Count</th><th>Rows only in this file</th><th>Identical rows</th><th>% Difference</th><th>Diff columns</th></tr>
-            <tr><td>${fileName1 || 'File 1'}</td><td>${body1.length}</td><td>${only1}</td><td rowspan="2">${both}</td><td rowspan="2" class="percent-cell ${percentClass}">${percentDiff}%</td><td>${diffColumns1Html}</td></tr>
-            <tr><td>${fileName2 || 'File 2'}</td><td>${body2.length}</td><td>${only2}</td><td>${diffColumns2Html}</td></tr>
+            <tr><td>${fileName1 || 'File 1'}</td><td>${body1.length}</td><td>${toleranceMode && totalUniqueRows === 0 ? 'Calculating...' : only1}</td><td rowspan="2">${toleranceMode && totalUniqueRows === 0 ? 'Calculating...' : both}</td><td rowspan="2" class="percent-cell ${percentClass}">${percentDiff}</td><td>${diffColumns1Html}</td></tr>
+            <tr><td>${fileName2 || 'File 2'}</td><td>${body2.length}</td><td>${toleranceMode && totalUniqueRows === 0 ? 'Calculating...' : only2}</td><td>${diffColumns2Html}</td></tr>
         </table>
     `;
     document.getElementById('summary').innerHTML = htmlSummary;
@@ -2361,6 +2447,127 @@ function performComparison() {
     }
 }
 
+// Function to update summary statistics based on actual matching results
+function updateSummaryStatistics() {
+    if (!currentPairs || currentPairs.length === 0) return;
+    
+    let identicalCount = 0;
+    let onlyInFile1 = 0;
+    let onlyInFile2 = 0;
+    let toleranceCount = 0;
+    let differentCount = 0;
+    
+    currentPairs.forEach(pair => {
+        const row1 = pair.row1;
+        const row2 = pair.row2;
+        
+        if (row1 && row2) {
+            // Both files have data - check if identical or different
+            let isIdentical = true;
+            let hasTolerance = false;
+            
+            for (let c = 0; c < currentFinalAllCols; c++) {
+                const v1 = row1[c] !== undefined ? row1[c] : '';
+                const v2 = row2[c] !== undefined ? row2[c] : '';
+                
+                if (toleranceMode) {
+                    const compResult = compareValuesWithTolerance(v1, v2);
+                    if (compResult === 'different') {
+                        isIdentical = false;
+                        break;
+                    } else if (compResult === 'tolerance') {
+                        hasTolerance = true;
+                        isIdentical = false;
+                    }
+                } else {
+                    if (v1.toString().toUpperCase() !== v2.toString().toUpperCase()) {
+                        isIdentical = false;
+                        break;
+                    }
+                }
+            }
+            
+            if (isIdentical && !hasTolerance) {
+                identicalCount++;
+            } else if (hasTolerance && toleranceMode) {
+                toleranceCount++;
+            } else {
+                differentCount++;
+            }
+        } else if (row1 && !row2) {
+            onlyInFile1++;
+        } else if (!row1 && row2) {
+            onlyInFile2++;
+        }
+    });
+    
+    // Update the global variables used by the summary table
+    if (toleranceMode) {
+        // In tolerance mode, identical includes both exact matches and tolerance matches
+        window.summaryStats = {
+            only1: onlyInFile1,
+            only2: onlyInFile2,
+            both: identicalCount + toleranceCount, // Both exact and tolerance matches count as "both"
+            exact: identicalCount,
+            tolerance: toleranceCount,
+            different: differentCount
+        };
+    } else {
+        window.summaryStats = {
+            only1: onlyInFile1,
+            only2: onlyInFile2,
+            both: identicalCount,
+            different: differentCount
+        };
+    }
+    
+    // Recalculate percentage
+    const totalUniqueRows = window.summaryStats.only1 + window.summaryStats.only2 + window.summaryStats.both;
+    const differentRows = window.summaryStats.only1 + window.summaryStats.only2;
+    const percentDiff = totalUniqueRows > 0 ? Math.min(((differentRows / totalUniqueRows) * 100), 100).toFixed(2) : '0.00';
+    
+    let percentClass = 'percent-low';
+    if (parseFloat(percentDiff) > 30) percentClass = 'percent-high';
+    else if (parseFloat(percentDiff) > 10) percentClass = 'percent-medium';
+    
+    // Update the summary table HTML
+    updateSummaryTable(window.summaryStats.only1, window.summaryStats.only2, window.summaryStats.both, percentDiff, percentClass);
+}
+
+// Function to update the summary table HTML
+function updateSummaryTable(only1, only2, both, percentDiff, percentClass) {
+    // Get existing excluded info and tolerance info
+    const summaryDiv = document.getElementById('summary');
+    const existingHTML = summaryDiv.innerHTML;
+    
+    // Extract excluded info and tolerance info if they exist
+    const excludedMatch = existingHTML.match(/<div class="excluded-info">.*?<\/div>/);
+    const toleranceMatch = existingHTML.match(/<div style="background: #fff3cd;.*?<\/div>/);
+    
+    const excludedInfo = excludedMatch ? excludedMatch[0] : '';
+    const toleranceInfo = toleranceMatch ? toleranceMatch[0] : '';
+    
+    // Get diff columns info from saved global values
+    const diffColumns1 = currentDiffColumns1 || '-';
+    const diffColumns2 = currentDiffColumns2 || '-';
+    
+    // Apply red highlighting if there are diff columns (only if not just '-')
+    const diffColumns1Html = (diffColumns1 !== '-') ? `<span style="color: red; font-weight: bold;">${diffColumns1}</span>` : diffColumns1;
+    const diffColumns2Html = (diffColumns2 !== '-') ? `<span style="color: red; font-weight: bold;">${diffColumns2}</span>` : diffColumns2;
+    
+    let htmlSummary = `
+        ${excludedInfo}
+        ${toleranceInfo}
+        <table style="margin-bottom:20px; border: 1px solid #ccc;">
+            <tr><th>File</th><th>Row Count</th><th>Rows only in this file</th><th>Identical rows</th><th>% Difference</th><th>Diff columns</th></tr>
+            <tr><td>${fileName1 || 'File 1'}</td><td>${currentPairs.filter(p => p.row1).length}</td><td>${only1}</td><td rowspan="2">${both}</td><td rowspan="2" class="percent-cell ${percentClass}">${percentDiff}%</td><td>${diffColumns1Html}</td></tr>
+            <tr><td>${fileName2 || 'File 2'}</td><td>${currentPairs.filter(p => p.row2).length}</td><td>${only2}</td><td>${diffColumns2Html}</td></tr>
+        </table>
+    `;
+    
+    summaryDiv.innerHTML = htmlSummary;
+}
+
 // Function to perform fuzzy matching for both export and display purposes
 function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols, isLargeFile) {
     // --- Fuzzy matching for bottom table ---
@@ -2370,30 +2577,58 @@ function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols,
     function countMatches(rowA, rowB) {
         let matches = 0;
         let keyMatches = 0; // Count matches in key columns
+        let toleranceMatches = 0; // Count tolerance matches
+        let keyToleranceMatches = 0; // Count tolerance matches in key columns
+        
         // Calculate 70% of total columns as key columns (minimum 1, maximum = total columns)
         const keyColumnsCount = Math.max(1, Math.min(finalAllCols, Math.ceil(finalAllCols * 0.7)));
         
         for (let i = 0; i < finalAllCols; i++) {
-            // Convert both values to uppercase for case-insensitive comparison
             let valueA = (rowA[i] || '').toString();
             let valueB = (rowB[i] || '').toString();
             
-            if (valueA.toUpperCase() === valueB.toUpperCase()) {
-                matches++;
-                // Count matches in key columns (first 70% of columns)
-                if (i < keyColumnsCount) {
-                    keyMatches++;
+            if (toleranceMode) {
+                // Use tolerance comparison
+                const compResult = compareValuesWithTolerance(valueA, valueB);
+                
+                if (compResult === 'identical') {
+                    matches++;
+                    if (i < keyColumnsCount) {
+                        keyMatches++;
+                    }
+                } else if (compResult === 'tolerance') {
+                    toleranceMatches++;
+                    if (i < keyColumnsCount) {
+                        keyToleranceMatches++;
+                    }
+                }
+            } else {
+                // Use exact comparison (case-insensitive)
+                if (valueA.toUpperCase() === valueB.toUpperCase()) {
+                    matches++;
+                    if (i < keyColumnsCount) {
+                        keyMatches++;
+                    }
                 }
             }
         }
         
-        // Give higher priority to key columns: 
-        // Score = key_matches * 3 + other_matches
-        // This ensures that matching key columns have much higher weight
-        const otherMatches = matches - keyMatches;
-        const weightedScore = (keyMatches * 3) + otherMatches;
-        
-        return weightedScore;
+        if (toleranceMode) {
+            // In tolerance mode, both exact matches and tolerance matches contribute to score
+            // Exact matches get full weight, tolerance matches get 70% weight
+            const adjustedToleranceMatches = toleranceMatches * 0.7;
+            const adjustedKeyToleranceMatches = keyToleranceMatches * 0.7;
+            
+            const totalKeyScore = (keyMatches * 3) + (adjustedKeyToleranceMatches * 3);
+            const totalOtherScore = (matches - keyMatches) + (adjustedToleranceMatches - adjustedKeyToleranceMatches);
+            
+            return totalKeyScore + totalOtherScore;
+        } else {
+            // Original logic for exact matching
+            const otherMatches = matches - keyMatches;
+            const weightedScore = (keyMatches * 3) + otherMatches;
+            return weightedScore;
+        }
     }
     
     // Process large files in batches to avoid freezing the UI
@@ -2449,6 +2684,9 @@ function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols,
             currentFinalHeaders = finalHeaders;
             currentFinalAllCols = finalAllCols;
             
+            // Update summary statistics based on actual matching results
+            updateSummaryStatistics();
+            
             if (isLargeFile) {
                 // Show large file message instead of table
                 showLargeFileMessage(Math.max(body1.length, body2.length));
@@ -2462,6 +2700,100 @@ function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols,
     // Determine batch size based on file size
     const batchSize = body1.length > 5000 ? 100 : body1.length > 1000 ? 250 : 1000;
     processBatch(0, batchSize);
+}
+
+// Helper functions for tolerance comparison
+function isDateString(str) {
+    if (!str || typeof str !== 'string') return false;
+    
+    // Remove quotes and trim
+    const cleanStr = str.replace(/['"]/g, '').trim();
+    
+    // Check for common date patterns
+    const datePatterns = [
+        /^\d{4}-\d{2}-\d{2}/, // 2023-12-31
+        /^\d{2}\/\d{2}\/\d{4}/, // 12/31/2023
+        /^\d{2}\.\d{2}\.\d{4}/, // 31.12.2023
+        /^\d{1,2}\/\d{1,2}\/\d{4}/, // 1/1/2023
+        /^\d{1,2}-\d{1,2}-\d{4}/, // 1-1-2023
+    ];
+    
+    return datePatterns.some(pattern => pattern.test(cleanStr));
+}
+
+function isNumericString(str) {
+    if (!str || typeof str !== 'string') return false;
+    
+    // Remove quotes, commas, and trim
+    const cleanStr = str.replace(/['",$\s]/g, '').trim();
+    
+    // Check if it's a valid number
+    return !isNaN(cleanStr) && !isNaN(parseFloat(cleanStr)) && isFinite(cleanStr);
+}
+
+function extractDateOnly(str) {
+    if (!str) return '';
+    
+    const cleanStr = str.toString().replace(/['"]/g, '').trim();
+    
+    // Extract date part from datetime strings
+    const dateMatch = cleanStr.match(/(\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4}|\d{2}\.\d{2}\.\d{4}|\d{1,2}\/\d{1,2}\/\d{4}|\d{1,2}-\d{1,2}-\d{4})/);
+    
+    return dateMatch ? dateMatch[0] : cleanStr;
+}
+
+function parseNumber(str) {
+    if (!str) return 0;
+    
+    // Remove quotes, commas, currency symbols and trim
+    const cleanStr = str.toString().replace(/['",$\s]/g, '').trim();
+    
+    return parseFloat(cleanStr) || 0;
+}
+
+function isWithinTolerance(val1, val2, tolerance = 0.01) {
+    const num1 = parseNumber(val1);
+    const num2 = parseNumber(val2);
+    
+    if (num1 === 0 && num2 === 0) return true;
+    if (num1 === 0 || num2 === 0) return false;
+    
+    const diff = Math.abs(num1 - num2);
+    const avg = (Math.abs(num1) + Math.abs(num2)) / 2;
+    
+    return (diff / avg) <= tolerance;
+}
+
+function compareValuesWithTolerance(v1, v2) {
+    if (!v1 && !v2) return 'identical';
+    if (!v1 || !v2) return 'different';
+    
+    const str1 = v1.toString().trim();
+    const str2 = v2.toString().trim();
+    
+    // Exact match (case-insensitive)
+    if (str1.toUpperCase() === str2.toUpperCase()) {
+        return 'identical';
+    }
+    
+    // Check if both are dates
+    if (isDateString(str1) && isDateString(str2)) {
+        const date1 = extractDateOnly(str1);
+        const date2 = extractDateOnly(str2);
+        
+        if (date1 === date2) {
+            return 'tolerance'; // Same date, different time
+        }
+    }
+    
+    // Check if both are numbers
+    if (isNumericString(str1) && isNumericString(str2)) {
+        if (isWithinTolerance(str1, str2, 0.01)) {
+            return 'tolerance'; // Within 1% tolerance
+        }
+    }
+    
+    return 'different';
 }
 
 // Universal function to render comparison table with consistent styling
@@ -2499,9 +2831,9 @@ function renderComparisonTable() {
     document.querySelector('.diff-table-header thead').innerHTML = headerHtml;
     
     // Filter row with consistent styling
-    let filterHtml = '<tr><td><input type="text" placeholder="Filter..." onkeyup="filterTable()" style="width:100%; padding:4px; border:1px solid #ccc; border-radius:3px;"></td>';
+    let filterHtml = '<tr><td><input type="text" placeholder="Filter..." onkeyup="filterTable()"></td>';
     for (let c = 0; c < currentFinalAllCols; c++) {
-        filterHtml += `<td><input type="text" placeholder="Filter..." onkeyup="filterTable()" style="width:100%; padding:4px; border:1px solid #ccc; border-radius:3px;"></td>`;
+        filterHtml += `<td><input type="text" placeholder="Filter..." onkeyup="filterTable()"></td>`;
     }
     filterHtml += '</tr>';
     document.querySelector('.filter-row').innerHTML = filterHtml;
@@ -2572,29 +2904,54 @@ function renderComparisonTable() {
         let row1 = pair.row1;
         let row2 = pair.row2;
         
-        // Pre-convert values to uppercase for performance
+        // Pre-convert values to uppercase for performance (for non-tolerance mode)
         let row1Upper = row1 ? row1.map(val => (val !== undefined ? val.toString().toUpperCase() : '')) : null;
         let row2Upper = row2 ? row2.map(val => (val !== undefined ? val.toString().toUpperCase() : '')) : null;
         
         let isEmpty = true;
         let hasWarn = false;
+        let hasTolerance = false;
         let allSame = true;
         let hasDiff = false;
+        
+        // Store comparison results for each column
+        let columnComparisons = [];
         
         for (let c = 0; c < currentFinalAllCols; c++) {
             let v1 = row1 ? (row1[c] !== undefined ? row1[c] : '') : '';
             let v2 = row2 ? (row2[c] !== undefined ? row2[c] : '') : '';
+            
             if ((v1 && v1.toString().trim() !== '') || (v2 && v2.toString().trim() !== '')) {
                 isEmpty = false;
             }
+            
             if (row1 && row2) {
-                if (row1Upper[c] !== row2Upper[c]) {
-                    hasWarn = true;
-                    allSame = false;
-                } 
+                if (toleranceMode) {
+                    // Use tolerance comparison
+                    const comparisonResult = compareValuesWithTolerance(v1, v2);
+                    columnComparisons[c] = comparisonResult;
+                    
+                    if (comparisonResult === 'different') {
+                        hasWarn = true;
+                        allSame = false;
+                    } else if (comparisonResult === 'tolerance') {
+                        hasTolerance = true;
+                        allSame = false;
+                    }
+                } else {
+                    // Use exact comparison
+                    if (row1Upper[c] !== row2Upper[c]) {
+                        hasWarn = true;
+                        allSame = false;
+                        columnComparisons[c] = 'different';
+                    } else {
+                        columnComparisons[c] = 'identical';
+                    }
+                }
             } else {
                 hasDiff = true;
                 allSame = false;
+                columnComparisons[c] = 'different';
             }
         }
         
@@ -2602,25 +2959,26 @@ function renderComparisonTable() {
         if (hideSame && row1 && row2 && allSame) return;
         if (hideNewRows1 && row1 && !row2) return;
         if (hideNewRows2 && !row1 && row2) return;
-        if (hideDiffRows && row1 && row2 && hasWarn) return;
+        if (hideDiffRows && row1 && row2 && (hasWarn || hasTolerance)) return;
         
         // If both files have data and they differ, create two separate rows
-        if (row1 && row2 && hasWarn) {
+        if (row1 && row2 && (hasWarn || hasTolerance)) {
             // Row for File 1
             bodyHtml += `<tr class="warn-row warn-row-group-start">`;
             bodyHtml += `<td class="warn-cell">${fileName1 || 'File 1'}</td>`;
             for (let c = 0; c < currentFinalAllCols; c++) {
                 let v1 = row1[c] !== undefined ? row1[c] : '';
-                let v2 = row2[c] !== undefined ? row2[c] : '';
-                let v1Upper = row1Upper[c] || '';
-                let v2Upper = row2Upper[c] || '';
+                let compResult = columnComparisons[c];
                 
-                if (v1Upper !== v2Upper) {
-                    // Different values - show in warn-cell
-                    bodyHtml += `<td class="warn-cell">${v1}</td>`;
-                } else {
+                if (compResult === 'identical') {
                     // Same values - will be merged with rowspan
                     bodyHtml += `<td class="identical" rowspan="2" style="vertical-align: middle; text-align: center;">${v1}</td>`;
+                } else if (compResult === 'tolerance') {
+                    // Values within tolerance - show in orange
+                    bodyHtml += `<td class="tolerance-cell">${v1}</td>`;
+                } else {
+                    // Different values - show in red
+                    bodyHtml += `<td class="warn-cell">${v1}</td>`;
                 }
             }
             bodyHtml += '</tr>';
@@ -2629,13 +2987,14 @@ function renderComparisonTable() {
             bodyHtml += `<tr class="warn-row warn-row-group-end">`;
             bodyHtml += `<td class="warn-cell">${fileName2 || 'File 2'}</td>`;
             for (let c = 0; c < currentFinalAllCols; c++) {
-                let v1 = row1[c] !== undefined ? row1[c] : '';
                 let v2 = row2[c] !== undefined ? row2[c] : '';
-                let v1Upper = row1Upper[c] || '';
-                let v2Upper = row2Upper[c] || '';
+                let compResult = columnComparisons[c];
                 
-                if (v1Upper !== v2Upper) {
-                    // Different values - show in warn-cell
+                if (compResult === 'tolerance') {
+                    // Values within tolerance - show in orange
+                    bodyHtml += `<td class="tolerance-cell">${v2}</td>`;
+                } else if (compResult === 'different') {
+                    // Different values - show in red
                     bodyHtml += `<td class="warn-cell">${v2}</td>`;
                 }
                 // For identical values, we already added rowspan=2 in the first row, so skip here
@@ -2648,17 +3007,25 @@ function renderComparisonTable() {
             
             if (row1 && row2 && allSame) {
                 source = 'Both files';
-                rowClass = '';
+                rowClass = 'row-identical';
             } else if (row1 && !row2) {
                 source = fileName1 || 'File 1';
-                rowClass = 'new-row';
+                rowClass = 'new-row1';
             } else if (!row1 && row2) {
                 source = fileName2 || 'File 2';
-                rowClass = 'new-row';
+                rowClass = 'new-row2';
             }
             
             bodyHtml += `<tr class="${rowClass}">`;
-            bodyHtml += `<td>${source}</td>`;
+            if (row1 && row2 && allSame) {
+                bodyHtml += `<td class="identical">${source}</td>`;
+            } else if (row1 && !row2) {
+                bodyHtml += `<td class="new-cell1">${source}</td>`;
+            } else if (!row1 && row2) {
+                bodyHtml += `<td class="new-cell2">${source}</td>`;
+            } else {
+                bodyHtml += `<td>${source}</td>`;
+            }
             
             // Data columns
             for (let c = 0; c < currentFinalAllCols; c++) {
@@ -2667,14 +3034,14 @@ function renderComparisonTable() {
                 
                 if (row1 && !row2) {
                     cellValue = row1[c] !== undefined ? row1[c] : '';
-                    cellClass = 'new-cell';
+                    cellClass = 'new-cell1';
                 } else if (!row1 && row2) {
                     cellValue = row2[c] !== undefined ? row2[c] : '';
-                    cellClass = 'new-cell';
+                    cellClass = 'new-cell2';
                 } else if (row1 && row2) {
                     // Both files have the same data
                     cellValue = row1[c] !== undefined ? row1[c] : '';
-                    cellClass = '';
+                    cellClass = 'identical';
                 }
                 
                 bodyHtml += `<td class="${cellClass}">${cellValue}</td>`;
@@ -3082,36 +3449,9 @@ function syncColumnWidths() {
     
     const numColumns = headerCells.length;
     
-    // Set fixed widths based on column index - no dynamic calculation needed
-    for (let colIndex = 0; colIndex < numColumns; colIndex++) {
-        let width;
-        
-        if (colIndex === 0) {
-            // First column (Source) - always fixed at 240px
-            width = '240px';
-        } else {
-            // All other columns - fixed at 180px for consistency
-            width = '180px';
-        }
-        
-        // Set header width
-        const headerCell = headerCells[colIndex];
-        headerCell.style.width = width;
-        headerCell.style.minWidth = width;
-        headerCell.style.maxWidth = width;
-        headerCell.style.boxSizing = 'border-box';
-        
-        // Set body cell widths for ALL rows (including hidden ones)
-        allBodyRows.forEach(row => {
-            const cells = row.querySelectorAll('td');
-            if (cells[colIndex]) {
-                cells[colIndex].style.width = width;
-                cells[colIndex].style.minWidth = width;
-                cells[colIndex].style.maxWidth = width;
-                cells[colIndex].style.boxSizing = 'border-box';
-            }
-        });
-    }
+    // Force table layout to fixed for consistent column behavior
+    headerTable.style.tableLayout = 'fixed';
+    bodyTable.style.tableLayout = 'fixed';
     
     // Calculate total table width and apply it
     const sourceColumnWidth = 240;
@@ -3167,36 +3507,9 @@ function forceTableWidthSync() {
     
     const numColumns = headerCells.length;
     
-    // Use EXACTLY the same logic as syncColumnWidths for consistency
-    for (let colIndex = 0; colIndex < numColumns; colIndex++) {
-        let width;
-        
-        if (colIndex === 0) {
-            // First column (Source) - always fixed at 240px
-            width = '240px';
-        } else {
-            // All other columns - fixed at 180px for consistency
-            width = '180px';
-        }
-        
-        // Apply to header cells
-        const headerCell = headerCells[colIndex];
-        headerCell.style.width = width;
-        headerCell.style.minWidth = width;
-        headerCell.style.maxWidth = width;
-        headerCell.style.boxSizing = 'border-box';
-        
-        // Apply to ALL body cells (including hidden rows)
-        allBodyRows.forEach(row => {
-            const cells = row.querySelectorAll('td');
-            if (cells[colIndex]) {
-                cells[colIndex].style.width = width;
-                cells[colIndex].style.minWidth = width;
-                cells[colIndex].style.maxWidth = width;
-                cells[colIndex].style.boxSizing = 'border-box';
-            }
-        });
-    }
+    // Apply table layout and calculate total width
+    headerTable.style.tableLayout = 'fixed';
+    bodyTable.style.tableLayout = 'fixed';
     
     // Calculate and set total table width
     const sourceColumnWidth = 240;

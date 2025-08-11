@@ -1,0 +1,6 @@
+Name,Price,Date,Quantity,Discount,Status
+Apple,10.05,2023-12-01 11:45:00,101,5.05,Active
+Banana,5.52,2023-12-01,199,2.48,Active
+Orange,8.25,2023-12-02 14:15:30,150,0,Inactive
+Grape,11.88,2023-12-03,76,9.95,Active
+Alex,9.75,2025-12-04 10:30:00,119,1.52,Mark

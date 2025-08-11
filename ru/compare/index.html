@@ -91,17 +91,17 @@
     </div>
 </header>
     
-    <div class="main-content" style="padding-top: 80px;"><!-- Account for fixed header -->
+    <div class="main-content main-content-padded"><!-- Account for fixed header -->
         <h1>Сравнение Данных Между Файлами Excel и CSV - v 5.2 Beta</h1>
-        <p style="text-align: center; font-size: 14px; color: #666;">
+        <p class="help-text">
             📝 Прочитайте мое подробное руководство 
-            <a href="../how_use/" style="color: #ffb17a; text-decoration: none;">здесь</a>
+            <a href="../how_use/" class="help-link">здесь</a>
         </p>
         <div id="summary"></div>
         <div class="comparison-container">
             <div class="table-container">
                 <input type="file" id="file1" accept=".xlsx,.xls,.csv"><br>
-                <div class="sheet-selector" id="sheetSelector1" style="display: none;">
+                <div class="sheet-selector sheet-selector-hidden" id="sheetSelector1">
                     <label for="sheetSelect1">Выберите лист:</label>
                     <select id="sheetSelect1"></select>
                 </div>
@@ -109,7 +109,7 @@
             </div>
             <div class="table-container">
                 <input type="file" id="file2" accept=".xlsx,.xls,.csv"><br>
-                <div class="sheet-selector" id="sheetSelector2" style="display: none;">
+                <div class="sheet-selector sheet-selector-hidden" id="sheetSelector2">
                     <label for="sheetSelect2">Выберите лист:</label>
                     <select id="sheetSelect2"></select>
                 </div>
@@ -117,22 +117,25 @@
             </div>
             <div class="controls-container">
                 <div class="exclude-compare-row">
-                    <div class="buttons-container" style="display: flex; gap: 10px;">
-                        <div class="button-half" style="flex: 1;">
-                            <button class="compare-btn" onclick="compareTables()" style="width: 100%;">Сравнить</button>
+                    <div class="buttons-container">
+                        <div class="button-half">
+                            <button class="compare-btn button-full-width" onclick="compareTables(false)">Сравнить</button>
                         </div>
-                        <div class="button-half" style="flex: 1;">
-                            <button id="exportExcelBtn" onclick="exportToExcel()" class="export-btn" style="display: none; width: 100%;">
+                        <div class="button-half">
+                            <button class="compare-btn tolerance-btn button-full-width" onclick="compareTables(true)">Сравнить с погрешностью 1%</button>
+                        </div>
+                        <div class="button-half">
+                            <button id="exportExcelBtn" onclick="exportToExcel()" class="export-btn export-btn-hidden">
                                 📊 Экспорт в Excel
                             </button>
                         </div>
                     </div>
                     <div class="exclude-columns-container">
                         <label for="excludeColumns" class="exclude-label">Исключить колонки:</label>
-                        <input type="text" id="excludeColumns" placeholder="например, ID, Время, ДатаСоздания" style="width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+                        <input type="text" id="excludeColumns" placeholder="например, ID, Время, ДатаСоздания" class="exclude-input">
                     </div>
                 </div>
-                <div class="filter-controls" style="display: none;">
+                <div class="filter-controls filter-controls-hidden">
                     <div class="filter-options">
                         <label><input type="checkbox" id="hideSameRows"> Скрыть ОДИНАКОВЫЕ строки</label>
                         <label><input type="checkbox" id="hideDiffColumns"> Скрыть РАЗНЫЕ строки</label>

@@ -88,17 +88,17 @@
     </div>
 </header>
     
-    <div class="main-content" style="padding-top: 80px;">
+    <div class="main-content" class="main-content-padded">
         <h1>Datenvergleich zwischen Excel- und CSV-Dateien - v 5.0 Beta</h1>
-        <p style="text-align: center; font-size: 14px; color: #666;">
+        <p class="help-text">
             📝 Lesen Sie meine detaillierte Anleitung 
-            <a href="../how_use/" style="color: #ffb17a; text-decoration: none;">hier</a>
+            <a href="../how_use/" class="help-link">hier</a>
         </p>
         <div id="summary"></div>
         <div class="comparison-container">
             <div class="table-container">
                 <input type="file" id="file1" accept=".xlsx,.xls,.csv"><br>
-                <div class="sheet-selector" id="sheetSelector1" style="display: none;">
+                <div class="sheet-selector" id="sheetSelector1" class="sheet-selector-hidden">
                     <label for="sheetSelect1">Blatt auswählen:</label>
                     <select id="sheetSelect1"></select>
                 </div>
@@ -106,7 +106,7 @@
             </div>
             <div class="table-container">
                 <input type="file" id="file2" accept=".xlsx,.xls,.csv"><br>
-                <div class="sheet-selector" id="sheetSelector2" style="display: none;">
+                <div class="sheet-selector" id="sheetSelector2" class="sheet-selector-hidden">
                     <label for="sheetSelect2">Blatt auswählen:</label>
                     <select id="sheetSelect2"></select>
                 </div>
@@ -114,22 +114,25 @@
             </div>
             <div class="controls-container">
                 <div class="exclude-compare-row">
-                    <div class="buttons-container" style="display: flex; gap: 10px;">
-                        <div class="button-half" style="flex: 1;">
-                            <button class="compare-btn" onclick="compareTables()" style="width: 100%;">Vergleichen</button>
+                    <div class="buttons-container" class="buttons-container">
+                        <div class="button-half" class="button-half">
+                            <button class="compare-btn" onclick="compareTables(false)" class="button-full-width">Vergleichen</button>
                         </div>
-                        <div class="button-half" style="flex: 1;">
-                            <button id="exportExcelBtn" onclick="exportToExcel()" class="export-btn" style="display: none; width: 100%;">
+                        <div class="button-half" class="button-half">
+                            <button class="compare-btn tolerance-btn" onclick="compareTables(true)" class="button-full-width">Mit 1% Toleranz vergleichen</button>
+                        </div>
+                        <div class="button-half" class="button-half">
+                            <button id="exportExcelBtn" onclick="exportToExcel()" class="export-btn" class="export-btn-hidden">
                                 📊 Nach Excel exportieren
                             </button>
                         </div>
                     </div>
                     <div class="exclude-columns-container">
                         <label for="excludeColumns" class="exclude-label">Spalten ausschließen:</label>
-                        <input type="text" id="excludeColumns" placeholder="z.B. ID, Zeitstempel, Erstellungsdatum" style="width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+                        <input type="text" id="excludeColumns" placeholder="z.B. ID, Zeitstempel, Erstellungsdatum" class="exclude-input">
                     </div>
                 </div>
-                <div class="filter-controls" style="display: none;">
+                <div class="filter-controls" class="sheet-selector-hidden">
                     <div class="filter-options">
                         <label><input type="checkbox" id="hideSameRows"> Gleiche Zeilen ausblenden</label>
                         <label><input type="checkbox" id="hideDiffColumns"> Unterschiedliche Zeilen ausblenden</label>
