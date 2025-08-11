@@ -67,17 +67,17 @@
     </div>
 </header>
     
-    <div class="main-content" style="padding-top: 80px;">
+    <div class="main-content" class="main-content-padded">
         <h1>Compare Dados Entre Arquivos Excel e CSV - v 5.0 Beta</h1>
-        <p style="text-align: center; font-size: 14px; color: #666;">
+        <p class="help-text">
             📝 Leia meu guia e deixe seus comentários ou perguntas nos comentários 
-            <a href="https://medium.com/@protmaks/comparing-excel-and-csv-without-loading-online-tool-for-business-5ab689ff1850" target="_blank" style="color: #ffb17a; text-decoration: none;">no Medium</a>
+            <a href="https://medium.com/@protmaks/comparing-excel-and-csv-without-loading-online-tool-for-business-5ab689ff1850" target="_blank" class="help-link">no Medium</a>
         </p>
         <div id="summary"></div>
         <div class="comparison-container">
             <div class="table-container">
                 <input type="file" id="file1" accept=".xlsx,.xls,.csv"><br>
-                <div class="sheet-selector" id="sheetSelector1" style="display: none;">
+                <div class="sheet-selector" id="sheetSelector1" class="sheet-selector-hidden">
                     <label for="sheetSelect1">Selecionar planilha:</label>
                     <select id="sheetSelect1"></select>
                 </div>
@@ -85,7 +85,7 @@
             </div>
             <div class="table-container">
                 <input type="file" id="file2" accept=".xlsx,.xls,.csv"><br>
-                <div class="sheet-selector" id="sheetSelector2" style="display: none;">
+                <div class="sheet-selector" id="sheetSelector2" class="sheet-selector-hidden">
                     <label for="sheetSelect2">Selecionar planilha:</label>
                     <select id="sheetSelect2"></select>
                 </div>
@@ -93,22 +93,25 @@
             </div>
             <div class="controls-container">
                 <div class="exclude-compare-row">
-                    <div class="buttons-container" style="display: flex; gap: 10px;">
-                        <div class="button-half" style="flex: 1;">
-                            <button class="compare-btn" onclick="compareTables()" style="width: 100%;">Comparar</button>
+                    <div class="buttons-container" class="buttons-container">
+                        <div class="button-half" class="button-half">
+                            <button class="compare-btn" onclick="compareTables(false)" class="button-full-width">Comparar</button>
                         </div>
-                        <div class="button-half" style="flex: 1;">
-                            <button id="exportExcelBtn" onclick="exportToExcel()" class="export-btn" style="display: none; width: 100%;">
+                        <div class="button-half" class="button-half">
+                            <button class="compare-btn tolerance-btn" onclick="compareTables(true)" class="button-full-width">Comparar com tolerância 1%</button>
+                        </div>
+                        <div class="button-half" class="button-half">
+                            <button id="exportExcelBtn" onclick="exportToExcel()" class="export-btn" class="export-btn-hidden">
                                 📊 Exportar para Excel
                             </button>
                         </div>
                     </div>
                     <div class="exclude-columns-container">
                         <label for="excludeColumns" class="exclude-label">Excluir colunas:</label>
-                        <input type="text" id="excludeColumns" placeholder="ex: ID, Timestamp, DataCriacao" style="width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+                        <input type="text" id="excludeColumns" placeholder="ex: ID, Timestamp, DataCriacao" class="exclude-input">
                     </div>
                 </div>
-                <div class="filter-controls" style="display: none;">
+                <div class="filter-controls" class="sheet-selector-hidden">
                     <div class="filter-options">
                         <label><input type="checkbox" id="hideSameRows"> Ocultar linhas IGUAIS</label>
                         <label><input type="checkbox" id="hideDiffColumns"> Ocultar linhas DIFERENTES</label>

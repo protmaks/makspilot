@@ -657,9 +657,7 @@ footer {
     border-right: none;
 }
 
-.preview-table tr:hover {
-    background-color: #f8f9fa;
-}
+
 
 .preview-table tr:last-child td {
     border-bottom: none;
@@ -703,10 +701,17 @@ table td {
     display: inline-block;
 }
 
+#file2{
+    background-color: #63cfbf;
+}
+
+#file1{
+    background-color: #65add7;
+}
+
 input[type="file"] {
     margin: 8px 0 0px 0;
     font-size: 1rem;
-    background-color: #63cfbf;
     color: white;
     padding: 8px 16px;
     border: none;
@@ -750,7 +755,7 @@ input[type="file"]::-moz-file-upload-button {
 button.compare-btn {
     padding: 10px 28px;
     font-size: 1.1rem;
-    background-color: #FFB17A;
+    background-color: #ff8c00;
     color: #fff;
     border: none;
     border-radius: 6px;
@@ -763,7 +768,7 @@ button.compare-btn {
 }
 
 button.compare-btn:hover {
-    background-color: #FFCF7A;
+    background-color: #e47f02;
     box-shadow: 0 4px 16px rgba(241, 111, 92, 0.13);
 }
 
@@ -793,7 +798,7 @@ button.compare-btn:hover {
 
 .buttons-container:has(.export-btn[style*="display: none"]) .button-half:first-child {
     flex: none;
-    width: 100%;
+    width: 50%;
 }
 
 /* Fallback for browsers that don't support :has() */
@@ -1003,10 +1008,6 @@ button.export-btn:disabled {
     text-overflow: ellipsis;
 }
 
-.table-container-sync .diff-table-header th:last-child,
-.table-container-sync .diff-table-body td:last-child {
-    border-right: none;
-}
 
 .table-container-sync .diff-table-body tr:last-child td {
     border-bottom: none;
@@ -1155,14 +1156,25 @@ button.export-btn:disabled {
     box-shadow: 2px 0 5px rgba(0,0,0,0.1);
 }
 
-/* Ensure hover effects work correctly on fixed column */
-.diff-table-body tr:hover td:first-child {
-    background-color: #f8f9fa;
-}
 
 /* Special styling for different cell types in the first column */
 .diff-table-body td:first-child.warn-cell {
     background-color: #f8d7da;
+}
+
+.diff-table-body td:first-child.new-cell1 {
+    background-color: #65add7;
+    color: #ffffff;
+}
+
+.diff-table-body td:first-child.new-cell2 {
+    background-color: #63cfbf;
+    color: #ffffff;
+}
+
+.diff-table-body td:first-child.identical {
+    background-color: #d4edda;
+    color: #212529;
 }
 
 .diff-table-body tr:hover td:first-child.warn-cell {
@@ -1170,7 +1182,7 @@ button.export-btn:disabled {
 }
 
 .diff-table-body td:last-child {
-    border-right: none;
+    border-right: 1px solid #c1c1c1;
 }
 
 .diff-table-body tr:hover {
@@ -1178,8 +1190,12 @@ button.export-btn:disabled {
 }
 
 /* Row styles for different states */
-.diff-table-body tr.new-row {
-    background-color: #fff3cd;
+.diff-table-body tr.new-row1 {
+    background-color: #cdedff; /* Голубой для файла 1 */
+}
+
+.diff-table-body tr.new-row2 {
+    background-color: #b8f5f0; /* Светло-бирюзовый для файла 2 */
 }
 
 .diff-table-body tr.warn-row {
@@ -1191,12 +1207,46 @@ button.export-btn:disabled {
 }
 
 /* Cell styles for different states */
-.diff-table-body td.new-cell {
-    background-color: #fff3cd;
+.diff-table-body td.new-cell1 {
+    background-color: #65add7;
+    color: #ffffff;
+}
+
+.diff-table-body td.new-cell2 {
+    background-color: #63cfbf;
+    color: #ffffff;
 }
 
 .diff-table-body td.warn-cell {
     background-color: #f8d7da;
+}
+
+.diff-table-body td.tolerance-cell {
+    background-color: #ffeaa7; /* Orange for tolerance differences */
+    /*border-left: 3px solid #ff8c00; /* Orange border to make it more visible */
+    font-weight: 500; /* Make text slightly bolder */
+    position: relative;
+}
+
+.diff-table-body tr:hover td.tolerance-cell {
+    background-color: #ffd93d; /* Slightly darker orange on hover */
+}
+
+/* Special styling for tolerance cells in fixed column */
+.diff-table-body td:first-child.tolerance-cell {
+    background-color: #ffeaa7;
+    box-shadow: 2px 0 5px rgba(255, 140, 0, 0.3);
+}
+
+.diff-table-body tr:hover td:first-child.tolerance-cell {
+    background-color: #ffd93d;
+}
+
+.tolerance-btn {
+    background-color: #FFB17A !important;
+    color: white !important;
+    border: none !important;
+    font-weight: 600 !important;
 }
 
 .diff-table-body td.identical {
@@ -1204,9 +1254,21 @@ button.export-btn:disabled {
     font-weight: 500;
 }
 
-/* Style for merged cells (rowspan) */
-.diff-table-body td[rowspan] {
-    border-bottom: 1px solid #000000 !important;
+
+.diff-table-body td[rowspan]{
+    border-bottom: 2px solid #000000 !important;
+}
+
+.warn-row-group-end td{
+    border-bottom: 2px solid #000000 !important;
+}
+
+.warn-row-group-start td[rowspan]{
+    border-top: 2px solid #000000 !important;
+}
+
+.warn-row-group-start td{
+    border-top: 2px solid #000000 !important;
 }
 
 /* Fixed first column for filter row */
@@ -1845,4 +1907,224 @@ button.export-btn:disabled {
 
 .buttons-container{
     margin-bottom: 15px;
+}
+
+/* Extracted inline styles - Compare page layout */
+.main-content-padded {
+    padding-top: 80px;
+}
+
+.help-text {
+    text-align: center;
+    font-size: 14px;
+    color: #666;
+}
+
+.help-link {
+    color: #ffb17a;
+    text-decoration: none;
+}
+
+.sheet-selector-hidden {
+    display: none;
+}
+
+.button-half {
+    flex: 1;
+}
+
+.button-full-width {
+    width: 100%;
+}
+
+.export-btn-hidden {
+    display: none;
+    width: 100%;
+}
+
+.exclude-input {
+    width: 100%;
+    padding: 8px;
+    margin: 5px 0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.filter-controls-hidden {
+    display: none;
+}
+
+/* How to use page styles */
+.section-heading {
+    color: #FFB17A;
+    margin: 25px 0 15px 0;
+}
+
+.center-section {
+    text-align: center;
+    margin: 40px 0;
+}
+
+/* Contact email styling */
+.contact-email {
+    unicode-bidi: bidi-override;
+    direction: rtl;
+}
+
+/* Main page styles */
+.main-page-heading {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #FFB17A;
+}
+
+.main-page-section-heading {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #FFB17A;
+}
+
+/* Story section styling */
+.story-section {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 30px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 40px;
+}
+
+.story-text {
+    font-size: 1.1rem;
+    line-height: 1.7;
+    text-align: center;
+    margin-bottom: 20px;
+    font-style: italic;
+    color: #F9FAFB;
+}
+
+.grid-layout {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 25px;
+}
+
+/* Feature cards styling */
+.feature-card {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 25px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.feature-title {
+    color: #FFB17A;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+}
+
+.feature-title-text {
+    margin-left: 10px;
+}
+
+.feature-list {
+    padding-left: 20px;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.standard-list {
+    margin-top: 15px;
+    padding-left: 20px;
+}
+
+.security-image {
+    max-width: 250px;
+}
+
+/* Security section styling */
+.security-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+    margin-bottom: 40px;
+}
+
+.security-title {
+    color: #FFB17A;
+    margin-bottom: 15px;
+    font-size: 1.2rem;
+}
+
+.security-text {
+    line-height: 1.6;
+    margin-bottom: 10px;
+}
+
+/* Verification section styling */
+.verification-section {
+    background: rgba(99, 207, 191, 0.1);
+    border: 1px solid #63cfbf;
+    border-radius: 12px;
+    padding: 25px;
+    text-align: center;
+}
+
+.verification-title {
+    color: #FFB17A;
+    margin-bottom: 15px;
+    font-size: 1.3rem;
+}
+
+.verification-text {
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+.verification-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.verification-highlight {
+    color: #63cfbf;
+}
+
+/* Footer contact styling */
+.footer-contact {
+    font-size: 12px;
+    color: #666;
+    margin: 10px 0 5px 0;
+    text-align: center;
+}
+
+/* Table column width styles */
+.diff-table-header th:first-child,
+.diff-table-body td:first-child,
+.filter-row td:first-child {
+    width: 240px;
+    min-width: 240px;
+    max-width: 240px;
+    box-sizing: border-box;
+}
+
+.diff-table-header th:not(:first-child),
+.diff-table-body td:not(:first-child),
+.filter-row td:not(:first-child) {
+    width: 180px;
+    min-width: 180px;
+    max-width: 180px;
+    box-sizing: border-box;
+}
+
+/* Filter input styles */
+.filter-row input[type="text"] {
+    width: 100%;
+    padding: 4px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    box-sizing: border-box;
 }
