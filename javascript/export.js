@@ -67,7 +67,7 @@ function createStyledHTMLTable(exportData) {
                 switch (bgColor) {
                     case 'FF6B6B': bgColor = 'f8d7da'; break; // bright red -> muted red
                     case '4CAF50': bgColor = 'd4edda'; break; // bright green -> muted green
-                    case 'ffeaa7': bgColor = 'f8d7da'; break; // map old tolerance orange to red
+                    case 'ffeaa7': bgColor = 'ffeaa7'; break; // keep tolerance orange as orange
                 }
                 style += ` background-color:#${bgColor};`;
             }
@@ -190,6 +190,8 @@ function prepareDataFromRenderedTable() {
             // Check for CSS classes that indicate color
             if (cell.classList.contains('warn-cell')) {
                 bgColor = "f8d7da"; // Red for differences
+            } else if (cell.classList.contains('tolerance-cell')) {
+                bgColor = "ffeaa7"; // Orange for tolerance differences
             } else if (cell.classList.contains('identical')) {
                 bgColor = "d4edda"; // Green for same
             } else if (cell.classList.contains('new-cell1')) {
@@ -219,7 +221,7 @@ function prepareDataFromRenderedTable() {
                 const bgColorStyle = computedStyle.backgroundColor;
                 
                 if (bgColorStyle.includes('255, 234, 167') || bgColorStyle.includes('ffeaa7')) {
-                    bgColor = "f8d7da"; // Red for differences
+                    bgColor = "ffeaa7"; // Orange for tolerance differences
                 } else if (bgColorStyle.includes('248, 215, 218') || bgColorStyle.includes('f8d7da')) {
                     bgColor = "f8d7da"; // Red for differences  
                 } else if (bgColorStyle.includes('212, 237, 218') || bgColorStyle.includes('d4edda')) {
