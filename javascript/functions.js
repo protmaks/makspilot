@@ -2369,13 +2369,31 @@ function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols,
     
     function countMatches(rowA, rowB) {
         let matches = 0;
+        let keyMatches = 0; // Count matches in key columns
+        // Calculate 70% of total columns as key columns (minimum 1, maximum = total columns)
+        const keyColumnsCount = Math.max(1, Math.min(finalAllCols, Math.ceil(finalAllCols * 0.7)));
+        
         for (let i = 0; i < finalAllCols; i++) {
-            // Convert both values to uppercase for case-insensitive comparison (cache the conversion)
+            // Convert both values to uppercase for case-insensitive comparison
             let valueA = (rowA[i] || '').toString();
             let valueB = (rowB[i] || '').toString();
-            if (valueA.toUpperCase() === valueB.toUpperCase()) matches++;
+            
+            if (valueA.toUpperCase() === valueB.toUpperCase()) {
+                matches++;
+                // Count matches in key columns (first 70% of columns)
+                if (i < keyColumnsCount) {
+                    keyMatches++;
+                }
+            }
         }
-        return matches;
+        
+        // Give higher priority to key columns: 
+        // Score = key_matches * 3 + other_matches
+        // This ensures that matching key columns have much higher weight
+        const otherMatches = matches - keyMatches;
+        const weightedScore = (keyMatches * 3) + otherMatches;
+        
+        return weightedScore;
     }
     
     // Process large files in batches to avoid freezing the UI
@@ -2392,7 +2410,14 @@ function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols,
                     bestIdx = j;
                 }
             }
-            if (bestScore >= Math.ceil(finalAllCols / 2)) {
+            // Calculate threshold for matching based on key columns priority
+            // Key columns = 70% of total columns, require at least 60% match in key columns
+            // OR at least 50% match in all columns with weighted scoring
+            const keyColumnsCount = Math.max(1, Math.min(finalAllCols, Math.ceil(finalAllCols * 0.7)));
+            const minKeyMatches = Math.ceil(keyColumnsCount * 0.6) * 3; // 60% of key columns with 3x weight
+            const minTotalMatches = Math.ceil(finalAllCols * 0.5); // 50% of all columns
+            
+            if (bestScore >= minKeyMatches || bestScore >= minTotalMatches) {
                 pairs.push({row1: body1[i], row2: body2[bestIdx]});
                 used2[bestIdx] = true;
             } else {

@@ -20,8 +20,8 @@ Allow: /de/
 
 # Allow CSS and JS files for proper rendering
 Allow: /style.css
+Allow: /javascript/
 Allow: /script.js
-Allow: /functions.js
 
 # Allow images for social media previews
 Allow: /img/
