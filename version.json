@@ -4,7 +4,7 @@
   "description": "Application version configuration",
   "changelog": {
     "v 5.2 Beta": [
-      "🔑 Enhanced row matching algorithm with dynamic key column prioritization",
+      "🔑 Enhanced row matching algorithm with dynamic key column prioritization ",
       "📊 First 70% of columns automatically become key columns with 3x weight in similarity scoring",
       "⚡ Improved matching threshold: 60% key columns OR 50% total columns",
       "🎯 Adaptive to any file structure - works with 5, 14, or any number of columns",
