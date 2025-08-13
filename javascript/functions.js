@@ -214,6 +214,91 @@ function populateSheetSelector(sheetNames, fileNum, selectedSheet) {
     }
 }
 
+// Function to process Excel sheet with optimized empty row/column detection
+function processExcelSheetOptimized(sheet) {
+    if (!sheet || !sheet['!ref']) {
+        return [];
+    }
+    
+    // Get the range of the sheet
+    const range = XLSX.utils.decode_range(sheet['!ref']);
+    
+    // Find the actual data boundaries by scanning for non-empty cells
+    let minRow = range.e.r + 1; // Start beyond the range
+    let maxRow = -1;
+    let minCol = range.e.c + 1; // Start beyond the range  
+    let maxCol = -1;
+    
+    // Scan through all cells to find actual data boundaries
+    for (let row = range.s.r; row <= range.e.r; row++) {
+        for (let col = range.s.c; col <= range.e.c; col++) {
+            const cellAddress = XLSX.utils.encode_cell({r: row, c: col});
+            const cell = sheet[cellAddress];
+            
+            // Check if cell has actual content (not just empty string or whitespace)
+            if (cell && cell.v !== undefined && cell.v !== null) {
+                const cellValue = cell.v.toString().trim();
+                if (cellValue !== '') {
+                    minRow = Math.min(minRow, row);
+                    maxRow = Math.max(maxRow, row);
+                    minCol = Math.min(minCol, col);
+                    maxCol = Math.max(maxCol, col);
+                }
+            }
+        }
+    }
+    
+    // If no data found, return empty array
+    if (minRow > maxRow || minCol > maxCol) {
+        return [];
+    }
+    
+    // Create the optimized range with only actual data
+    const dataRange = {
+        s: { r: minRow, c: minCol },
+        e: { r: maxRow, c: maxCol }
+    };
+    
+    // Create a new sheet object with only the data range
+    const optimizedSheet = {};
+    optimizedSheet['!ref'] = XLSX.utils.encode_range(dataRange);
+    
+    // Copy only the cells within the data range
+    for (let row = minRow; row <= maxRow; row++) {
+        for (let col = minCol; col <= maxCol; col++) {
+            const originalAddress = XLSX.utils.encode_cell({r: row, c: col});
+            const newAddress = XLSX.utils.encode_cell({r: row - minRow, c: col - minCol});
+            
+            if (sheet[originalAddress]) {
+                optimizedSheet[newAddress] = sheet[originalAddress];
+            }
+        }
+    }
+    
+    // Update the range to start from 0,0
+    optimizedSheet['!ref'] = XLSX.utils.encode_range({
+        s: { r: 0, c: 0 },
+        e: { r: maxRow - minRow, c: maxCol - minCol }
+    });
+    
+    // Convert to JSON with the optimized range
+    const json = XLSX.utils.sheet_to_json(optimizedSheet, {
+        header: 1, 
+        defval: '',
+        raw: true,          // Get raw values to preserve full precision
+        dateNF: 'yyyy-mm-dd hh:mm:ss'  // More complete date format
+    });
+    
+    // Additional safety: filter out any remaining empty rows that might slip through
+    const filteredJson = json.filter(row => 
+        Array.isArray(row) && row.some(cell => 
+            cell !== null && cell !== undefined && cell.toString().trim() !== ''
+        )
+    );
+    
+    return filteredJson;
+}
+
 // Function to process the selected sheet
 function processSelectedSheet(fileNum, selectedSheetName) {
     // Clear previous comparison results when changing sheets
@@ -231,12 +316,7 @@ function processSelectedSheet(fileNum, selectedSheetName) {
     // Use setTimeout to allow UI to update
     setTimeout(() => {
         const sheet = workbook.Sheets[selectedSheetName];
-        let json = XLSX.utils.sheet_to_json(sheet, {
-            header: 1, 
-            defval: '',
-            raw: true,          // Get raw values to preserve full precision
-            dateNF: 'yyyy-mm-dd hh:mm:ss'  // More complete date format
-        });
+        let json = processExcelSheetOptimized(sheet);
         
         // Check both file size and column count limits simultaneously
         let maxCols = 0;
@@ -1736,12 +1816,7 @@ function handleFile(file, num) {
                 setTimeout(() => {
                     // Process the first sheet directly (more efficient than calling processSelectedSheet)
                     let firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    let json = XLSX.utils.sheet_to_json(firstSheet, {
-                        header: 1, 
-                        defval: '',
-                        raw: true,          // Get raw values to preserve full precision
-                        dateNF: 'yyyy-mm-dd hh:mm:ss'  // More complete date format
-                    });
+                    let json = processExcelSheetOptimized(firstSheet);
                     
                     // Check both file size and column count limits simultaneously
                     let maxCols = 0;
