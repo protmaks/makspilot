@@ -2797,11 +2797,38 @@ function smartDetectKeyColumns(headers, data) {
         high: ['id', 'uid', 'key', 'primary', 'identifier', 'код', 'номер', 'артикул', 'pk', 'primarykey'],
         medium: ['name', 'title', 'label', 'имя', 'название', 'наименование', 'фио', 'customer', 'client', 'клиент'],
         low: ['date', 'time', 'created', 'modified', 'дата', 'время', 'создан', 'изменен'],
-        // New: Aggregation patterns for YYYYMM and multi-column aggregation
-        aggregation: ['yyyymm', 'yyyymmdd', 'year_month', 'yearmonth', 'period', 'период', 'reporting_period', 'отчетный_период',
-                     'year', 'год', 'month', 'месяц', 'quarter', 'квартал', 'partition', 'раздел']
+        dateAggregation: ['yyyymm', 'yyyymmdd', 'year_month', 'year_week', 'period', 'период', 'месяц_год', 'yearmonth', 'reporting_period', 'отчетный_период'],
+        // New: Multi-column aggregation patterns
+        aggregationComponents: {
+            year: ['year', 'год', 'yr', 'y'],
+            month: ['month', 'месяц', 'mon', 'mm', 'm'],
+            quarter: ['quarter', 'квартал', 'q', 'qtr'],
+            week: ['week', 'неделя', 'wk', 'w'],
+            day: ['day', 'день', 'dd', 'd'],
+            type: ['type', 'тип', 'category', 'категория', 'class', 'класс'],
+            partition: ['partition', 'раздел', 'part', 'segment', 'сегмент'],
+            region: ['region', 'регион', 'area', 'область', 'zone', 'зона'],
+            department: ['department', 'отдел', 'dept', 'division', 'подразделение']
+        }
     };
     
+    // First, analyze individual columns
+    const columnScores = analyzeIndividualColumns(headers, bodyData, keyIndicators);
+    
+    // Then, analyze potential multi-column aggregation patterns
+    const aggregationGroups = detectAggregationGroups(headers, bodyData, keyIndicators);
+    
+    // Combine results to determine the best key strategy
+    const finalKeyColumns = selectOptimalKeyStrategy(columnScores, aggregationGroups, headers, bodyData);
+    
+    return finalKeyColumns;
+}
+
+// Analyze individual columns (existing logic with minor refactoring)
+function analyzeIndividualColumns(headers, bodyData, keyIndicators) {
+// Analyze individual columns (existing logic with minor refactoring)
+function analyzeIndividualColumns(headers, bodyData, keyIndicators) {
+    const columnCount = headers.length;
     const columnScores = [];
     
     for (let colIndex = 0; colIndex < columnCount; colIndex++) {
@@ -2811,14 +2838,13 @@ function smartDetectKeyColumns(headers, data) {
         // 1. Header analysis (40% weight)
         let headerScore = 0;
         
-        // Check for aggregation patterns (highest priority for YYYYMM type fields)
-        if (keyIndicators.aggregation.some(keyword => header.includes(keyword))) {
-            // Special boost for YYYYMM pattern
-            if (header.match(/^y{4}m{2}$|yyyymm|year.*month|месяц.*год|period|период/i)) {
-                headerScore = 12; // Highest priority for temporal aggregation
-            } else {
-                headerScore = 9; // High priority for other aggregation components
-            }
+        // Check for date aggregation patterns (highest priority for YYYYMM type fields)
+        if (keyIndicators.dateAggregation.some(keyword => header.includes(keyword))) {
+            headerScore = 12; // Higher than regular high priority
+        }
+        // Check for YYYYMM pattern specifically
+        else if (header.match(/^y{4}m{2}$|^year.*month$|^месяц.*год$|period|период|reporting.*period|отчетный.*период/i)) {
+            headerScore = 12;
         }
         // Check for high priority keywords
         else if (keyIndicators.high.some(keyword => header.includes(keyword))) {
@@ -2832,6 +2858,10 @@ function smartDetectKeyColumns(headers, data) {
         else if (keyIndicators.low.some(keyword => header.includes(keyword))) {
             headerScore = 3;
         }
+        // Check if it's part of aggregation components
+        else if (isAggregationComponent(header, keyIndicators.aggregationComponents)) {
+            headerScore = 8; // High score for aggregation components
+        }
         // No keywords found
         else {
             headerScore = 1;
@@ -2844,60 +2874,79 @@ function smartDetectKeyColumns(headers, data) {
         const uniqueValues = new Set(columnValues);
         const uniquenessRatio = columnValues.length > 0 ? uniqueValues.size / columnValues.length : 0;
         
-        // Special analysis for YYYYMM and aggregation patterns
-        let isAggregationField = false;
-        let aggregationConfidence = 0;
+        // Special analysis for date aggregation patterns
+        let isDateAggregation = false;
+        let hasYYYYMMPattern = false;
+        let dateAggregationConfidence = 0;
         
         if (columnValues.length > 0) {
-            // Check for YYYYMM pattern (202301, 202302, etc.)
+            // Check if values follow YYYYMM pattern (202301, 202302, etc.)
             const yyyymmPattern = /^20\d{4}$/; // Matches 6-digit numbers starting with 20 (2000-2099 years)
             const yyyymmCount = columnValues.filter(val => yyyymmPattern.test(val)).length;
-            const hasYYYYMMPattern = yyyymmCount > columnValues.length * 0.7; // 70% match threshold
+            hasYYYYMMPattern = yyyymmCount > columnValues.length * 0.8; // 80% of values match YYYYMM pattern
             
+            // Additional check for YYYYMM values that are sequential/reasonable
             if (hasYYYYMMPattern) {
-                // Additional validation for sequential YYYYMM values
                 const yyyymmValues = columnValues.filter(val => yyyymmPattern.test(val))
                     .map(val => parseInt(val))
                     .sort((a, b) => a - b);
                 
-                let validMonthCount = 0;
-                for (const value of yyyymmValues) {
-                    const month = value % 100;
-                    if (month >= 1 && month <= 12) {
-                        validMonthCount++;
+                let sequentialCount = 0;
+                for (let i = 0; i < yyyymmValues.length - 1; i++) {
+                    const current = yyyymmValues[i];
+                    const next = yyyymmValues[i + 1];
+                    const currentYear = Math.floor(current / 100);
+                    const currentMonth = current % 100;
+                    const nextYear = Math.floor(next / 100);
+                    const nextMonth = next % 100;
+                    
+                    // Check if it's a reasonable month progression
+                    if (currentMonth >= 1 && currentMonth <= 12 && nextMonth >= 1 && nextMonth <= 12) {
+                        // Check if next month follows logically (same year next month, or next year January)
+                        if ((currentYear === nextYear && nextMonth === currentMonth + 1) ||
+                            (nextYear === currentYear + 1 && currentMonth === 12 && nextMonth === 1)) {
+                            sequentialCount++;
+                        }
                     }
                 }
                 
-                if (validMonthCount > yyyymmValues.length * 0.8) {
-                    isAggregationField = true;
-                    aggregationConfidence = 0.9;
+                // If more than 50% of transitions are sequential, it's very likely YYYYMM data
+                if (sequentialCount > (yyyymmValues.length - 1) * 0.5) {
+                    dateAggregationConfidence = 0.9;
+                } else {
+                    dateAggregationConfidence = 0.7;
                 }
             }
             
-            // Check for other aggregation patterns
-            const aggregationPatterns = [
-                { pattern: /^20\d{2}$/, type: 'year' },          // 2023, 2024
-                { pattern: /^[1-9]$|^1[0-2]$/, type: 'month' },  // 1-12
-                { pattern: /^[1-4]$/, type: 'quarter' },         // 1-4
-                { pattern: /^20\d{2}-[01]\d$/, type: 'year-month' }, // 2023-01
-                { pattern: /^Q[1-4]$/, type: 'quarter' }         // Q1, Q2, Q3, Q4
+            // Check for other date aggregation patterns
+            const dateAggregationPatterns = [
+                /^20\d{2}[01]\d[0-3]\d$/, // YYYYMMDD: 20230115
+                /^20\d{2}-[01]\d$/, // YYYY-MM: 2023-01
+                /^20\d{2}\/[01]\d$/, // YYYY/MM: 2023/01
+                /^[01]\d\/20\d{2}$/, // MM/YYYY: 01/2023
+                /^Q[1-4]20\d{2}$/, // Q12023, Q22023 (quarters)
+                /^20\d{2}W[0-5]\d$/ // 2023W01, 2023W52 (weeks)
             ];
             
-            for (const { pattern, type } of aggregationPatterns) {
-                const matches = columnValues.filter(val => pattern.test(val)).length;
-                if (matches > columnValues.length * 0.6) {
-                    isAggregationField = true;
-                    aggregationConfidence = Math.max(aggregationConfidence, 0.7);
-                    break;
-                }
+            const aggregationMatches = columnValues.filter(val => 
+                dateAggregationPatterns.some(pattern => pattern.test(val))
+            ).length;
+            
+            if (aggregationMatches > columnValues.length * 0.7) {
+                isDateAggregation = true;
+                dateAggregationConfidence = Math.max(dateAggregationConfidence, 0.8);
             }
         }
         
         let uniquenessScore = 0;
-        if (isAggregationField) {
-            // Aggregation fields are excellent keys even with lower uniqueness
-            const baseScore = uniquenessRatio >= 0.3 ? 9 : 7;
-            uniquenessScore = Math.floor(baseScore * aggregationConfidence);
+        if (hasYYYYMMPattern || isDateAggregation) {
+            // Date aggregation fields are excellent keys even with moderate uniqueness
+            // Use confidence level to determine the score
+            const baseScore = uniquenessRatio >= 0.5 ? 10 : 8;
+            uniquenessScore = Math.floor(baseScore * dateAggregationConfidence);
+            
+            // Ensure minimum score for detected date aggregation
+            uniquenessScore = Math.max(uniquenessScore, 7);
         } else if (uniquenessRatio >= 0.95) {
             uniquenessScore = 10; // Very unique - likely a key
         } else if (uniquenessRatio >= 0.8) {
@@ -2924,79 +2973,287 @@ function smartDetectKeyColumns(headers, data) {
             headerScore: headerScore,
             uniquenessScore: uniquenessScore,
             positionScore: positionScore,
-            isAggregationField: isAggregationField,
-            aggregationConfidence: aggregationConfidence
+            isDateAggregation: hasYYYYMMPattern || isDateAggregation,
+            dateAggregationConfidence: dateAggregationConfidence,
+            aggregationComponent: getAggregationComponentType(headers[colIndex], keyIndicators.aggregationComponents)
         });
     }
     
     // Sort by score descending
     columnScores.sort((a, b) => b.score - a.score);
     
-    // Log the analysis results (commented out for production)
-    // console.log('🔍 Smart Key Column Detection Results:');
-    // console.log('Columns analyzed:', columnScores.map(col => ({
+    return columnScores;
+}
+
+// Helper function to check if a header is an aggregation component
+function isAggregationComponent(header, aggregationComponents) {
+    for (const [componentType, keywords] of Object.entries(aggregationComponents)) {
+        if (keywords.some(keyword => header.includes(keyword))) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Helper function to get aggregation component type
+function getAggregationComponentType(header, aggregationComponents) {
+    const headerLower = header.toLowerCase();
+    for (const [componentType, keywords] of Object.entries(aggregationComponents)) {
+        if (keywords.some(keyword => headerLower.includes(keyword))) {
+            return componentType;
+        }
+    }
+    return null;
+}
+
+// Detect multi-column aggregation groups
+function detectAggregationGroups(headers, bodyData, keyIndicators) {
+    const aggregationGroups = [];
+    const aggregationComponents = keyIndicators.aggregationComponents;
+    
+    // Find columns that are aggregation components
+    const componentColumns = [];
+    headers.forEach((header, index) => {
+        const componentType = getAggregationComponentType(header, aggregationComponents);
+        if (componentType) {
+            componentColumns.push({
+                index: index,
+                header: header,
+                componentType: componentType,
+                values: bodyData.map(row => (row[index] || '').toString().trim()).filter(val => val !== '')
+            });
+        }
+    });
+    
+    if (componentColumns.length < 2) {
+        return aggregationGroups; // Need at least 2 components for a group
+    }
+    
+    // Group components by logical patterns
+    const groupPatterns = [
+        {
+            name: 'year_month',
+            components: ['year', 'month'],
+            weight: 10,
+            description: 'Year + Month aggregation'
+        },
+        {
+            name: 'year_quarter',
+            components: ['year', 'quarter'],
+            weight: 9,
+            description: 'Year + Quarter aggregation'
+        },
+        {
+            name: 'year_week',
+            components: ['year', 'week'],
+            weight: 8,
+            description: 'Year + Week aggregation'
+        },
+        {
+            name: 'temporal_partition',
+            components: ['year', 'month', 'partition'],
+            weight: 9,
+            description: 'Temporal + Partition aggregation'
+        },
+        {
+            name: 'temporal_type',
+            components: ['year', 'month', 'type'],
+            weight: 8,
+            description: 'Temporal + Type aggregation'
+        },
+        {
+            name: 'temporal_region',
+            components: ['year', 'month', 'region'],
+            weight: 8,
+            description: 'Temporal + Region aggregation'
+        },
+        {
+            name: 'partition_type',
+            components: ['partition', 'type'],
+            weight: 7,
+            description: 'Partition + Type aggregation'
+        }
+    ];
+    
+    // Check each pattern
+    for (const pattern of groupPatterns) {
+        const matchingComponents = [];
+        
+        for (const requiredComponent of pattern.components) {
+            const found = componentColumns.find(col => col.componentType === requiredComponent);
+            if (found) {
+                matchingComponents.push(found);
+            }
+        }
+        
+        // If we found all required components for this pattern
+        if (matchingComponents.length === pattern.components.length) {
+            const groupScore = calculateGroupScore(matchingComponents, bodyData, pattern.weight);
+            
+            aggregationGroups.push({
+                pattern: pattern,
+                components: matchingComponents,
+                score: groupScore,
+                indexes: matchingComponents.map(comp => comp.index).sort((a, b) => a - b),
+                combinedUniqueness: calculateCombinedUniqueness(matchingComponents, bodyData)
+            });
+        }
+    }
+    
+    // Sort groups by score descending
+    aggregationGroups.sort((a, b) => b.score - a.score);
+    
+    return aggregationGroups;
+}
+
+// Calculate score for an aggregation group
+function calculateGroupScore(components, bodyData, baseWeight) {
+    let score = baseWeight;
+    
+    // Bonus for good data quality in each component
+    for (const component of components) {
+        const values = component.values;
+        const uniqueValues = new Set(values);
+        const uniquenessRatio = values.length > 0 ? uniqueValues.size / values.length : 0;
+        
+        // Add bonus based on component type and data quality
+        if (component.componentType === 'year') {
+            // Years should have reasonable values
+            const validYears = values.filter(val => {
+                const num = parseInt(val);
+                return num >= 2000 && num <= 2030;
+            }).length;
+            const yearValidityRatio = values.length > 0 ? validYears / values.length : 0;
+            score += yearValidityRatio * 3;
+        } else if (component.componentType === 'month') {
+            // Months should be 1-12
+            const validMonths = values.filter(val => {
+                const num = parseInt(val);
+                return num >= 1 && num <= 12;
+            }).length;
+            const monthValidityRatio = values.length > 0 ? validMonths / values.length : 0;
+            score += monthValidityRatio * 3;
+        } else if (component.componentType === 'quarter') {
+            // Quarters should be 1-4
+            const validQuarters = values.filter(val => {
+                const num = parseInt(val);
+                return num >= 1 && num <= 4;
+            }).length;
+            const quarterValidityRatio = values.length > 0 ? validQuarters / values.length : 0;
+            score += quarterValidityRatio * 3;
+        }
+        
+        // General uniqueness bonus
+        score += uniquenessRatio * 2;
+    }
+    
+    return score;
+}
+
+// Calculate combined uniqueness of multiple columns
+function calculateCombinedUniqueness(components, bodyData) {
+    const combinedValues = new Set();
+    
+    for (let rowIndex = 0; rowIndex < bodyData.length; rowIndex++) {
+        const combinedValue = components.map(comp => 
+            (bodyData[rowIndex][comp.index] || '').toString().trim()
+        ).join('|');
+        
+        if (combinedValue.trim() !== '' && !combinedValue.includes('|')) {
+            combinedValues.add(combinedValue);
+        }
+    }
+    
+    return bodyData.length > 0 ? combinedValues.size / bodyData.length : 0;
+}
+
+// Select optimal key strategy - single columns vs multi-column aggregation
+function selectOptimalKeyStrategy(columnScores, aggregationGroups, headers, bodyData) {
+    let finalKeyColumns = [];
+    
+    // console.log('🔍 Analyzing key strategies...');
+    // console.log('📊 Individual column scores:', columnScores.slice(0, 5).map(col => ({
     //     column: `"${col.header}"`,
-    //     index: col.index,
-    //     totalScore: col.score.toFixed(2),
+    //     score: col.score.toFixed(2),
     //     uniqueness: `${(col.uniquenessRatio * 100).toFixed(1)}%`,
-    //     headerMatch: col.headerScore,
-    //     position: col.positionScore,
-    //     aggregation: col.isAggregationField ? `✅ YES (${(col.aggregationConfidence * 100).toFixed(0)}%)` : '❌ NO'
+    //     aggregationComponent: col.aggregationComponent || 'none'
+    // })));
+    // console.log('📊 Aggregation groups found:', aggregationGroups.map(group => ({
+    //     pattern: group.pattern.name,
+    //     components: group.components.map(c => `"${c.header}"`),
+    //     score: group.score.toFixed(2),
+    //     combinedUniqueness: `${(group.combinedUniqueness * 100).toFixed(1)}%`
     // })));
     
-    // Determine key columns based on scores with priority for aggregation fields
-    let keyColumns = [];
+    // Strategy 1: Check if we have a high-quality aggregation group
+    if (aggregationGroups.length > 0) {
+        const bestGroup = aggregationGroups[0];
+        const bestSingleColumn = columnScores[0];
+        
+        // Use aggregation group if:
+        // 1. It has high score (>= 15) AND
+        // 2. Combined uniqueness is good (>= 0.7) AND
+        // 3. It's significantly better than single column approach OR single column score is low
+        const useAggregationGroup = bestGroup.score >= 15 && 
+                                  bestGroup.combinedUniqueness >= 0.7 && 
+                                  (bestGroup.score > bestSingleColumn.score + 5 || bestSingleColumn.score < 8);
+        
+        if (useAggregationGroup) {
+            finalKeyColumns = bestGroup.indexes;
+            // console.log(`✅ Selected multi-column aggregation strategy: ${bestGroup.pattern.description}`);
+            // console.log(`🎯 Key columns: [${finalKeyColumns.join(', ')}] = [${finalKeyColumns.map(i => `"${headers[i]}"`).join(', ')}]`);
+            return finalKeyColumns;
+        }
+    }
     
-    // First, look for aggregation fields - they are excellent keys for YYYYMM type data
-    const aggregationFields = columnScores.filter(col => col.isAggregationField);
-    if (aggregationFields.length > 0) {
-        // console.log('🎯 Aggregation fields found:', aggregationFields.map(col => `"${col.header}" (${(col.aggregationConfidence * 100).toFixed(0)}% confidence)`));
+    // Strategy 2: Use traditional single-column approach with aggregation awareness
+    const dateAggregationColumns = columnScores.filter(col => col.isDateAggregation);
+    
+    if (dateAggregationColumns.length > 0) {
+        // Prioritize date aggregation columns
+        finalKeyColumns.push(dateAggregationColumns[0].index);
         
-        // Prioritize aggregation fields, especially YYYYMM patterns
-        keyColumns.push(aggregationFields[0].index);
-        
-        // Add additional aggregation fields if they are high quality
-        for (let i = 1; i < Math.min(3, aggregationFields.length); i++) {
-            const col = aggregationFields[i];
-            if (col.score >= 8 && col.aggregationConfidence >= 0.7) {
-                keyColumns.push(col.index);
+        // Add additional date aggregation columns if they exist and are good
+        for (let i = 1; i < Math.min(2, dateAggregationColumns.length); i++) {
+            const col = dateAggregationColumns[i];
+            if (col.score >= 8) {
+                finalKeyColumns.push(col.index);
             }
         }
     }
     
-    // If no aggregation fields found or we need more keys, use traditional approach
-    if (keyColumns.length === 0) {
+    // If no date aggregation columns found or we need more keys, use regular logic
+    if (finalKeyColumns.length === 0) {
         // Always include the highest scoring column
         if (columnScores.length > 0) {
-            keyColumns.push(columnScores[0].index);
+            finalKeyColumns.push(columnScores[0].index);
         }
     }
     
-    // Add additional high-scoring columns if needed (avoid duplicates)
-    for (let i = 0; i < Math.min(3, columnScores.length) && keyColumns.length < 3; i++) {
+    // Add additional columns if they have high scores and high uniqueness
+    // but avoid duplicates and don't exceed 3 key columns total
+    for (let i = 0; i < Math.min(3, columnScores.length) && finalKeyColumns.length < 3; i++) {
         const col = columnScores[i];
-        if (!keyColumns.includes(col.index)) {
+        if (!finalKeyColumns.includes(col.index)) {
             // Include if score is high and uniqueness is good
             if (col.score >= 6 && col.uniquenessRatio >= 0.7) {
-                keyColumns.push(col.index);
+                finalKeyColumns.push(col.index);
             }
         }
     }
     
     // Ensure we have at least one key column
-    if (keyColumns.length === 0) {
-        keyColumns = [0];
+    if (finalKeyColumns.length === 0) {
+        finalKeyColumns = [0];
     }
     
     // Sort key columns by their original position
-    keyColumns.sort((a, b) => a - b);
+    finalKeyColumns.sort((a, b) => a - b);
     
-    // console.log(`✅ Selected key columns: [${keyColumns.join(', ')}] = [${keyColumns.map(i => `"${headers[i]}"`).join(', ')}]`);
-    // if (aggregationFields.length > 0) {
-    //     console.log(`🗓️ Aggregation priority applied for: ${keyColumns.filter(i => aggregationFields.some(col => col.index === i)).map(i => `"${headers[i]}"`).join(', ')}`);
-    // }
+    // console.log(`✅ Selected single-column strategy`);
+    // console.log(`🎯 Key columns: [${finalKeyColumns.join(', ')}] = [${finalKeyColumns.map(i => `"${headers[i]}"`).join(', ')}]`);
     
-    return keyColumns;
+    return finalKeyColumns;
 }
 
 // Function to perform fuzzy matching for both export and display purposes
