@@ -1,8 +1,8 @@
 // Excel and CSV File Comparison Functions
 
 // Configuration constants
-const MAX_ROWS_LIMIT = 45000; // Maximum allowed rows per file
-const MAX_COLS_LIMIT = 40; // Maximum allowed columns per file
+const MAX_ROWS_LIMIT = 55000; // Maximum allowed rows per file
+const MAX_COLS_LIMIT = 120; // Maximum allowed columns per file
 const DETAILED_TABLE_LIMIT = 15000; // Limit for showing detailed comparison table (above this only summary and export)
 
 let data1 = [], data2 = [];
