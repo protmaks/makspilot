@@ -328,6 +328,20 @@ header {
     background-color: #208778;
 }
 
+/* Compact Section Styles */
+.compact-section {
+    padding: 60px 0;
+    border-top: 1px solid rgba(249, 250, 251, 0.1);
+}
+
+.compact-section.content-section:nth-child(odd) {
+    background-color: #111827;
+}
+
+.compact-section.content-section:nth-child(even) {
+    background-color: #208778;
+}
+
 .section-grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -1481,7 +1495,8 @@ button.export-btn:disabled {
     margin-right: auto;
 }
 
-.feature-card {
+/* Feature cards with images (for "Why Choose Our Tool?" section) */
+.features-grid .feature-card {
     background: rgba(255, 255, 255, 0.1);
     padding: 40px;
     border-radius: 16px;
@@ -1494,12 +1509,12 @@ button.export-btn:disabled {
     min-height: 180px;
 }
 
-.feature-card:hover {
+.features-grid .feature-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
 }
 
-.feature-card:nth-child(even) {
+.features-grid .feature-card:nth-child(even) {
     flex-direction: row-reverse;
 }
 
@@ -1523,8 +1538,8 @@ button.export-btn:disabled {
     text-align: left;
 }
 
-.feature-card:nth-child(even) .feature-content {
-    text-align: right;
+.features-grid .feature-card:nth-child(even) .feature-content {
+    /*text-align: right;*/
 }
 
 .feature-title {
@@ -1601,7 +1616,7 @@ button.export-btn:disabled {
         height: 120px;
     }
     
-    .feature-card {
+    .features-grid .feature-card {
         flex-direction: column !important;
         text-align: center;
         gap: 25px;
@@ -1609,11 +1624,11 @@ button.export-btn:disabled {
         padding: 30px 20px;
     }
     
-    .feature-card:nth-child(even) .feature-content {
+    .features-grid .feature-card:nth-child(even) .feature-content {
         text-align: center;
     }
     
-    .feature-content {
+    .features-grid .feature-content {
         text-align: center !important;
     }
     
@@ -2007,15 +2022,43 @@ button.export-btn:disabled {
 .grid-layout {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 25px;
+    gap: 30px;
+    margin-top: 20px;
 }
 
-/* Feature cards styling */
+/* Feature cards styling for grid layouts (without images) */
+.grid-layout .feature-card,
+.security-grid .feature-card {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 30px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+    backdrop-filter: blur(10px);
+    /* No display: flex here - let them use default block layout */
+}
+
+.grid-layout .feature-card:hover,
+.security-grid .feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* Generic feature card styles (fallback) */
 .feature-card {
     background: rgba(255, 255, 255, 0.1);
-    padding: 25px;
-    border-radius: 12px;
+    padding: 30px;
+    border-radius: 16px;
     border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    background: rgba(255, 255, 255, 0.15);
 }
 
 .feature-title {
@@ -2051,47 +2094,66 @@ button.export-btn:disabled {
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 30px;
     margin-bottom: 40px;
+    margin-top: 20px;
 }
 
 .security-title {
     color: #FFB17A;
     margin-bottom: 15px;
     font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .security-text {
     line-height: 1.6;
-    margin-bottom: 10px;
+    margin-bottom: 15px;
+    color: #F9FAFB;
 }
 
 /* Verification section styling */
 .verification-section {
     background: rgba(99, 207, 191, 0.1);
     border: 1px solid #63cfbf;
-    border-radius: 12px;
-    padding: 25px;
+    border-radius: 16px;
+    padding: 30px;
     text-align: center;
+    margin-top: 30px;
 }
 
 .verification-title {
     color: #FFB17A;
     margin-bottom: 15px;
     font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
 }
 
 .verification-text {
     line-height: 1.6;
-    margin-bottom: 20px;
+    margin-bottom: 25px;
+    color: #F9FAFB;
 }
 
 .verification-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
+    gap: 25px;
+}
+
+.verification-grid > div {
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .verification-highlight {
     color: #63cfbf;
+    font-weight: 600;
 }
 
 /* Footer contact styling */
@@ -2128,4 +2190,44 @@ button.export-btn:disabled {
     border: 1px solid #ccc;
     border-radius: 3px;
     box-sizing: border-box;
+}
+
+/* Mobile responsiveness for compact sections */
+@media (max-width: 768px) {
+    .compact-section {
+        padding: 40px 0;
+    }
+
+    .grid-layout {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .security-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .feature-card {
+        padding: 20px;
+    }
+
+    .verification-section {
+        padding: 20px;
+    }
+
+    .verification-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .main-page-section-heading {
+        font-size: 1.8rem;
+        margin-bottom: 20px;
+    }
+
+    .story-section {
+        padding: 20px;
+        margin-bottom: 30px;
+    }
 }
