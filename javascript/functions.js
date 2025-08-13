@@ -7,6 +7,7 @@ const DETAILED_TABLE_LIMIT = 15000; // Limit for showing detailed comparison tab
 
 let data1 = [], data2 = [];
 let fileName1 = '', fileName2 = '';
+let sheetName1 = '', sheetName2 = ''; // Store current sheet names
 let workbook1 = null, workbook2 = null; // Store workbooks for sheet selection
 let toleranceMode = false; // Global variable for tolerance comparison mode
 
@@ -136,6 +137,14 @@ function getSummaryTableHeaders() {
     return translations[currentLang] || translations['en'];
 }
 
+// Function to get file name with sheet name if exists
+function getFileDisplayName(fileName, sheetName) {
+    if (sheetName && sheetName.trim() !== '') {
+        return `${fileName}:${sheetName}`;
+    }
+    return fileName;
+}
+
 // Function to update sheet information display
 function updateSheetInfo(fileName, sheetNames, selectedSheet, fileNum) {
     const sheetInfoContainer = document.getElementById('sheetInfo');
@@ -214,6 +223,91 @@ function populateSheetSelector(sheetNames, fileNum, selectedSheet) {
     }
 }
 
+// Function to process Excel sheet with optimized empty row/column detection
+function processExcelSheetOptimized(sheet) {
+    if (!sheet || !sheet['!ref']) {
+        return [];
+    }
+    
+    // Get the range of the sheet
+    const range = XLSX.utils.decode_range(sheet['!ref']);
+    
+    // Find the actual data boundaries by scanning for non-empty cells
+    let minRow = range.e.r + 1; // Start beyond the range
+    let maxRow = -1;
+    let minCol = range.e.c + 1; // Start beyond the range  
+    let maxCol = -1;
+    
+    // Scan through all cells to find actual data boundaries
+    for (let row = range.s.r; row <= range.e.r; row++) {
+        for (let col = range.s.c; col <= range.e.c; col++) {
+            const cellAddress = XLSX.utils.encode_cell({r: row, c: col});
+            const cell = sheet[cellAddress];
+            
+            // Check if cell has actual content (not just empty string or whitespace)
+            if (cell && cell.v !== undefined && cell.v !== null) {
+                const cellValue = cell.v.toString().trim();
+                if (cellValue !== '') {
+                    minRow = Math.min(minRow, row);
+                    maxRow = Math.max(maxRow, row);
+                    minCol = Math.min(minCol, col);
+                    maxCol = Math.max(maxCol, col);
+                }
+            }
+        }
+    }
+    
+    // If no data found, return empty array
+    if (minRow > maxRow || minCol > maxCol) {
+        return [];
+    }
+    
+    // Create the optimized range with only actual data
+    const dataRange = {
+        s: { r: minRow, c: minCol },
+        e: { r: maxRow, c: maxCol }
+    };
+    
+    // Create a new sheet object with only the data range
+    const optimizedSheet = {};
+    optimizedSheet['!ref'] = XLSX.utils.encode_range(dataRange);
+    
+    // Copy only the cells within the data range
+    for (let row = minRow; row <= maxRow; row++) {
+        for (let col = minCol; col <= maxCol; col++) {
+            const originalAddress = XLSX.utils.encode_cell({r: row, c: col});
+            const newAddress = XLSX.utils.encode_cell({r: row - minRow, c: col - minCol});
+            
+            if (sheet[originalAddress]) {
+                optimizedSheet[newAddress] = sheet[originalAddress];
+            }
+        }
+    }
+    
+    // Update the range to start from 0,0
+    optimizedSheet['!ref'] = XLSX.utils.encode_range({
+        s: { r: 0, c: 0 },
+        e: { r: maxRow - minRow, c: maxCol - minCol }
+    });
+    
+    // Convert to JSON with the optimized range
+    const json = XLSX.utils.sheet_to_json(optimizedSheet, {
+        header: 1, 
+        defval: '',
+        raw: true,          // Get raw values to preserve full precision
+        dateNF: 'yyyy-mm-dd hh:mm:ss'  // More complete date format
+    });
+    
+    // Additional safety: filter out any remaining empty rows that might slip through
+    const filteredJson = json.filter(row => 
+        Array.isArray(row) && row.some(cell => 
+            cell !== null && cell !== undefined && cell.toString().trim() !== ''
+        )
+    );
+    
+    return filteredJson;
+}
+
 // Function to process the selected sheet
 function processSelectedSheet(fileNum, selectedSheetName) {
     // Clear previous comparison results when changing sheets
@@ -221,6 +315,13 @@ function processSelectedSheet(fileNum, selectedSheetName) {
     
     const workbook = fileNum === 1 ? workbook1 : workbook2;
     const fileName = fileNum === 1 ? fileName1 : fileName2;
+    
+    // Store the current sheet name
+    if (fileNum === 1) {
+        sheetName1 = selectedSheetName;
+    } else {
+        sheetName2 = selectedSheetName;
+    }
     
     if (!workbook || !workbook.Sheets[selectedSheetName]) return;
     
@@ -231,12 +332,7 @@ function processSelectedSheet(fileNum, selectedSheetName) {
     // Use setTimeout to allow UI to update
     setTimeout(() => {
         const sheet = workbook.Sheets[selectedSheetName];
-        let json = XLSX.utils.sheet_to_json(sheet, {
-            header: 1, 
-            defval: '',
-            raw: true,          // Get raw values to preserve full precision
-            dateNF: 'yyyy-mm-dd hh:mm:ss'  // More complete date format
-        });
+        let json = processExcelSheetOptimized(sheet);
         
         // Check both file size and column count limits simultaneously
         let maxCols = 0;
@@ -1580,10 +1676,12 @@ function handleFile(file, num) {
         data1 = [];
         fileName1 = file.name;
         workbook1 = null;
+        sheetName1 = ''; // Clear sheet name for CSV files
     } else {
         data2 = [];
         fileName2 = file.name;
         workbook2 = null;
+        sheetName2 = ''; // Clear sheet name for CSV files
     }
     
     // Clear result tables
@@ -1718,8 +1816,10 @@ function handleFile(file, num) {
                 // Store workbook for sheet selection
                 if (num === 1) {
                     workbook1 = workbook;
+                    sheetName1 = workbook.SheetNames[0]; // Set initial sheet name
                 } else {
                     workbook2 = workbook;
+                    sheetName2 = workbook.SheetNames[0]; // Set initial sheet name
                 }
                 
                 // Show information about sheets if there are multiple
@@ -1736,12 +1836,7 @@ function handleFile(file, num) {
                 setTimeout(() => {
                     // Process the first sheet directly (more efficient than calling processSelectedSheet)
                     let firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    let json = XLSX.utils.sheet_to_json(firstSheet, {
-                        header: 1, 
-                        defval: '',
-                        raw: true,          // Get raw values to preserve full precision
-                        dateNF: 'yyyy-mm-dd hh:mm:ss'  // More complete date format
-                    });
+                    let json = processExcelSheetOptimized(firstSheet);
                     
                     // Check both file size and column count limits simultaneously
                     let maxCols = 0;
@@ -2680,16 +2775,143 @@ function updateSummaryTable(only1, only2, both, percentDiff, percentClass, table
         ${toleranceInfo}
         <table style="margin-bottom:20px; border: 1px solid #ccc;">
             <tr><th>${tableHeaders.file}</th><th>${tableHeaders.rowCount}</th><th>${tableHeaders.rowsOnlyInFile}</th><th>${tableHeaders.identicalRows}</th><th>${tableHeaders.similarity}</th><th>${tableHeaders.diffColumns}</th></tr>
-            <tr><td>${fileName1 || tableHeaders.file1}</td><td>${currentPairs.filter(p => p.row1).length}</td><td>${only1}</td><td rowspan="2">${both}</td><td rowspan="2" class="percent-cell ${percentClass}">${percentDiff}%</td><td>${diffColumns1Html}</td></tr>
-            <tr><td>${fileName2 || tableHeaders.file2}</td><td>${currentPairs.filter(p => p.row2).length}</td><td>${only2}</td><td>${diffColumns2Html}</td></tr>
+            <tr><td>${getFileDisplayName(fileName1, sheetName1) || tableHeaders.file1}</td><td>${currentPairs.filter(p => p.row1).length}</td><td>${only1}</td><td rowspan="2">${both}</td><td rowspan="2" class="percent-cell ${percentClass}">${percentDiff}%</td><td>${diffColumns1Html}</td></tr>
+            <tr><td>${getFileDisplayName(fileName2, sheetName2) || tableHeaders.file2}</td><td>${currentPairs.filter(p => p.row2).length}</td><td>${only2}</td><td>${diffColumns2Html}</td></tr>
         </table>
     `;
     
     summaryDiv.innerHTML = htmlSummary;
 }
 
+// Smart detection of key columns based on headers, uniqueness, and position
+function smartDetectKeyColumns(headers, data) {
+    if (!headers || !data || data.length < 2) {
+        return [0]; // Default to first column if no data
+    }
+    
+    const columnCount = headers.length;
+    const bodyData = data.slice(1); // Skip header row
+    
+    // Define key indicators for headers
+    const keyIndicators = {
+        high: ['id', 'uid', 'key', 'primary', 'identifier', 'код', 'номер', 'артикул', 'pk', 'primarykey'],
+        medium: ['name', 'title', 'label', 'имя', 'название', 'наименование', 'фио', 'customer', 'client', 'клиент'],
+        low: ['date', 'time', 'created', 'modified', 'дата', 'время', 'создан', 'изменен']
+    };
+    
+    const columnScores = [];
+    
+    for (let colIndex = 0; colIndex < columnCount; colIndex++) {
+        const header = (headers[colIndex] || '').toString().toLowerCase();
+        let score = 0;
+        
+        // 1. Header analysis (40% weight)
+        let headerScore = 0;
+        
+        // Check for high priority keywords
+        if (keyIndicators.high.some(keyword => header.includes(keyword))) {
+            headerScore = 10;
+        }
+        // Check for medium priority keywords
+        else if (keyIndicators.medium.some(keyword => header.includes(keyword))) {
+            headerScore = 6;
+        }
+        // Check for low priority keywords
+        else if (keyIndicators.low.some(keyword => header.includes(keyword))) {
+            headerScore = 3;
+        }
+        // No keywords found
+        else {
+            headerScore = 1;
+        }
+        
+        score += headerScore * 0.4;
+        
+        // 2. Uniqueness analysis (40% weight)
+        const columnValues = bodyData.map(row => (row[colIndex] || '').toString().trim()).filter(val => val !== '');
+        const uniqueValues = new Set(columnValues);
+        const uniquenessRatio = columnValues.length > 0 ? uniqueValues.size / columnValues.length : 0;
+        
+        let uniquenessScore = 0;
+        if (uniquenessRatio >= 0.95) {
+            uniquenessScore = 10; // Very unique - likely a key
+        } else if (uniquenessRatio >= 0.8) {
+            uniquenessScore = 8;
+        } else if (uniquenessRatio >= 0.6) {
+            uniquenessScore = 6;
+        } else if (uniquenessRatio >= 0.4) {
+            uniquenessScore = 4;
+        } else {
+            uniquenessScore = 1; // Low uniqueness - unlikely to be a key
+        }
+        
+        score += uniquenessScore * 0.4;
+        
+        // 3. Position weight (20% weight) - earlier columns are more likely to be keys
+        const positionScore = Math.max(1, 10 - colIndex * 2); // Decreases as position increases
+        score += positionScore * 0.2;
+        
+        columnScores.push({
+            index: colIndex,
+            header: headers[colIndex],
+            score: score,
+            uniquenessRatio: uniquenessRatio,
+            headerScore: headerScore,
+            uniquenessScore: uniquenessScore,
+            positionScore: positionScore
+        });
+    }
+    
+    // Sort by score descending
+    columnScores.sort((a, b) => b.score - a.score);
+    
+    // Log the analysis results (commented out for production)
+    // console.log('🔍 Smart Key Column Detection Results:');
+    // console.log('Columns analyzed:', columnScores.map(col => ({
+    //     column: `"${col.header}"`,
+    //     index: col.index,
+    //     totalScore: col.score.toFixed(2),
+    //     uniqueness: `${(col.uniquenessRatio * 100).toFixed(1)}%`,
+    //     headerMatch: col.headerScore,
+    //     position: col.positionScore
+    // })));
+    
+    // Determine key columns based on scores
+    let keyColumns = [];
+    
+    // Always include the highest scoring column
+    if (columnScores.length > 0) {
+        keyColumns.push(columnScores[0].index);
+    }
+    
+    // Add additional columns if they have high scores and high uniqueness
+    for (let i = 1; i < Math.min(3, columnScores.length); i++) {
+        const col = columnScores[i];
+        // Include if score is high and uniqueness is good
+        if (col.score >= 6 && col.uniquenessRatio >= 0.7) {
+            keyColumns.push(col.index);
+        }
+    }
+    
+    // Ensure we have at least one key column
+    if (keyColumns.length === 0) {
+        keyColumns = [0];
+    }
+    
+    // Sort key columns by their original position
+    keyColumns.sort((a, b) => a - b);
+    
+    // console.log(`✅ Selected key columns: [${keyColumns.join(', ')}] = [${keyColumns.map(i => `"${headers[i]}"`).join(', ')}]`);
+    
+    return keyColumns;
+}
+
 // Function to perform fuzzy matching for both export and display purposes
 function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols, isLargeFile, tableHeaders) {
+    
+    // Smart detection of key columns
+    const combinedData = [finalHeaders, ...body1, ...body2];
+    const keyColumnIndexes = smartDetectKeyColumns(finalHeaders, combinedData);
     
     // --- Fuzzy matching for bottom table ---
     let used2 = new Array(body2.length).fill(false);
@@ -2701,8 +2923,8 @@ function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols,
         let toleranceMatches = 0; // Count tolerance matches
         let keyToleranceMatches = 0; // Count tolerance matches in key columns
         
-        // Calculate 70% of total columns as key columns (minimum 1, maximum = total columns)
-        const keyColumnsCount = Math.max(1, Math.min(finalAllCols, Math.ceil(finalAllCols * 0.7)));
+        // Use smart detected key columns instead of 70% rule
+        const keyColumnsIndexes = keyColumnIndexes;
         
         for (let i = 0; i < finalAllCols; i++) {
             let valueA = (rowA[i] || '').toString();
@@ -2714,12 +2936,12 @@ function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols,
                 
                 if (compResult === 'identical') {
                     matches++;
-                    if (i < keyColumnsCount) {
+                    if (keyColumnsIndexes.includes(i)) {
                         keyMatches++;
                     }
                 } else if (compResult === 'tolerance') {
                     toleranceMatches++;
-                    if (i < keyColumnsCount) {
+                    if (keyColumnsIndexes.includes(i)) {
                         keyToleranceMatches++;
                     }
                 }
@@ -2727,7 +2949,7 @@ function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols,
                 // Use exact comparison (case-insensitive)
                 if (valueA.toUpperCase() === valueB.toUpperCase()) {
                     matches++;
-                    if (i < keyColumnsCount) {
+                    if (keyColumnsIndexes.includes(i)) {
                         keyMatches++;
                     }
                 }
@@ -2766,16 +2988,14 @@ function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols,
                     bestIdx = j;
                 }
             }
-            // Calculate threshold for matching based on key columns priority
-            // Key columns = 70% of total columns, require at least 60% match in key columns
-            // OR at least 50% match in all columns with weighted scoring
-            const keyColumnsCount = Math.max(1, Math.min(finalAllCols, Math.ceil(finalAllCols * 0.7)));
-            let minKeyMatches = Math.ceil(keyColumnsCount * 0.6) * 3; // 60% of key columns with 3x weight
+            // Calculate threshold for matching based on smart detected key columns
+            const keyColumnsCount = keyColumnIndexes.length;
+            let minKeyMatches = Math.ceil(keyColumnsCount * 0.6) * 3; // 60% of detected key columns with 3x weight
             let minTotalMatches = Math.ceil(finalAllCols * 0.5); // 50% of all columns
             
             // In tolerance mode, require higher threshold since tolerance matches have reduced weight
             if (toleranceMode) {
-                minKeyMatches = Math.ceil(keyColumnsCount * 0.8) * 3; // 80% of key columns with 3x weight
+                minKeyMatches = Math.ceil(keyColumnsCount * 0.8) * 3; // 80% of detected key columns with 3x weight
                 minTotalMatches = Math.ceil(finalAllCols * 0.7); // 70% of all columns
             }
             
@@ -3092,7 +3312,7 @@ function renderComparisonTable() {
         if (row1 && row2 && (hasWarn || hasTolerance)) {
             // Row for File 1
             bodyHtml += `<tr class="warn-row warn-row-group-start">`;
-            bodyHtml += `<td class="warn-cell">${fileName1 || 'File 1'}</td>`;
+            bodyHtml += `<td class="warn-cell">${getFileDisplayName(fileName1, sheetName1) || 'File 1'}</td>`;
             for (let c = 0; c < currentFinalAllCols; c++) {
                 let v1 = row1[c] !== undefined ? row1[c] : '';
                 let compResult = columnComparisons[c];
@@ -3112,7 +3332,7 @@ function renderComparisonTable() {
             
             // Row for File 2
             bodyHtml += `<tr class="warn-row warn-row-group-end">`;
-            bodyHtml += `<td class="warn-cell">${fileName2 || 'File 2'}</td>`;
+            bodyHtml += `<td class="warn-cell">${getFileDisplayName(fileName2, sheetName2) || 'File 2'}</td>`;
             for (let c = 0; c < currentFinalAllCols; c++) {
                 let v2 = row2[c] !== undefined ? row2[c] : '';
                 let compResult = columnComparisons[c];
@@ -3136,10 +3356,10 @@ function renderComparisonTable() {
                 source = 'Both files';
                 rowClass = 'row-identical';
             } else if (row1 && !row2) {
-                source = fileName1 || 'File 1';
+                source = getFileDisplayName(fileName1, sheetName1) || 'File 1';
                 rowClass = 'new-row1';
             } else if (!row1 && row2) {
-                source = fileName2 || 'File 2';
+                source = getFileDisplayName(fileName2, sheetName2) || 'File 2';
                 rowClass = 'new-row2';
             }
             
