@@ -7,6 +7,7 @@ const DETAILED_TABLE_LIMIT = 15000; // Limit for showing detailed comparison tab
 
 let data1 = [], data2 = [];
 let fileName1 = '', fileName2 = '';
+let sheetName1 = '', sheetName2 = ''; // Store current sheet names
 let workbook1 = null, workbook2 = null; // Store workbooks for sheet selection
 let toleranceMode = false; // Global variable for tolerance comparison mode
 
@@ -134,6 +135,14 @@ function getSummaryTableHeaders() {
     };
     
     return translations[currentLang] || translations['en'];
+}
+
+// Function to get file name with sheet name if exists
+function getFileDisplayName(fileName, sheetName) {
+    if (sheetName && sheetName.trim() !== '') {
+        return `${fileName}:${sheetName}`;
+    }
+    return fileName;
 }
 
 // Function to update sheet information display
@@ -306,6 +315,13 @@ function processSelectedSheet(fileNum, selectedSheetName) {
     
     const workbook = fileNum === 1 ? workbook1 : workbook2;
     const fileName = fileNum === 1 ? fileName1 : fileName2;
+    
+    // Store the current sheet name
+    if (fileNum === 1) {
+        sheetName1 = selectedSheetName;
+    } else {
+        sheetName2 = selectedSheetName;
+    }
     
     if (!workbook || !workbook.Sheets[selectedSheetName]) return;
     
@@ -1660,10 +1676,12 @@ function handleFile(file, num) {
         data1 = [];
         fileName1 = file.name;
         workbook1 = null;
+        sheetName1 = ''; // Clear sheet name for CSV files
     } else {
         data2 = [];
         fileName2 = file.name;
         workbook2 = null;
+        sheetName2 = ''; // Clear sheet name for CSV files
     }
     
     // Clear result tables
@@ -1798,8 +1816,10 @@ function handleFile(file, num) {
                 // Store workbook for sheet selection
                 if (num === 1) {
                     workbook1 = workbook;
+                    sheetName1 = workbook.SheetNames[0]; // Set initial sheet name
                 } else {
                     workbook2 = workbook;
+                    sheetName2 = workbook.SheetNames[0]; // Set initial sheet name
                 }
                 
                 // Show information about sheets if there are multiple
@@ -2755,8 +2775,8 @@ function updateSummaryTable(only1, only2, both, percentDiff, percentClass, table
         ${toleranceInfo}
         <table style="margin-bottom:20px; border: 1px solid #ccc;">
             <tr><th>${tableHeaders.file}</th><th>${tableHeaders.rowCount}</th><th>${tableHeaders.rowsOnlyInFile}</th><th>${tableHeaders.identicalRows}</th><th>${tableHeaders.similarity}</th><th>${tableHeaders.diffColumns}</th></tr>
-            <tr><td>${fileName1 || tableHeaders.file1}</td><td>${currentPairs.filter(p => p.row1).length}</td><td>${only1}</td><td rowspan="2">${both}</td><td rowspan="2" class="percent-cell ${percentClass}">${percentDiff}%</td><td>${diffColumns1Html}</td></tr>
-            <tr><td>${fileName2 || tableHeaders.file2}</td><td>${currentPairs.filter(p => p.row2).length}</td><td>${only2}</td><td>${diffColumns2Html}</td></tr>
+            <tr><td>${getFileDisplayName(fileName1, sheetName1) || tableHeaders.file1}</td><td>${currentPairs.filter(p => p.row1).length}</td><td>${only1}</td><td rowspan="2">${both}</td><td rowspan="2" class="percent-cell ${percentClass}">${percentDiff}%</td><td>${diffColumns1Html}</td></tr>
+            <tr><td>${getFileDisplayName(fileName2, sheetName2) || tableHeaders.file2}</td><td>${currentPairs.filter(p => p.row2).length}</td><td>${only2}</td><td>${diffColumns2Html}</td></tr>
         </table>
     `;
     
@@ -3292,7 +3312,7 @@ function renderComparisonTable() {
         if (row1 && row2 && (hasWarn || hasTolerance)) {
             // Row for File 1
             bodyHtml += `<tr class="warn-row warn-row-group-start">`;
-            bodyHtml += `<td class="warn-cell">${fileName1 || 'File 1'}</td>`;
+            bodyHtml += `<td class="warn-cell">${getFileDisplayName(fileName1, sheetName1) || 'File 1'}</td>`;
             for (let c = 0; c < currentFinalAllCols; c++) {
                 let v1 = row1[c] !== undefined ? row1[c] : '';
                 let compResult = columnComparisons[c];
@@ -3312,7 +3332,7 @@ function renderComparisonTable() {
             
             // Row for File 2
             bodyHtml += `<tr class="warn-row warn-row-group-end">`;
-            bodyHtml += `<td class="warn-cell">${fileName2 || 'File 2'}</td>`;
+            bodyHtml += `<td class="warn-cell">${getFileDisplayName(fileName2, sheetName2) || 'File 2'}</td>`;
             for (let c = 0; c < currentFinalAllCols; c++) {
                 let v2 = row2[c] !== undefined ? row2[c] : '';
                 let compResult = columnComparisons[c];
@@ -3336,10 +3356,10 @@ function renderComparisonTable() {
                 source = 'Both files';
                 rowClass = 'row-identical';
             } else if (row1 && !row2) {
-                source = fileName1 || 'File 1';
+                source = getFileDisplayName(fileName1, sheetName1) || 'File 1';
                 rowClass = 'new-row1';
             } else if (!row1 && row2) {
-                source = fileName2 || 'File 2';
+                source = getFileDisplayName(fileName2, sheetName2) || 'File 2';
                 rowClass = 'new-row2';
             }
             

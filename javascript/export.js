@@ -310,7 +310,7 @@ function prepareDataFromRawData() {
         if (hideDiffRows && row1 && row2 && (hasDiff || hasTolerance)) return;
         
         if (row1 && row2 && (hasDiff || hasTolerance)) {
-            const dataRow1 = [fileName1 || 'File 1'];
+            const dataRow1 = [getFileDisplayName(fileName1, sheetName1) || 'File 1'];
             for (let c = 0; c < currentFinalAllCols; c++) {
                 const v1 = row1[c] ?? ''; const v2 = row2[c] ?? ''; dataRow1.push(String(v1));
                 const addr = XLSX.utils.encode_cell({ r: rowIndex, c: c + 1 });
@@ -328,7 +328,7 @@ function prepareDataFromRawData() {
             const source1 = XLSX.utils.encode_cell({ r: rowIndex, c: 0 });
             formatting[source1] = { fill:{ fgColor:{ rgb:'f8d7da'}}, font:{ color:{rgb:'212529'}, bold:true}, border:{ top:{style:'thick',color:{rgb:'000000'}}, bottom:{style:'thin',color:{rgb:'D4D4D4'}}, left:{style:'thin',color:{rgb:'D4D4D4'}}, right:{style:'thin',color:{rgb:'D4D4D4'}} } };
             rowIndex++;
-            const dataRow2 = [fileName2 || 'File 2'];
+            const dataRow2 = [getFileDisplayName(fileName2, sheetName2) || 'File 2'];
             for (let c = 0; c < currentFinalAllCols; c++) {
                 const v2 = row2[c] ?? ''; dataRow2.push(String(v2));
                 const addr = XLSX.utils.encode_cell({ r: rowIndex, c: c + 1 });
@@ -349,8 +349,8 @@ function prepareDataFromRawData() {
         } else {
             let source = '', fillColor = '';
             if (row1 && row2 && allSame) { source = 'Both files'; fillColor = 'd4edda'; }
-            else if (row1 && !row2) { source = fileName1 || 'File 1'; fillColor = '65add7'; }
-            else if (!row1 && row2) { source = fileName2 || 'File 2'; fillColor = '63cfbf'; }
+            else if (row1 && !row2) { source = getFileDisplayName(fileName1, sheetName1) || 'File 1'; fillColor = '65add7'; }
+            else if (!row1 && row2) { source = getFileDisplayName(fileName2, sheetName2) || 'File 2'; fillColor = '63cfbf'; }
             const dataRow = [source];
             for (let c = 0; c < currentFinalAllCols; c++) {
                 let v = ''; if (row1 && !row2) v = row1[c] ?? ''; else if (!row1 && row2) v = row2[c] ?? ''; else if (row1 && row2) v = row1[c] ?? '';
