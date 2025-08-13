@@ -2763,8 +2763,135 @@ function updateSummaryTable(only1, only2, both, percentDiff, percentClass, table
     summaryDiv.innerHTML = htmlSummary;
 }
 
+// Smart detection of key columns based on headers, uniqueness, and position
+function smartDetectKeyColumns(headers, data) {
+    if (!headers || !data || data.length < 2) {
+        return [0]; // Default to first column if no data
+    }
+    
+    const columnCount = headers.length;
+    const bodyData = data.slice(1); // Skip header row
+    
+    // Define key indicators for headers
+    const keyIndicators = {
+        high: ['id', 'uid', 'key', 'primary', 'identifier', 'код', 'номер', 'артикул', 'pk', 'primarykey'],
+        medium: ['name', 'title', 'label', 'имя', 'название', 'наименование', 'фио', 'customer', 'client', 'клиент'],
+        low: ['date', 'time', 'created', 'modified', 'дата', 'время', 'создан', 'изменен']
+    };
+    
+    const columnScores = [];
+    
+    for (let colIndex = 0; colIndex < columnCount; colIndex++) {
+        const header = (headers[colIndex] || '').toString().toLowerCase();
+        let score = 0;
+        
+        // 1. Header analysis (40% weight)
+        let headerScore = 0;
+        
+        // Check for high priority keywords
+        if (keyIndicators.high.some(keyword => header.includes(keyword))) {
+            headerScore = 10;
+        }
+        // Check for medium priority keywords
+        else if (keyIndicators.medium.some(keyword => header.includes(keyword))) {
+            headerScore = 6;
+        }
+        // Check for low priority keywords
+        else if (keyIndicators.low.some(keyword => header.includes(keyword))) {
+            headerScore = 3;
+        }
+        // No keywords found
+        else {
+            headerScore = 1;
+        }
+        
+        score += headerScore * 0.4;
+        
+        // 2. Uniqueness analysis (40% weight)
+        const columnValues = bodyData.map(row => (row[colIndex] || '').toString().trim()).filter(val => val !== '');
+        const uniqueValues = new Set(columnValues);
+        const uniquenessRatio = columnValues.length > 0 ? uniqueValues.size / columnValues.length : 0;
+        
+        let uniquenessScore = 0;
+        if (uniquenessRatio >= 0.95) {
+            uniquenessScore = 10; // Very unique - likely a key
+        } else if (uniquenessRatio >= 0.8) {
+            uniquenessScore = 8;
+        } else if (uniquenessRatio >= 0.6) {
+            uniquenessScore = 6;
+        } else if (uniquenessRatio >= 0.4) {
+            uniquenessScore = 4;
+        } else {
+            uniquenessScore = 1; // Low uniqueness - unlikely to be a key
+        }
+        
+        score += uniquenessScore * 0.4;
+        
+        // 3. Position weight (20% weight) - earlier columns are more likely to be keys
+        const positionScore = Math.max(1, 10 - colIndex * 2); // Decreases as position increases
+        score += positionScore * 0.2;
+        
+        columnScores.push({
+            index: colIndex,
+            header: headers[colIndex],
+            score: score,
+            uniquenessRatio: uniquenessRatio,
+            headerScore: headerScore,
+            uniquenessScore: uniquenessScore,
+            positionScore: positionScore
+        });
+    }
+    
+    // Sort by score descending
+    columnScores.sort((a, b) => b.score - a.score);
+    
+    // Log the analysis results (commented out for production)
+    // console.log('🔍 Smart Key Column Detection Results:');
+    // console.log('Columns analyzed:', columnScores.map(col => ({
+    //     column: `"${col.header}"`,
+    //     index: col.index,
+    //     totalScore: col.score.toFixed(2),
+    //     uniqueness: `${(col.uniquenessRatio * 100).toFixed(1)}%`,
+    //     headerMatch: col.headerScore,
+    //     position: col.positionScore
+    // })));
+    
+    // Determine key columns based on scores
+    let keyColumns = [];
+    
+    // Always include the highest scoring column
+    if (columnScores.length > 0) {
+        keyColumns.push(columnScores[0].index);
+    }
+    
+    // Add additional columns if they have high scores and high uniqueness
+    for (let i = 1; i < Math.min(3, columnScores.length); i++) {
+        const col = columnScores[i];
+        // Include if score is high and uniqueness is good
+        if (col.score >= 6 && col.uniquenessRatio >= 0.7) {
+            keyColumns.push(col.index);
+        }
+    }
+    
+    // Ensure we have at least one key column
+    if (keyColumns.length === 0) {
+        keyColumns = [0];
+    }
+    
+    // Sort key columns by their original position
+    keyColumns.sort((a, b) => a - b);
+    
+    // console.log(`✅ Selected key columns: [${keyColumns.join(', ')}] = [${keyColumns.map(i => `"${headers[i]}"`).join(', ')}]`);
+    
+    return keyColumns;
+}
+
 // Function to perform fuzzy matching for both export and display purposes
 function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols, isLargeFile, tableHeaders) {
+    
+    // Smart detection of key columns
+    const combinedData = [finalHeaders, ...body1, ...body2];
+    const keyColumnIndexes = smartDetectKeyColumns(finalHeaders, combinedData);
     
     // --- Fuzzy matching for bottom table ---
     let used2 = new Array(body2.length).fill(false);
@@ -2776,8 +2903,8 @@ function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols,
         let toleranceMatches = 0; // Count tolerance matches
         let keyToleranceMatches = 0; // Count tolerance matches in key columns
         
-        // Calculate 70% of total columns as key columns (minimum 1, maximum = total columns)
-        const keyColumnsCount = Math.max(1, Math.min(finalAllCols, Math.ceil(finalAllCols * 0.7)));
+        // Use smart detected key columns instead of 70% rule
+        const keyColumnsIndexes = keyColumnIndexes;
         
         for (let i = 0; i < finalAllCols; i++) {
             let valueA = (rowA[i] || '').toString();
@@ -2789,12 +2916,12 @@ function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols,
                 
                 if (compResult === 'identical') {
                     matches++;
-                    if (i < keyColumnsCount) {
+                    if (keyColumnsIndexes.includes(i)) {
                         keyMatches++;
                     }
                 } else if (compResult === 'tolerance') {
                     toleranceMatches++;
-                    if (i < keyColumnsCount) {
+                    if (keyColumnsIndexes.includes(i)) {
                         keyToleranceMatches++;
                     }
                 }
@@ -2802,7 +2929,7 @@ function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols,
                 // Use exact comparison (case-insensitive)
                 if (valueA.toUpperCase() === valueB.toUpperCase()) {
                     matches++;
-                    if (i < keyColumnsCount) {
+                    if (keyColumnsIndexes.includes(i)) {
                         keyMatches++;
                     }
                 }
@@ -2841,16 +2968,14 @@ function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols,
                     bestIdx = j;
                 }
             }
-            // Calculate threshold for matching based on key columns priority
-            // Key columns = 70% of total columns, require at least 60% match in key columns
-            // OR at least 50% match in all columns with weighted scoring
-            const keyColumnsCount = Math.max(1, Math.min(finalAllCols, Math.ceil(finalAllCols * 0.7)));
-            let minKeyMatches = Math.ceil(keyColumnsCount * 0.6) * 3; // 60% of key columns with 3x weight
+            // Calculate threshold for matching based on smart detected key columns
+            const keyColumnsCount = keyColumnIndexes.length;
+            let minKeyMatches = Math.ceil(keyColumnsCount * 0.6) * 3; // 60% of detected key columns with 3x weight
             let minTotalMatches = Math.ceil(finalAllCols * 0.5); // 50% of all columns
             
             // In tolerance mode, require higher threshold since tolerance matches have reduced weight
             if (toleranceMode) {
-                minKeyMatches = Math.ceil(keyColumnsCount * 0.8) * 3; // 80% of key columns with 3x weight
+                minKeyMatches = Math.ceil(keyColumnsCount * 0.8) * 3; // 80% of detected key columns with 3x weight
                 minTotalMatches = Math.ceil(finalAllCols * 0.7); // 70% of all columns
             }
             
