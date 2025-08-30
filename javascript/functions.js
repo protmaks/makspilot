@@ -3887,7 +3887,7 @@ function syncTableScroll() {
         bodyTable.addEventListener('scroll', syncScrollHandler);
     }
 }
-l
+
 function syncScrollHandler() {
     const headerTable = document.querySelector('.table-header-fixed');
     const bodyTable = document.querySelector('.table-body-scrollable');
