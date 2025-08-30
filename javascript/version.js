@@ -1,8 +1,3 @@
-/**
- * Version Management for MaxPilot
- * Dynamically loads and displays version information
- */
-
 class VersionManager {
     constructor() {
         this.versionData = null;
@@ -21,18 +16,17 @@ class VersionManager {
                 this.versionData = await response.json();
             } else {
                 console.warn('Could not load version.json');
-                this.versionData = { version: 'v 4.0 Beta' }; // Fallback
+                this.versionData = { version: 'v 4.0 Beta' };
             }
         } catch (error) {
             console.warn('Error loading version data:', error);
-            this.versionData = { version: 'v 4.0 Beta' }; // Fallback
+            this.versionData = { version: 'v 4.0 Beta' };
         }
     }
 
     updateVersionElements() {
         if (!this.versionData) return;
 
-        // Update elements with data-version attribute
         const versionElements = document.querySelectorAll('[data-version]');
         versionElements.forEach(element => {
             const versionType = element.getAttribute('data-version');
@@ -42,7 +36,6 @@ class VersionManager {
                     element.textContent = this.versionData.version;
                     break;
                 case 'number':
-                    // Extract just the number (e.g., "4.0" from "v 4.0 Beta")
                     const numberMatch = this.versionData.version.match(/(\d+\.\d+)/);
                     element.textContent = numberMatch ? numberMatch[1] : this.versionData.version;
                     break;
@@ -54,7 +47,6 @@ class VersionManager {
             }
         });
 
-        // Update h1 titles that contain version
         this.updateTitleVersions();
     }
 
@@ -62,7 +54,6 @@ class VersionManager {
         const h1Elements = document.querySelectorAll('h1');
         h1Elements.forEach(h1 => {
             const text = h1.textContent;
-            // Look for existing version pattern and replace it
             const versionPattern = /v \d+\.\d+[^-]*/;
             if (versionPattern.test(text)) {
                 h1.textContent = text.replace(versionPattern, this.versionData.version);
@@ -89,15 +80,12 @@ class VersionManager {
     }
 }
 
-// Global version manager instance
 let versionManager;
 
-// Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     versionManager = new VersionManager();
 });
 
-// Export for use in other scripts
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = VersionManager;
 }
