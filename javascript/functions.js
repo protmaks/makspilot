@@ -236,7 +236,6 @@ function processExcelSheetOptimized(sheet) {
             }
         }
     }
-    y
     if (minRow > maxRow || minCol > maxCol) {
         return [];
     }
@@ -245,7 +244,6 @@ function processExcelSheetOptimized(sheet) {
         s: { r: minRow, c: minCol },
         e: { r: maxRow, c: maxCol }
     };
-    e
     const optimizedSheet = {};
     optimizedSheet['!ref'] = XLSX.utils.encode_range(dataRange);
     
@@ -271,8 +269,7 @@ function processExcelSheetOptimized(sheet) {
         raw: true,          
         dateNF: 'yyyy-mm-dd hh:mm:ss'  
     });
-    gh
-    const filteredJson = json.filter(row => 
+    const filteredJson = json.filter(row =>
         Array.isArray(row) && row.some(cell => 
             cell !== null && cell !== undefined && cell.toString().trim() !== ''
         )
