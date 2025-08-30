@@ -1,13 +1,11 @@
-const CACHE_NAME = 'makspilot-cache-v1.0.0';
+const CACHE_NAME = 'makspilot-cache-v1.1.0';
 
 const urlsToCache = [
-  '/',
-  '/index.html',
   '/style.css',
   '/javascript/script.js',
   '/javascript/functions.js',
   '/javascript/redirect.js',
-  '/img/main.png',
+  '/img/main.webp',
   '/img/maxpilot.png',
   '/img/python.svg',
   '/img/shiba.svg',
@@ -18,6 +16,58 @@ const urlsToCache = [
   '/favicon.ico'
 ];
 
+const cacheFirstStrategy = async (request) => {
+  const cachedResponse = await caches.match(request);
+  if (cachedResponse) {
+    return cachedResponse;
+  }
+
+  try {
+    const networkResponse = await fetch(request);
+    
+    if (networkResponse.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(request, networkResponse.clone());
+    }
+    
+    return networkResponse;
+  } catch (error) {у
+    console.error('Fetch failed:', error);
+    throw error;
+  }
+};
+
+const networkFirstStrategy = async (request) => {
+  try {
+    const networkResponse = await fetch(request);
+    
+    if (networkResponse.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(request, networkResponse.clone());
+    }
+    
+    return networkResponse;
+  } catch (error) {
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+    
+    console.error('Network and cache failed:', error);
+    throw error;
+  }
+};
+
+const getCacheStrategy = (request) => {
+  const url = new URL(request.url);
+  
+  if (request.destination === 'document' || url.pathname === '/' || url.pathname.endsWith('.html')) {
+    return networkFirstStrategy;
+  }
+  
+  return cacheFirstStrategy;
+};
+
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -26,19 +76,17 @@ self.addEventListener('install', event => {
         return cache.addAll(urlsToCache);
       })
   );
+  self.skipWaiting();
 });
 
 self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        if (response) {
-          return response;
-        }
-        return fetch(event.request);
-      }
-    )
-  );
+  if (event.request.method !== 'GET') {
+    return;
+  }
+  
+  const strategy = getCacheStrategy(event.request);
+  
+  event.respondWith(strategy(event.request));
 });
 
 self.addEventListener('activate', event => {
@@ -53,4 +101,5 @@ self.addEventListener('activate', event => {
       );
     })
   );
+  return self.clients.claim();
 });
