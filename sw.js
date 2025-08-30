@@ -18,6 +18,10 @@ const urlsToCache = [
 ];
 
 const cacheFirstStrategy = async (request) => {
+  if (request.url.startsWith('chrome-extension://') || request.url.startsWith('moz-extension://')) {
+    return fetch(request);
+  }
+  
   const cachedResponse = await caches.match(request);
   if (cachedResponse) {
     return cachedResponse;
@@ -32,13 +36,17 @@ const cacheFirstStrategy = async (request) => {
     }
     
     return networkResponse;
-  } catch (error) {у
+  } catch (error) {
     console.error('Fetch failed:', error);
     throw error;
   }
 };
 
 const networkFirstStrategy = async (request) => {
+  if (request.url.startsWith('chrome-extension://') || request.url.startsWith('moz-extension://')) {
+    return fetch(request);
+  }
+  
   try {
     const networkResponse = await fetch(request);
     
