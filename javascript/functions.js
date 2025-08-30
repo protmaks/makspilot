@@ -1664,6 +1664,21 @@ function parseCSVValue(value) {
             return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         }
         return value;
+    } else if (value.match(/^\d{1,2}\.\d{1,2}\.\d{2}$/)) {
+        // Handle DD.MM.YY format (e.g., "05.01.25")
+        const parts = value.split('.');
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10);
+        let year = parseInt(parts[2], 10);
+        
+        // Assume years 00-30 are 2000-2030, years 31-99 are 1931-1999
+        year = year <= 30 ? 2000 + year : 1900 + year;
+        
+        // Validate date parts
+        if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+            return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        }
+        return value;
     }
     return value; // Keep dates as strings
     
