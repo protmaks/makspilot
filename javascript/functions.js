@@ -1666,7 +1666,6 @@ function parseCSVValue(value) {
         return value;
     }
     return value; // Keep dates as strings
-    }
     
     // Try to parse as number (handle both . and , as decimal separators)
     let numValue = value.replace(',', '.'); // Convert comma to dot for parsing
