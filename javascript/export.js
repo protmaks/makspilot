@@ -1,4 +1,3 @@
-// Function to export comparison table to Excel with formatting
 function exportToExcel() {
     if (!currentPairs || currentPairs.length === 0) {
         alert('No data to export. Please compare files first.');
@@ -15,7 +14,6 @@ function exportToExcel() {
     }
 }
 
-// Create styled HTML table for Excel export
 function createStyledHTMLTable(exportData) {
     let html = `
     <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
@@ -39,9 +37,7 @@ function createStyledHTMLTable(exportData) {
             </colgroup>
     `;
     
-    // Add table rows with data and formatting
     exportData.data.forEach((row, rowIndex) => {
-        // Add autofilter to header row
         if (rowIndex === 0) {
             html += '<tr style="font-weight: bold;">';
         } else {
@@ -54,7 +50,6 @@ function createStyledHTMLTable(exportData) {
             
             let style = 'border: 0.5pt solid #D4D4D4; padding: 4px; vertical-align: top;';
             
-            // Check for thick borders from formatting
             if (formatting && formatting.border) {
                 if (formatting.border.top && formatting.border.top.style === 'thick') {
                     style = 'border-top: 2pt solid #000; border-bottom: 0.5pt solid #D4D4D4; border-left: 0.5pt solid #D4D4D4; border-right: 0.5pt solid #D4D4D4; padding:4px; vertical-align:top;';
@@ -65,9 +60,9 @@ function createStyledHTMLTable(exportData) {
             if (formatting && formatting.fill && formatting.fill.fgColor) {
                 let bgColor = formatting.fill.fgColor.rgb;
                 switch (bgColor) {
-                    case 'FF6B6B': bgColor = 'f8d7da'; break; // bright red -> muted red
-                    case '4CAF50': bgColor = 'd4edda'; break; // bright green -> muted green
-                    case 'ffeaa7': bgColor = 'ffeaa7'; break; // keep tolerance orange as orange
+                    case 'FF6B6B': bgColor = 'f8d7da'; break;
+                    case '4CAF50': bgColor = 'd4edda'; break;
+                    case 'ffeaa7': bgColor = 'ffeaa7'; break;
                 }
                 style += ` background-color:#${bgColor};`;
             }
@@ -95,16 +90,14 @@ function createStyledHTMLTable(exportData) {
     return html;
 }
 
-// Download Excel file from HTML
 function downloadExcelFromHTML(htmlContent) {
     const now = new Date();
-    const date = now.toISOString().slice(0, 10); // YYYY-MM-DD format
+    const date = now.toISOString().slice(0, 10);
     
-    // Get the first file name without extension
     let firstFileName = 'file1';
     if (typeof fileName1 !== 'undefined' && fileName1) {
-        firstFileName = fileName1.replace(/\.[^/.]+$/, ''); // Remove file extension
-        firstFileName = firstFileName.replace(/[^a-zA-Z0-9_-]/g, '_'); // Replace special chars with underscore
+        firstFileName = fileName1.replace(/\.[^/.]+$/, '');
+        firstFileName = firstFileName.replace(/[^a-zA-Z0-9_-]/g, '_');
     }
     
     const filename = `compare_${firstFileName}_${date}.xls`;
@@ -126,12 +119,10 @@ function downloadExcelFromHTML(htmlContent) {
     showExportSuccess(filename);
 }
 
-// Function to prepare data for Excel export
 function prepareDataForExport() {
     return prepareDataFromRawData();
 }
 
-// Function to prepare data from already rendered table
 function prepareDataFromRenderedTable() {
     const tableBody = document.querySelector('.diff-table-body tbody');
     const tableHeader = document.querySelector('.diff-table-header thead');
@@ -144,16 +135,13 @@ function prepareDataFromRenderedTable() {
     const formatting = {};
     const colWidths = [];
     
-    // Get headers from rendered table
     const headerRow = tableHeader.querySelector('tr');
     if (headerRow) {
         const headers = Array.from(headerRow.querySelectorAll('th')).map(th => String(th.textContent || '')); // Ensure string format
         data.push(headers);
         
-        // Set column widths
         headers.forEach(() => colWidths.push({ wch: 15 }));
         
-        // Add header formatting
         headers.forEach((header, col) => {
             const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
             formatting[cellAddress] = {
@@ -169,67 +157,60 @@ function prepareDataFromRenderedTable() {
         });
     }
     
-    // Get data from rendered table rows
     const rows = Array.from(tableBody.querySelectorAll('tr'));
     
     rows.forEach((row, rowIndex) => {
         const cells = Array.from(row.querySelectorAll('td'));
         const rowData = cells.map(cell => {
-            // Force all values to be strings and preserve original formatting
             const cellText = cell.textContent || '';
-            // Preserve any leading/trailing spaces and ensure string format
-            return String(cellText); // Keep as string, we'll handle Excel formatting in HTML
+            return String(cellText);
         });
         data.push(rowData);
         
-        // Get formatting from rendered table
         cells.forEach((cell, colIndex) => {
             const cellAddress = XLSX.utils.encode_cell({ r: rowIndex + 1, c: colIndex });
-            let bgColor = "ffffff"; // Default white
+            let bgColor = "ffffff";
             
-            // Check for CSS classes that indicate color
             if (cell.classList.contains('warn-cell')) {
-                bgColor = "f8d7da"; // Red for differences
+                bgColor = "f8d7da";
             } else if (cell.classList.contains('tolerance-cell')) {
-                bgColor = "ffeaa7"; // Orange for tolerance differences
+                bgColor = "ffeaa7";
             } else if (cell.classList.contains('identical')) {
-                bgColor = "d4edda"; // Green for same
+                bgColor = "d4edda";
             } else if (cell.classList.contains('new-cell1')) {
-                bgColor = "65add7"; // Blue for data from file 1
+                bgColor = "65add7";
             } else if (cell.classList.contains('new-cell2')) {
-                bgColor = "63cfbf"; // Teal for data from file 2
+                bgColor = "63cfbf";
             } else if (cell.classList.contains('new-cell')) {
-                bgColor = "65add7"; // Blue for compatibility with old code
+                bgColor = "65add7";
             } else if (cell.classList.contains('unique-cell')) {
-                // Check if it's specifically only-in-file1 or only-in-file2
                 if (cell.classList.contains('only-in-file1') || cell.classList.contains('new-cell1')) {
-                    bgColor = "65add7"; // Blue for data only in file 1
+                    bgColor = "65add7";
                 } else if (cell.classList.contains('only-in-file2') || cell.classList.contains('new-cell2')) {
-                    bgColor = "63cfbf"; // Teal for data only in file 2
+                    bgColor = "63cfbf";
                 } else {
-                    bgColor = "cdedff"; // General blue for other unique data
+                    bgColor = "cdedff";
                 }
             } else if (cell.classList.contains('only-in-file1')) {
-                bgColor = "65add7"; // Blue for data only in file 1
+                bgColor = "65add7";
             } else if (cell.classList.contains('only-in-file2')) {
-                bgColor = "63cfbf"; // Teal for data only in file 2
+                bgColor = "63cfbf";
             }
             
-            // Also check computed background color if no class found
             if (bgColor === "ffffff") {
                 const computedStyle = window.getComputedStyle(cell);
                 const bgColorStyle = computedStyle.backgroundColor;
                 
                 if (bgColorStyle.includes('255, 234, 167') || bgColorStyle.includes('ffeaa7')) {
-                    bgColor = "ffeaa7"; // Orange for tolerance differences
+                    bgColor = "ffeaa7";
                 } else if (bgColorStyle.includes('248, 215, 218') || bgColorStyle.includes('f8d7da')) {
-                    bgColor = "f8d7da"; // Red for differences  
+                    bgColor = "f8d7da"; 
                 } else if (bgColorStyle.includes('212, 237, 218') || bgColorStyle.includes('d4edda')) {
-                    bgColor = "d4edda"; // Green same
+                    bgColor = "d4edda";
                 } else if (bgColorStyle.includes('99, 207, 191') || bgColorStyle.includes('63cfbf')) {
-                    bgColor = "63cfbf"; // Teal for file 2
+                    bgColor = "63cfbf";
                 } else if (bgColorStyle.includes('101, 173, 215') || bgColorStyle.includes('65add7')) {
-                    bgColor = "65add7"; // Blue for file 1
+                    bgColor = "65add7";
                 }
             }
             
@@ -249,7 +230,6 @@ function prepareDataFromRenderedTable() {
     return { data, formatting, colWidths };
 }
 
-// Function to prepare data from raw data (fallback)
 function prepareDataFromRawData() {
     const data = []; const formatting = []; const colWidths = [];
     const hideSame = document.getElementById('hideSameRows')?.checked || false;
@@ -267,7 +247,6 @@ function prepareDataFromRawData() {
         const row2Upper = row2 ? row2.map(v => v !== undefined ? v.toString().toUpperCase() : '') : null;
         let isEmpty = true, hasDiff = false, allSame = true, hasTolerance = false;
         
-        // Store comparison results for each column
         let columnComparisons = [];
         
         for (let c = 0; c < currentFinalAllCols; c++) {
@@ -277,7 +256,6 @@ function prepareDataFromRawData() {
             
             if (row1 && row2) {
                 if (toleranceMode && typeof compareValuesWithTolerance === 'function') {
-                    // Use tolerance comparison
                     const comparisonResult = compareValuesWithTolerance(v1, v2);
                     columnComparisons[c] = comparisonResult;
                     
@@ -289,7 +267,6 @@ function prepareDataFromRawData() {
                         allSame = false;
                     }
                 } else {
-                    // Use exact comparison
                     if (row1Upper[c] !== row2Upper[c]) {
                         hasDiff = true;
                         allSame = false;
@@ -367,10 +344,8 @@ function prepareDataFromRawData() {
     return { data, formatting, colWidths };
 }
 
-// Function to set column widths
 function setColumnWidths(ws, colWidths) { ws['!cols'] = colWidths; }
 
-// Function to show export success message
 function showExportSuccess() {
     const successDiv = document.createElement('div');
     successDiv.style.cssText = 'position:fixed;top:20px;right:20px;background:#d4edda;color:#155724;padding:15px 25px;border:1px solid #c3e6cb;border-radius:8px;box-shadow:0 4px 15px rgba(0,0,0,0.15);z-index:10000;font-size:14px;font-weight:500;max-width:350px;line-height:1.4;';

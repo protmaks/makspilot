@@ -1,4 +1,3 @@
-// Configuration constants
 const MAX_ROWS_LIMIT = 55000; // Maximum allowed rows per file
 const MAX_COLS_LIMIT = 120; // Maximum allowed columns per file
 const DETAILED_TABLE_LIMIT = 15000; // Limit for showing detailed comparison table (above this only summary and export)
@@ -9,7 +8,6 @@ let sheetName1 = '', sheetName2 = ''; // Store current sheet names
 let workbook1 = null, workbook2 = null; // Store workbooks for sheet selection
 let toleranceMode = false; // Global variable for tolerance comparison mode
 
-// Global variables for sorting
 let currentSortColumn = -1;
 let currentSortDirection = 'asc';
 let currentPairs = [];
@@ -18,9 +16,7 @@ let currentFinalAllCols = 0;
 let currentDiffColumns1 = '-';
 let currentDiffColumns2 = '-';
 
-// Function to get translated summary table headers
 function getSummaryTableHeaders() {
-    // Detect current language based on page URL
     const currentLang = window.location.pathname.includes('/ru/') ? 'ru' : 
                        window.location.pathname.includes('/pl/') ? 'pl' :
                        window.location.pathname.includes('/es/') ? 'es' :
@@ -135,7 +131,6 @@ function getSummaryTableHeaders() {
     return translations[currentLang] || translations['en'];
 }
 
-// Function to get file name with sheet name if exists
 function getFileDisplayName(fileName, sheetName) {
     if (sheetName && sheetName.trim() !== '') {
         return `${fileName}:${sheetName}`;
@@ -143,7 +138,6 @@ function getFileDisplayName(fileName, sheetName) {
     return fileName;
 }
 
-// Function to update sheet information display
 function updateSheetInfo(fileName, sheetNames, selectedSheet, fileNum) {
     const sheetInfoContainer = document.getElementById('sheetInfo');
     if (!sheetInfoContainer) return;
@@ -161,7 +155,6 @@ function updateSheetInfo(fileName, sheetNames, selectedSheet, fileNum) {
             </div>
         `;
         
-        // Remove any existing sheet info for this file
         const existingInfos = sheetInfoContainer.querySelectorAll('.sheet-info');
         existingInfos.forEach(info => {
             if (info.dataset.fileNum === fileNum.toString()) {
@@ -172,7 +165,6 @@ function updateSheetInfo(fileName, sheetNames, selectedSheet, fileNum) {
         sheetInfoContainer.appendChild(sheetInfo);
         sheetInfoContainer.style.display = 'flex';
     } else {
-        // If this file has only one sheet, remove its sheet info
         const allInfos = sheetInfoContainer.querySelectorAll('.sheet-info');
         allInfos.forEach(info => {
             if (info.dataset.fileNum === fileNum.toString()) {
@@ -186,7 +178,6 @@ function updateSheetInfo(fileName, sheetNames, selectedSheet, fileNum) {
     }
 }
 
-// Function to populate sheet selector dropdown
 function populateSheetSelector(sheetNames, fileNum, selectedSheet) {
     const sheetSelector = document.getElementById(`sheetSelector${fileNum}`);
     const sheetSelect = document.getElementById(`sheetSelect${fileNum}`);
@@ -194,10 +185,8 @@ function populateSheetSelector(sheetNames, fileNum, selectedSheet) {
     if (!sheetSelector || !sheetSelect) return;
     
     if (sheetNames.length > 1) {
-        // Clear existing options
         sheetSelect.innerHTML = '';
         
-        // Add options for each sheet
         sheetNames.forEach((sheetName, index) => {
             const option = document.createElement('option');
             option.value = sheetName;
@@ -208,35 +197,28 @@ function populateSheetSelector(sheetNames, fileNum, selectedSheet) {
             sheetSelect.appendChild(option);
         });
         
-        // Show the selector
         sheetSelector.style.display = 'block';
         
-        // Add event listener for sheet selection change
         sheetSelect.onchange = function() {
             processSelectedSheet(fileNum, this.value);
         };
     } else {
-        // Hide the selector for single-sheet files
         sheetSelector.style.display = 'none';
     }
 }
 
-// Function to process Excel sheet with optimized empty row/column detection
 function processExcelSheetOptimized(sheet) {
     if (!sheet || !sheet['!ref']) {
         return [];
     }
     
-    // Get the range of the sheet
     const range = XLSX.utils.decode_range(sheet['!ref']);
     
-    // Find the actual data boundaries by scanning for non-empty cells
     let minRow = range.e.r + 1; // Start beyond the range
     let maxRow = -1;
     let minCol = range.e.c + 1; // Start beyond the range  
     let maxCol = -1;
     
-    // Scan through all cells to find actual data boundaries
     for (let row = range.s.r; row <= range.e.r; row++) {
         for (let col = range.s.c; col <= range.e.c; col++) {
             const cellAddress = XLSX.utils.encode_cell({r: row, c: col});
@@ -254,23 +236,19 @@ function processExcelSheetOptimized(sheet) {
             }
         }
     }
-    
-    // If no data found, return empty array
+    y
     if (minRow > maxRow || minCol > maxCol) {
         return [];
     }
     
-    // Create the optimized range with only actual data
     const dataRange = {
         s: { r: minRow, c: minCol },
         e: { r: maxRow, c: maxCol }
     };
-    
-    // Create a new sheet object with only the data range
+    e
     const optimizedSheet = {};
     optimizedSheet['!ref'] = XLSX.utils.encode_range(dataRange);
     
-    // Copy only the cells within the data range
     for (let row = minRow; row <= maxRow; row++) {
         for (let col = minCol; col <= maxCol; col++) {
             const originalAddress = XLSX.utils.encode_cell({r: row, c: col});
@@ -282,21 +260,18 @@ function processExcelSheetOptimized(sheet) {
         }
     }
     
-    // Update the range to start from 0,0
     optimizedSheet['!ref'] = XLSX.utils.encode_range({
         s: { r: 0, c: 0 },
         e: { r: maxRow - minRow, c: maxCol - minCol }
     });
     
-    // Convert to JSON with the optimized range
     const json = XLSX.utils.sheet_to_json(optimizedSheet, {
         header: 1, 
         defval: '',
         raw: true,          // Get raw values to preserve full precision
         dateNF: 'yyyy-mm-dd hh:mm:ss'  // More complete date format
     });
-    
-    // Additional safety: filter out any remaining empty rows that might slip through
+    gh
     const filteredJson = json.filter(row => 
         Array.isArray(row) && row.some(cell => 
             cell !== null && cell !== undefined && cell.toString().trim() !== ''
@@ -306,15 +281,12 @@ function processExcelSheetOptimized(sheet) {
     return filteredJson;
 }
 
-// Function to process the selected sheet
 function processSelectedSheet(fileNum, selectedSheetName) {
-    // Clear previous comparison results when changing sheets
     clearComparisonResults();
     
     const workbook = fileNum === 1 ? workbook1 : workbook2;
     const fileName = fileNum === 1 ? fileName1 : fileName2;
     
-    // Store the current sheet name
     if (fileNum === 1) {
         sheetName1 = selectedSheetName;
     } else {
@@ -323,16 +295,13 @@ function processSelectedSheet(fileNum, selectedSheetName) {
     
     if (!workbook || !workbook.Sheets[selectedSheetName]) return;
     
-    // Show loading indicator for large files
     const tableElement = document.getElementById(fileNum === 1 ? 'table1' : 'table2');
     tableElement.innerHTML = '<div style="text-align: center; padding: 20px;">Loading sheet...</div>';
     
-    // Use setTimeout to allow UI to update
     setTimeout(() => {
         const sheet = workbook.Sheets[selectedSheetName];
         let json = processExcelSheetOptimized(sheet);
         
-        // Check both file size and column count limits simultaneously
         let maxCols = 0;
         for (let i = 0; i < json.length; i++) {
             if (json[i] && json[i].length > maxCols) {
@@ -347,7 +316,7 @@ function processSelectedSheet(fileNum, selectedSheetName) {
                 'rows', json.length, MAX_ROWS_LIMIT, '', 
                 'columns', maxCols, MAX_COLS_LIMIT
             );
-            // Clear data
+
             if (fileNum === 1) {
                 data1 = [];
             } else {
@@ -356,13 +325,10 @@ function processSelectedSheet(fileNum, selectedSheetName) {
             return;
         }
         
-        // Process the data efficiently
         json = json.filter(row => Array.isArray(row) && row.some(cell => (cell !== null && cell !== undefined && cell.toString().trim() !== '')));
         
-        // Normalize headers to uppercase
         json = normalizeHeaders(json);
         
-        // Analyze column types and apply appropriate conversions
         json = processColumnTypes(json);
         
         json = removeEmptyColumns(json);
@@ -371,7 +337,6 @@ function processSelectedSheet(fileNum, selectedSheetName) {
             return row.map(cell => roundDecimalNumbers(cell));
         });
         
-        // Update the data and preview
         if (fileNum === 1) {
             data1 = json;
             renderPreview(json, 'table1');
@@ -380,25 +345,20 @@ function processSelectedSheet(fileNum, selectedSheetName) {
             renderPreview(json, 'table2');
         }
         
-        // Update the sheet info
         updateSheetInfo(fileName, workbook.SheetNames, selectedSheetName, fileNum);
     }, 10);
 }
 
-// Function to analyze column types and apply appropriate conversions
 function processColumnTypes(data) {
     if (!data || data.length === 0) return data;
     
-    // Get column count
     const maxCols = Math.max(...data.map(row => Array.isArray(row) ? row.length : 0));
     if (maxCols === 0) return data;
     
-    // Analyze each column
     const columnTypes = [];
     const headers = data[0] || [];
     
     for (let colIndex = 0; colIndex < maxCols; colIndex++) {
-        // Extract column values (skip header row)
         const columnValues = [];
         for (let rowIndex = 1; rowIndex < data.length; rowIndex++) {
             const value = data[rowIndex] && data[rowIndex][colIndex];
@@ -407,23 +367,18 @@ function processColumnTypes(data) {
             }
         }
         
-        // Determine column type
         const columnHeader = headers[colIndex] || '';
         const isDateCol = isDateColumn(columnValues, columnHeader);
         columnTypes[colIndex] = isDateCol ? 'date' : 'other';
-        
-        // Column type detection completed
     }
     
-    // Apply conversions based on column types
     const processedData = data.map((row, rowIndex) => {
-        if (!Array.isArray(row) || rowIndex === 0) return row; // Skip header
+        if (!Array.isArray(row) || rowIndex === 0) return row;
         
         return row.map((cell, colIndex) => {
             if (columnTypes[colIndex] === 'date') {
-                return convertExcelDateNormalized(cell, true); // Force date conversion
+                return convertExcelDateNormalized(cell, true);
             } else {
-                // For non-date columns, don't convert numbers to dates
                 return cell;
             }
         });
@@ -432,7 +387,6 @@ function processColumnTypes(data) {
     return processedData;
 }
 
-// Helper function to detect if a column likely contains dates
 function isDateColumn(columnValues, columnHeader = '') {
     if (!columnValues || columnValues.length === 0) return false;
     
@@ -441,7 +395,6 @@ function isDateColumn(columnValues, columnHeader = '') {
     let totalCount = 0;
     let potentialExcelDates = 0;
     
-    // Check if column header suggests this is a date column
     const headerLower = columnHeader.toString().toLowerCase();
     const dateKeywords = ['date', 'time', 'created', 'modified', 'updated', 'birth', 'дата', 'время', 'создан', 'изменен', 'обновлен'];
     const headerSuggestsDate = dateKeywords.some(keyword => headerLower.includes(keyword));
@@ -450,9 +403,7 @@ function isDateColumn(columnValues, columnHeader = '') {
         if (value && value.toString().trim() !== '') {
             totalCount++;
             
-            // Check if value looks like a date
             if (typeof value === 'string') {
-                // Check for date patterns
                 if (value.match(/^\d{4}-\d{1,2}-\d{1,2}$/) || // YYYY-MM-DD
                     value.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/) || // MM/DD/YYYY
                     value.match(/^\d{1,2}-\d{1,2}-\d{4}$/) || // MM-DD-YYYY
@@ -464,8 +415,6 @@ function isDateColumn(columnValues, columnHeader = '') {
                 dateCount++;
             } else if (typeof value === 'number') {
                 numberCount++;
-                // Check if number could be an Excel date (exclude small numbers like 1015, 1011)
-                // Start from 1980 (Excel serial ~29221) to avoid false positives
                 if (value >= 29221 && value <= 219146) {
                     potentialExcelDates++;
                 }
@@ -473,11 +422,6 @@ function isDateColumn(columnValues, columnHeader = '') {
         }
     }
     
-    // Column is considered a date column if:
-    // 1. Header suggests dates AND more than 30% are potential dates, OR
-    // 2. More than 50% of values are explicit dates, OR
-    // 3. More than 70% of values are numbers that could be Excel dates, OR
-    // 4. Mix of dates and potential Excel dates makes up >60% of values
     if (totalCount === 0) return false;
     
     const dateRatio = dateCount / totalCount;
@@ -3840,7 +3784,6 @@ window.addEventListener('load', function() {
 
 // Initialize file handlers
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize button layout - hide export button container initially
     const exportBtn = document.getElementById('exportExcelBtn');
     const buttonsContainer = document.querySelector('.buttons-container');
     const exportButtonHalf = exportBtn ? exportBtn.closest('.button-half') : null;
@@ -3858,7 +3801,6 @@ document.addEventListener('DOMContentLoaded', function() {
         handleFile(e.target.files[0], 2);
     });
     
-    // Add event listeners for filter checkboxes
     const hideSameRowsEl = document.getElementById('hideSameRows');
     if (hideSameRowsEl) {
         hideSameRowsEl.addEventListener('change', function() {
@@ -3895,7 +3837,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Initialize table with empty values on page load
     const tableHeaders = getSummaryTableHeaders();
     let htmlSummary = `
         <table style="margin-bottom:20px; border: 1px solid #ccc;">
@@ -3907,7 +3848,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('summary').innerHTML = htmlSummary;
 });
 
-// Function to synchronize column widths between header and body tables
 function syncColumnWidths() {
     const headerTable = document.querySelector('.diff-table-header');
     const bodyTable = document.querySelector('.diff-table-body');
@@ -3915,21 +3855,18 @@ function syncColumnWidths() {
     if (!headerTable || !bodyTable) return;
     
     const headerCells = headerTable.querySelectorAll('th');
-    const allBodyRows = bodyTable.querySelectorAll('tbody tr'); // Get ALL rows, not just visible ones
+    const allBodyRows = bodyTable.querySelectorAll('tbody tr');
     
     if (!headerCells.length) return;
     
-    // Force table layout to fixed for consistent column behavior
     headerTable.style.tableLayout = 'fixed';
     bodyTable.style.tableLayout = 'fixed';
     
     const numColumns = headerCells.length;
     
-    // Force table layout to fixed for consistent column behavior
     headerTable.style.tableLayout = 'fixed';
     bodyTable.style.tableLayout = 'fixed';
     
-    // Calculate total table width and apply it
     const sourceColumnWidth = 240;
     const dataColumnWidth = 180;
     const calculatedTotalWidth = sourceColumnWidth + ((numColumns - 1) * dataColumnWidth);
@@ -3941,21 +3878,16 @@ function syncColumnWidths() {
     bodyTable.style.minWidth = calculatedTotalWidth + 'px';
 }
 
-// Function to synchronize table scroll
 function syncTableScroll() {
     const headerTable = document.querySelector('.table-header-fixed');
     const bodyTable = document.querySelector('.table-body-scrollable');
     
     if (headerTable && bodyTable) {
-        // Remove existing scroll listener to avoid duplicates
         bodyTable.removeEventListener('scroll', syncScrollHandler);
-        
-        // Add the scroll synchronization
         bodyTable.addEventListener('scroll', syncScrollHandler);
     }
 }
-
-// Define scroll handler function separately to allow removal
+l
 function syncScrollHandler() {
     const headerTable = document.querySelector('.table-header-fixed');
     const bodyTable = document.querySelector('.table-body-scrollable');
@@ -3965,7 +3897,6 @@ function syncScrollHandler() {
     }
 }
 
-// Function to force table width synchronization with enhanced column width enforcement
 function forceTableWidthSync() {
     const headerTable = document.querySelector('.diff-table-header');
     const bodyTable = document.querySelector('.diff-table-body');
@@ -3977,22 +3908,18 @@ function forceTableWidthSync() {
     
     if (headerCells.length === 0) return;
     
-    // Force table layout to fixed
     headerTable.style.tableLayout = 'fixed';
     bodyTable.style.tableLayout = 'fixed';
     
     const numColumns = headerCells.length;
     
-    // Apply table layout and calculate total width
     headerTable.style.tableLayout = 'fixed';
     bodyTable.style.tableLayout = 'fixed';
     
-    // Calculate and set total table width
     const sourceColumnWidth = 240;
     const dataColumnWidth = 180;
     const calculatedTotalWidth = sourceColumnWidth + ((numColumns - 1) * dataColumnWidth);
     
-    // Set consistent table widths
     headerTable.style.width = calculatedTotalWidth + 'px';
     bodyTable.style.width = calculatedTotalWidth + 'px';
     headerTable.style.minWidth = calculatedTotalWidth + 'px';
@@ -4001,7 +3928,6 @@ function forceTableWidthSync() {
 
 // Function to show message for large files (15K-45K rows) with summary and export only
 function showLargeFileMessage(totalRows) {
-    // Hide the detailed comparison table
     document.getElementById('diffTable').innerHTML = `
         <div style="text-align: center; padding: 40px; background-color: #e7f3ff; border: 1px solid #bee5eb; border-radius: 8px; margin: 20px 0;">
             <div style="font-size: 24px; margin-bottom: 16px;">📊</div>

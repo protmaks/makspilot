@@ -1,6 +1,4 @@
-// Smooth scroll helper for anchor links
 document.addEventListener('DOMContentLoaded', function() {
-    // Mobile menu toggle
     const mobileToggle = document.querySelector('.mobile-menu-toggle');
     const navMenu = document.querySelector('.nav-menu');
 
@@ -11,7 +9,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Close mobile menu when clicking on a link
     if (navMenu) {
         document.querySelectorAll('.nav-menu a').forEach(link => {
             link.addEventListener('click', function() {
@@ -25,7 +22,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Header scroll effect
     const header = document.querySelector('header');
     if (header) {
         window.addEventListener('scroll', function() {
@@ -37,7 +33,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Handle all anchor links with smooth scrolling
     const links = document.querySelectorAll('a[href^="#"]');
     
     links.forEach(link => {
@@ -58,7 +53,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Add intersection observer for fade-in animations
     const observerOptions = {
         threshold: 0.1,
         rootMargin: '0px 0px -50px 0px'
@@ -73,7 +67,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }, observerOptions);
 
-    // Observe all content sections
     document.querySelectorAll('.content-section').forEach(section => {
         section.style.opacity = '0';
         section.style.transform = 'translateY(30px)';
@@ -82,7 +75,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Language switcher function
 function switchLanguage(url) {
     if (url) {
         window.location.href = url;
