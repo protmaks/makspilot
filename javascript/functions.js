@@ -1047,11 +1047,11 @@ function convertExcelDate(value, isInDateColumn = false) {
             }
         }
         
-        // Handle DD.MM.YY HH:MM format (dots with time)
+        // Handle MM.DD.YY HH:MM format (dots with time)
         dateTimeMatch = value.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/);
         if (dateTimeMatch) {
-            const day = parseInt(dateTimeMatch[1]);
-            const month = parseInt(dateTimeMatch[2]);
+            const month = parseInt(dateTimeMatch[1]);
+            const day = parseInt(dateTimeMatch[2]);
             let year = parseInt(dateTimeMatch[3]);
             const hour = parseInt(dateTimeMatch[4]);
             const minute = parseInt(dateTimeMatch[5]);
@@ -1059,23 +1059,23 @@ function convertExcelDate(value, isInDateColumn = false) {
             // Assume years 00-30 are 2000-2030, years 31-99 are 1931-1999
             year = year <= 30 ? 2000 + year : 1900 + year;
             
-            if (day <= 31 && month <= 12 && hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
-                return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
+            if (month >= 1 && month <= 12 && day >= 1 && day <= 31 && hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+                return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' +
                        String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
             }
         }
         
-        // Handle DD.MM.YYYY HH:MM format (dots with full year and time)
+        // Handle MM.DD.YYYY HH:MM format (dots with full year and time)
         dateTimeMatch = value.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/);
         if (dateTimeMatch) {
-            const day = parseInt(dateTimeMatch[1]);
-            const month = parseInt(dateTimeMatch[2]);
+            const month = parseInt(dateTimeMatch[1]);
+            const day = parseInt(dateTimeMatch[2]);
             const year = parseInt(dateTimeMatch[3]);
             const hour = parseInt(dateTimeMatch[4]);
             const minute = parseInt(dateTimeMatch[5]);
             
-            if (day <= 31 && month <= 12 && year >= 1900 && year <= 2100 && hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
-                return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' + 
+            if (month >= 1 && month <= 12 && day >= 1 && day <= 31 && year >= 1900 && year <= 2100 && hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+                return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0') + ' ' +
                        String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
             }
         }
@@ -1217,28 +1217,28 @@ function convertExcelDate(value, isInDateColumn = false) {
             }
         }
         
-        // DD.MM.YY format (short year)
+        // MM.DD.YY format (short year)
         dateMatch = value.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2})$/);
         if (dateMatch) {
-            const day = parseInt(dateMatch[1]);
-            const month = parseInt(dateMatch[2]);
+            const month = parseInt(dateMatch[1]);
+            const day = parseInt(dateMatch[2]);
             let year = parseInt(dateMatch[3]);
             // Assume years 00-30 are 2000-2030, years 31-99 are 1931-1999
             year = year <= 30 ? 2000 + year : 1900 + year;
-            if (day <= 31 && month <= 12) {
+            if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
                 return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
             }
         }
         
-        // DD/MM/YY format (short year with slashes)
+        // MM/DD/YY format (short year with slashes)
         dateMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
         if (dateMatch) {
-            const day = parseInt(dateMatch[1]);
-            const month = parseInt(dateMatch[2]);
+            const month = parseInt(dateMatch[1]);
+            const day = parseInt(dateMatch[2]);
             let year = parseInt(dateMatch[3]);
             // Assume years 00-30 are 2000-2030, years 31-99 are 1931-1999
             year = year <= 30 ? 2000 + year : 1900 + year;
-            if (day <= 31 && month <= 12) {
+            if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
                 return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
             }
         }
