@@ -18,6 +18,8 @@
             const currentSrc = img.src;
             const newSrc = currentSrc.replace('main.webp', 'main_mobile.webp');
             img.src = newSrc;
+            // Add fetchpriority for LCP optimization
+            img.fetchPriority = 'high';
         });
     }
     
