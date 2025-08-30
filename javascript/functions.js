@@ -1647,11 +1647,25 @@ function parseCSVValue(value) {
     }
     
     // Check if it looks like a date - if so, keep it as string
-    if (value.match(/^\d{4}-\d{1,2}-\d{1,2}$/) || 
-        value.match(/^\d{1,2}[\/\.]\d{1,2}[\/\.]\d{4}$/) ||
-        value.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/) ||
-        value.match(/^\d{1,2}\.\d{1,2}\.\d{4}$/)) {
-        return value; // Keep dates as strings
+    if (value.match(/^\d{4}-\d{1,2}-\d{1,2}$/)) {
+        // ISO format YYYY-MM-DD - keep as is
+        return value;
+    } else if (value.match(/^\d{1,2}[\/\.]\d{1,2}[\/\.]\d{4}$/) ||
+               value.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/) ||
+               value.match(/^\d{1,2}\.\d{1,2}\.\d{4}$/)) {
+        // Convert DD/MM/YYYY to YYYY-MM-DD
+        const parts = value.split(/[\/\.]/);
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10);
+        const year = parseInt(parts[2], 10);
+        
+        // Validate date parts
+        if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+            return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        }
+        return value;
+    }
+    return value; // Keep dates as strings
     }
     
     // Try to parse as number (handle both . and , as decimal separators)
@@ -2322,8 +2336,11 @@ function compareTables(useTolerance = false) {
     clearComparisonResults();
     
     // Show immediate loading indicator
-    document.getElementById('result').innerHTML = '<div style="text-align: center; padding: 20px; font-size: 16px;">🔄 Starting comparison... Please wait</div>';
-    document.getElementById('summary').innerHTML = '<div style="text-align: center; padding: 10px;">Initializing...</div>';
+    let resultDiv = document.getElementById('result');
+    let summaryDiv = document.getElementById('summary');
+    
+    resultDiv.innerHTML = '<div id="comparison-loading" style="text-align: center; padding: 20px; font-size: 16px;">🔄 Starting comparison... Please wait</div>';
+    summaryDiv.innerHTML = '<div style="text-align: center; padding: 10px;">Initializing...</div>';
     
     if (!data1.length || !data2.length) {
         document.getElementById('result').innerText = 'Please, load both files.';
@@ -2521,6 +2538,12 @@ function performComparison() {
     let diffColumns2Html = onlyInFile2.length > 0 ? `<span style="color: red; font-weight: bold;">${diffColumns2}</span>` : diffColumns2;
     
     // Form keys for exact match with case-insensitive comparison
+    // Clear the loading message if it exists
+    const loadingDiv = document.getElementById('comparison-loading');
+    if (loadingDiv) {
+        loadingDiv.remove();
+    }
+
     function rowKey(row) { 
         if (toleranceMode) {
             // In tolerance mode, we cannot use simple string comparison for stats
