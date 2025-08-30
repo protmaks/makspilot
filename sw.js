@@ -1,4 +1,4 @@
-const CACHE_NAME = 'makspilot-cache-v1.1.0';
+const CACHE_NAME = 'makspilot-cache-v1.1.1';
 
 const urlsToCache = [
   '/style.css',
@@ -6,6 +6,7 @@ const urlsToCache = [
   '/javascript/functions.js',
   '/javascript/redirect.js',
   '/img/main.webp',
+  '/img/main_mobile.webp',
   '/img/maxpilot.png',
   '/img/python.svg',
   '/img/shiba.svg',

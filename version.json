@@ -1,8 +1,13 @@
 {
-  "version": "v 5.2 Beta",
-  "releaseDate": "2025-08-11",
+  "version": "v 5.3 Beta",
+  "releaseDate": "2025-08-30",
   "description": "Application version configuration",
   "changelog": {
+    "v 5.3 Beta": [
+      "📱 Added responsive images for mobile devices",
+      "🔄 Replaced main.webp with main_mobile.webp for mobile users",
+      "⚡ Improved mobile user experience with optimized images"
+    ],
     "v 5.2 Beta": [
       "🔑 Enhanced row matching algorithm with dynamic key column prioritization",
       "📊 First 70% of columns automatically become key columns with 3x weight in similarity scoring",
