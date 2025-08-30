@@ -81,7 +81,7 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Открыт кэш');
+        console.log('A cache opened');
         return cache.addAll(urlsToCache);
       })
   );

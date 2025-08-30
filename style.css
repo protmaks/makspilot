@@ -8,6 +8,32 @@ html {
     scroll-behavior: smooth;
 }
 
+h1 {
+  font-size: 2.2rem;
+  font-weight: bold;
+}
+
+h2 {
+  font-size: 1.5rem;
+}
+
+h3 {
+  font-size: 1.1rem;
+}
+
+h4 {
+  font-size: 1rem;
+}
+
+h5 {
+  font-size: 0.8rem;
+}
+
+h6 {
+  font-size: 0.7rem;
+}
+
+
 body {
     font-family: 'Inter', sans-serif;
     background-color: #208778;
@@ -21,7 +47,6 @@ body {
     padding: 0 20px;
 }
 
-/* Header */
 header {
     position: fixed;
     top: 0;
@@ -211,7 +236,6 @@ header {
     }
     }
 
-/* Hero Section */
 #hero {
     min-height: 100vh;
     display: flex;
@@ -270,7 +294,6 @@ header {
     color: #F9FAFB;
 }
 
-/* Compare Section */
 #compare {
     padding: 80px 0;
     border-top: 1px solid rgba(0, 74, 0, 0.1);
@@ -314,7 +337,6 @@ header {
     background-color: #FFCF7A;
 }
 
-/* Content Sections */
 .content-section {
     padding: 80px 0;
     border-top: 1px solid rgba(249, 250, 251, 0.1);
@@ -328,7 +350,6 @@ header {
     background-color: #208778;
 }
 
-/* Compact Section Styles */
 .compact-section {
     padding: 60px 0;
     border-top: 1px solid rgba(249, 250, 251, 0.1);
@@ -393,7 +414,6 @@ header {
     transform: scale(1.05);
 }
 
-/* Footer */
 footer {
     background-color: #111827;
     padding: 60px 0 30px;
@@ -438,7 +458,6 @@ footer {
     color: #F9FAFB;
 }
 
-/* Responsive adjustments for landing page */
 @media (max-width: 767px) {
     .content-section {
         padding: 60px 0;
@@ -469,7 +488,6 @@ footer {
     }
 }
 
-/* Animations */
 @keyframes fadeInUp {
     from {
         opacity: 0;
@@ -485,10 +503,9 @@ footer {
     animation: fadeInUp 0.8s ease-out;
 }
 
-/* Comparison Tool Styles */
 .main-content {
     background: #f7f8fa;
-    padding-top: 0; /* No top padding for landing page */
+    padding-top: 0;
     color: #2d3a4a;
     padding-bottom: 20px;
 }
@@ -621,7 +638,6 @@ footer {
     box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }
 
-/* Preview table styles */
 .preview-wrapper {
     margin-top: 10px;
     overflow-x: auto;
@@ -677,7 +693,6 @@ footer {
     border-bottom: none;
 }
 
-/* Table container improvements */
 #table1, #table2 {
     margin-top: 10px;
 }
@@ -689,7 +704,6 @@ footer {
     font-weight: 600;
 }
 
-/* Base table styles */
 table {
     color: #495057;
     font-family: inherit;
@@ -786,7 +800,6 @@ button.compare-btn:hover {
     box-shadow: 0 4px 16px rgba(241, 111, 92, 0.13);
 }
 
-/* Button container styles */
 .buttons-container {
     display: flex;
     gap: 10px;
@@ -805,7 +818,6 @@ button.compare-btn:hover {
     min-height: 45px;
 }
 
-/* When export button is hidden, make compare button full width */
 .button-half:has(button[style*="display: none"]) {
     display: none !important;
 }
@@ -815,7 +827,6 @@ button.compare-btn:hover {
     width: 50%;
 }
 
-/* Fallback for browsers that don't support :has() */
 .button-half.export-hidden {
     display: none !important;
 }
@@ -825,7 +836,6 @@ button.compare-btn:hover {
     width: 100%;
 }
 
-/* Export button styles */
 button.export-btn {
     padding: 8px 20px;
     font-size: 0.95rem;
@@ -959,13 +969,12 @@ button.export-btn:disabled {
     z-index: 10;
     overflow-x: auto;
     overflow-y: hidden;
-    /* Hide scrollbar for header */
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 }
 
 .table-header-fixed::-webkit-scrollbar {
-    display: none; /* Chrome, Safari and Opera */
+    display: none;
 }
 
 .table-body-scrollable {
@@ -977,7 +986,6 @@ button.export-btn:disabled {
     border-radius: 0 0 8px 8px;
 }
 
-/* Synchronized scrolling container */
 .table-container-sync {
     position: relative;
     overflow: hidden;
@@ -1028,7 +1036,6 @@ button.export-btn:disabled {
     border-bottom: none;
 }
 
-/* Performance and Loading Indicators */
 .loading-indicator {
     text-align: center;
     padding: 20px;
@@ -1086,13 +1093,12 @@ button.export-btn:disabled {
     text-align: center;
 }
 
-/* Comparison Table Styles - Fixed column alignment */
 .diff-table-header {
     width: 100%;
     border-collapse: collapse;
     background: #fff;
     font-size: 13px;
-    table-layout: fixed; /* Fixed layout for consistent column widths */
+    table-layout: fixed;
 }
 
 .diff-table-header th {
@@ -1108,13 +1114,10 @@ button.export-btn:disabled {
     white-space: nowrap;
     font-size: 11px;
     cursor: pointer;
-    /* Remove conflicting width rules - let CSS at end of file handle this */
     box-sizing: border-box;
 }
 
-/* Fixed first column (Source) */
 .diff-table-header th:first-child {
-    /* Remove conflicting rules - let CSS at end of file handle this */
     background-color: #f8f9fa;
     box-shadow: 2px 0 5px rgba(0,0,0,0.1);
 }
@@ -1148,7 +1151,7 @@ button.export-btn:disabled {
     border-collapse: collapse;
     background: #fff;
     font-size: 13px;
-    table-layout: fixed; /* Fixed layout for consistent column widths */
+    table-layout: fixed;
 }
 
 .diff-table-body td {
@@ -1160,19 +1163,15 @@ button.export-btn:disabled {
     overflow: hidden;
     text-overflow: ellipsis;
     vertical-align: top;
-    /* Remove conflicting width rules - let CSS at end of file handle this */
     box-sizing: border-box;
 }
 
-/* Fixed first column (Source) for body */
 .diff-table-body td:first-child {
-    /* Remove conflicting rules - let CSS at end of file handle this */
     background-color: #ffffff;
     box-shadow: 2px 0 5px rgba(0,0,0,0.1);
 }
 
 
-/* Special styling for different cell types in the first column */
 .diff-table-body td:first-child.warn-cell {
     background-color: #f8d7da;
 }
@@ -1204,13 +1203,12 @@ button.export-btn:disabled {
     background-color: #f8f9fa;
 }
 
-/* Row styles for different states */
 .diff-table-body tr.new-row1 {
-    background-color: #cdedff; /* Голубой для файла 1 */
+    background-color: #cdedff;
 }
 
 .diff-table-body tr.new-row2 {
-    background-color: #b8f5f0; /* Светло-бирюзовый для файла 2 */
+    background-color: #b8f5f0;
 }
 
 .diff-table-body tr.warn-row {
@@ -1221,7 +1219,6 @@ button.export-btn:disabled {
     background-color: #d4edda;
 }
 
-/* Cell styles for different states */
 .diff-table-body td.new-cell1 {
     background-color: #65add7;
     color: #ffffff;
@@ -1237,17 +1234,15 @@ button.export-btn:disabled {
 }
 
 .diff-table-body td.tolerance-cell {
-    background-color: #ffeaa7; /* Orange for tolerance differences */
-    /*border-left: 3px solid #ff8c00; /* Orange border to make it more visible */
-    font-weight: 500; /* Make text slightly bolder */
+    background-color: #ffeaa7;
+    font-weight: 500;
     position: relative;
 }
 
 .diff-table-body tr:hover td.tolerance-cell {
-    background-color: #ffd93d; /* Slightly darker orange on hover */
+    background-color: #ffd93d;
 }
 
-/* Special styling for tolerance cells in fixed column */
 .diff-table-body td:first-child.tolerance-cell {
     background-color: #ffeaa7;
     box-shadow: 2px 0 5px rgba(255, 140, 0, 0.3);
@@ -1286,7 +1281,6 @@ button.export-btn:disabled {
     border-top: 2px solid #000000 !important;
 }
 
-/* Fixed first column for filter row */
 .filter-row td:first-child {
     position: sticky;
     left: 0;
@@ -1296,13 +1290,11 @@ button.export-btn:disabled {
     min-width: 360px !important;
 }
 
-/* Style filter inputs in fixed column */
 .filter-row td:first-child input {
     background-color: #f8f9fa;
     border: 1px solid #dee2e6;
 }
 
-/* Filter controls styles */
 .filter-controls {
     max-width: 1200px;
     padding: 0 20px;
@@ -1372,7 +1364,6 @@ button.export-btn:disabled {
     box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }
 
-/* Excluded info styles */
 .excluded-info {
     background: #e2e3e5;
     border: 1px solid #ced4da;
@@ -1383,7 +1374,6 @@ button.export-btn:disabled {
     color: #495057;
 }
 
-/* Error and Warning Messages */
 .file-limit-error {
     text-align: center;
     padding: 40px;
@@ -1454,7 +1444,6 @@ button.export-btn:disabled {
     margin-bottom: 20px;
 }
 
-/* Compact Landing Page Styles */
 .compact-hero {
     min-height: 60vh;
     padding: 40px 0;
@@ -1495,7 +1484,6 @@ button.export-btn:disabled {
     margin-right: auto;
 }
 
-/* Feature cards with images (for "Why Choose Our Tool?" section) */
 .features-grid .feature-card {
     background: rgba(255, 255, 255, 0.1);
     padding: 40px;
@@ -1536,10 +1524,6 @@ button.export-btn:disabled {
 .feature-content {
     flex: 1;
     text-align: left;
-}
-
-.features-grid .feature-card:nth-child(even) .feature-content {
-    /*text-align: right;*/
 }
 
 .feature-title {
@@ -1592,7 +1576,6 @@ button.export-btn:disabled {
     background-color: #111827;
 }
 
-/* Compact landing page mobile styles */
 @media (max-width: 768px) {
     .compact-hero .container {
         flex-direction: column;
@@ -1637,7 +1620,6 @@ button.export-btn:disabled {
     }
 }
 
-/* Mobile Warning Styles */
 .mobile-warning {
     display: none;
     position: fixed;
@@ -1705,7 +1687,6 @@ button.export-btn:disabled {
     box-shadow: 0 8px 25px rgba(255, 177, 122, 0.4);
 }
 
-/* Show warning on mobile devices */
 @media (max-width: 768px) {
     .mobile-warning {
         display: flex !important;
@@ -1720,7 +1701,6 @@ button.export-btn:disabled {
         display: none !important;
     }
     
-    /* Ensure header stays visible on mobile compare page */
     header {
         display: block !important;
         position: fixed !important;
@@ -1729,7 +1709,6 @@ button.export-btn:disabled {
     }
 }
 
-/* Additional table stability improvements for filtering */
 .table-header-fixed {
     overflow-x: auto;
     overflow-y: hidden;
@@ -1744,15 +1723,12 @@ button.export-btn:disabled {
     position: relative;
 }
 
-/* Force consistent column behavior during filtering */
 .diff-table-header,
 .diff-table-body {
     table-layout: fixed !important;
     border-collapse: collapse !important;
-    /* Remove width: 100% to allow our JavaScript to control width */
 }
 
-/* Ensure filtered rows maintain table structure */
 .diff-table-body tr[style*="display: none"] {
     display: none !important;
     height: 0 !important;
@@ -1767,7 +1743,6 @@ button.export-btn:disabled {
     line-height: 0 !important;
 }
 
-/* Enhanced column width stability */
 .diff-table-header th,
 .diff-table-body td {
     box-sizing: border-box !important;
@@ -1776,7 +1751,6 @@ button.export-btn:disabled {
     text-overflow: ellipsis !important;
 }
 
-/* Prevent column width changes during filtering */
 .diff-table-header th:not(:first-child),
 .diff-table-body td:not(:first-child) {
     width: 180px !important;
@@ -1784,7 +1758,6 @@ button.export-btn:disabled {
     max-width: 180px !important;
 }
 
-/* Special handling for first column to prevent shifts */
 .diff-table-header th:first-child,
 .diff-table-body td:first-child {
     width: 240px !important;
@@ -1795,7 +1768,6 @@ button.export-btn:disabled {
     z-index: 2;
 }
 
-/* Language Switcher Styles */
 .lang-switcher {
     position: relative;
     display: inline-block;
@@ -1850,7 +1822,6 @@ button.export-btn:disabled {
     }
 }
 
-/* File input labels */
 .file-label {
     display: block;
     margin-bottom: 8px;
@@ -1859,7 +1830,6 @@ button.export-btn:disabled {
     font-size: 14px;
 }
 
-/* How Use Page Classes */
 .how-use-title {
     text-align: center;
     margin-bottom: 30px;
@@ -1898,7 +1868,6 @@ button.export-btn:disabled {
     text-align: center;
 }
 
-/* Column alignment info styles */
 .column-alignment-info {
     background: #d1ecf1;
     border: 1px solid #bee5eb;
@@ -1925,7 +1894,6 @@ button.export-btn:disabled {
     margin-bottom: 15px;
 }
 
-/* Extracted inline styles - Compare page layout */
 .main-content-padded {
     padding-top: 80px;
 }
@@ -1971,7 +1939,6 @@ button.export-btn:disabled {
     display: none;
 }
 
-/* How to use page styles */
 .section-heading {
     color: #FFB17A;
     margin: 25px 0 15px 0;
@@ -1982,13 +1949,11 @@ button.export-btn:disabled {
     margin: 40px 0;
 }
 
-/* Contact email styling */
 .contact-email {
     unicode-bidi: bidi-override;
     direction: rtl;
 }
 
-/* Main page styles */
 .main-page-heading {
     text-align: center;
     margin-bottom: 20px;
@@ -2001,7 +1966,6 @@ button.export-btn:disabled {
     color: #FFB17A;
 }
 
-/* Story section styling */
 .story-section {
     background: rgba(255, 255, 255, 0.05);
     padding: 30px;
@@ -2026,7 +1990,6 @@ button.export-btn:disabled {
     margin-top: 20px;
 }
 
-/* Feature cards styling for grid layouts (without images) */
 .grid-layout .feature-card,
 .security-grid .feature-card {
     background: rgba(255, 255, 255, 0.1);
@@ -2035,7 +1998,6 @@ button.export-btn:disabled {
     border: 1px solid rgba(255, 255, 255, 0.2);
     transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
     backdrop-filter: blur(10px);
-    /* No display: flex here - let them use default block layout */
 }
 
 .grid-layout .feature-card:hover,
@@ -2045,7 +2007,6 @@ button.export-btn:disabled {
     background: rgba(255, 255, 255, 0.15);
 }
 
-/* Generic feature card styles (fallback) */
 .feature-card {
     background: rgba(255, 255, 255, 0.1);
     padding: 30px;
@@ -2088,7 +2049,6 @@ button.export-btn:disabled {
     max-width: 250px;
 }
 
-/* Security section styling */
 .security-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -2112,7 +2072,6 @@ button.export-btn:disabled {
     color: #F9FAFB;
 }
 
-/* Verification section styling */
 .verification-section {
     background: rgba(99, 207, 191, 0.1);
     border: 1px solid #63cfbf;
@@ -2156,7 +2115,6 @@ button.export-btn:disabled {
     font-weight: 600;
 }
 
-/* Footer contact styling */
 .footer-contact {
     font-size: 12px;
     color: #666;
@@ -2164,7 +2122,6 @@ button.export-btn:disabled {
     text-align: center;
 }
 
-/* Table column width styles */
 .diff-table-header th:first-child,
 .diff-table-body td:first-child,
 .filter-row td:first-child {
@@ -2183,7 +2140,6 @@ button.export-btn:disabled {
     box-sizing: border-box;
 }
 
-/* Filter input styles */
 .filter-row input[type="text"] {
     width: 100%;
     padding: 4px;
@@ -2192,7 +2148,6 @@ button.export-btn:disabled {
     box-sizing: border-box;
 }
 
-/* Mobile responsiveness for compact sections */
 @media (max-width: 768px) {
     .compact-section {
         padding: 40px 0;
