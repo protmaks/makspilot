@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ru" data-placeholder-text="Выберите файлы на компьютере и нажмите Сравнить">
 <head>
-    <script src="../../javascript/redirect.js"></script>
+    <script src="../../javascript/redirect.js" defer></script>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-C19L2VS3EH"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
@@ -34,7 +34,9 @@
     <link rel="alternate" hreflang="de" href="https://makspilot.com/de/compare/">
     <title>МаксПилот - Сравнение файлов Excel и CSV</title>
     <link rel="icon" type="image/x-icon" href="../../favicon.ico">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="../../style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
@@ -56,7 +58,7 @@
     <header>
     <div class="header-container">
         <a href="../" class="logo">
-            <img src="../../img/maxpilot.png" alt="Логотип MaxPilot">
+            <img src="../../img/makspilot.svg" alt="Логотип MaxPilot">
         </a>
         <nav>
             <ul class="nav-menu">
