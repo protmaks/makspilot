@@ -346,7 +346,10 @@ function processColumnTypes(data) {
             }
         }
         
-        const columnHeader = headers[colIndex] || '';
+        let columnHeader = '';
+        if (headers && headers.length > colIndex) {
+            columnHeader = headers[colIndex] || '';
+        }
         const isDateCol = isDateColumn(columnValues, columnHeader);
         columnTypes[colIndex] = isDateCol ? 'date' : 'other';
     }
