@@ -1205,10 +1205,12 @@ button.export-btn:disabled {
 
 .diff-table-body tr.new-row1 {
     background-color: #cdedff;
+    text-align: center;
 }
 
 .diff-table-body tr.new-row2 {
     background-color: #b8f5f0;
+    text-align: center;
 }
 
 .diff-table-body tr.warn-row {
