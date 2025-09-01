@@ -240,6 +240,42 @@ function processExcelSheetOptimized(sheet) {
         return [];
     }
     
+    const dataRange = {
+        s: { r: minRow, c: minCol },
+        e: { r: maxRow, c: maxCol }
+    };
+    const optimizedSheet = {};
+    optimizedSheet['!ref'] = XLSX.utils.encode_range(dataRange);
+    
+    for (let row = minRow; row <= maxRow; row++) {
+        for (let col = minCol; col <= maxCol; col++) {
+            const originalAddress = XLSX.utils.encode_cell({r: row, c: col});
+            const newAddress = XLSX.utils.encode_cell({r: row - minRow, c: col - minCol});
+            
+            if (sheet[originalAddress]) {
+                optimizedSheet[newAddress] = sheet[originalAddress];
+            }
+        }
+    }
+    
+    optimizedSheet['!ref'] = XLSX.utils.encode_range({
+        s: { r: 0, c: 0 },
+        e: { r: maxRow - minRow, c: maxCol - minCol }
+    });
+    
+    const json = XLSX.utils.sheet_to_json(optimizedSheet, {
+        header: 1, 
+        defval: '',
+        raw: true,          
+        dateNF: 'yyyy-mm-dd hh:mm:ss'  
+    });
+    const filteredJson = json.filter(row =>
+        Array.isArray(row) && row.some(cell => 
+            cell !== null && cell !== undefined && cell.toString().trim() !== ''
+        )
+    );
+    
+    return filteredJson;
 }
 
 function processSelectedSheet(fileNum, selectedSheetName) {
@@ -328,10 +364,7 @@ function processColumnTypes(data) {
             }
         }
         
-        let columnHeader = '';
-        if (headers && headers.length > colIndex) {
-            columnHeader = headers[colIndex] || '';
-        }
+        const columnHeader = headers[colIndex] || '';
         const isDateCol = isDateColumn(columnValues, columnHeader);
         columnTypes[colIndex] = isDateCol ? 'date' : 'other';
     }
@@ -511,10 +544,12 @@ function convertExcelDate(value, isInDateColumn = false) {
             const minutes = Math.floor((totalSeconds % 3600) / 60);
             const seconds = totalSeconds % 60;
             
-            if (year >= 1900 && year <= 2500) {
-                
+            if (year >= 1900 && year <= 2050) {
                 const hasTime = timeFraction > 0 || hours !== 0 || minutes !== 0 || seconds !== 0;
                 return formatDate(year, month, day, hasTime ? hours : null, hasTime ? minutes : null, hasTime ? seconds : null);
+            } else {
+                // Если год больше 2050, возвращаем исходное число
+                return value;
             }
         }
     }
@@ -2461,7 +2496,7 @@ function performComparison() {
     
     const loadingDiv = document.getElementById('comparison-loading');
     if (loadingDiv) {
-        loadingDiv.parentNode.removeChild(loadingDiv);
+        loadingDiv.remove();
     }
 
     function rowKey(row) { 
