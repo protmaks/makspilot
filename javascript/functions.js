@@ -240,42 +240,48 @@ function processExcelSheetOptimized(sheet) {
         return [];
     }
     
-    const dataRange = {
-        s: { r: minRow, c: minCol },
-        e: { r: maxRow, c: maxCol }
-    };
-    const optimizedSheet = {};
-    optimizedSheet['!ref'] = XLSX.utils.encode_range(dataRange);
-    
-    for (let row = minRow; row <= maxRow; row++) {
-        for (let col = minCol; col <= maxCol; col++) {
-            const originalAddress = XLSX.utils.encode_cell({r: row, c: col});
-            const newAddress = XLSX.utils.encode_cell({r: row - minRow, c: col - minCol});
-            
-            if (sheet[originalAddress]) {
-                optimizedSheet[newAddress] = sheet[originalAddress];
+    let dateCount = 0;
+    let numberCount = 0;
+    let totalCount = 0;
+    let potentialExcelDates = 0;
+    let maxYear = 0;
+    const headerLower = columnHeader.toString().toLowerCase();
+    const dateKeywords = ['date', 'time', 'created', 'modified', 'updated', 'birth', 'дата', 'время', 'создан', 'изменен', 'обновлен'];
+    const headerSuggestsDate = dateKeywords.some(keyword => headerLower.includes(keyword));
+    for (let value of columnValues) {
+        if (value && value.toString().trim() !== '') {
+            totalCount++;
+            if (typeof value === 'string') {
+                let m = value.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+                if (m) {
+                    let year = parseInt(m[1]);
+                    if (year >= 1900 && year <= 2050) {
+                        dateCount++;
+                        if (year > maxYear) maxYear = year;
+                    }
+                } else if (value.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/) || value.match(/^\d{1,2}-\d{1,2}-\d{4}$/) || value.match(/^\d{4}\/\d{1,2}\/\d{1,2}$/) || value.includes('T') || value.includes('GMT') || value.includes('UTC')) {
+                    dateCount++;
+                }
+            } else if (value instanceof Date) {
+                let year = value.getFullYear();
+                if (year >= 1900 && year <= 2050) {
+                    dateCount++;
+                    if (year > maxYear) maxYear = year;
+                }
+            } else if (typeof value === 'number') {
+                numberCount++;
+                if (value >= 29221 && value <= 90000) {
+                    potentialExcelDates++;
+                }
             }
         }
     }
-    
-    optimizedSheet['!ref'] = XLSX.utils.encode_range({
-        s: { r: 0, c: 0 },
-        e: { r: maxRow - minRow, c: maxCol - minCol }
-    });
-    
-    const json = XLSX.utils.sheet_to_json(optimizedSheet, {
-        header: 1, 
-        defval: '',
-        raw: true,          
-        dateNF: 'yyyy-mm-dd hh:mm:ss'  
-    });
-    const filteredJson = json.filter(row =>
-        Array.isArray(row) && row.some(cell => 
-            cell !== null && cell !== undefined && cell.toString().trim() !== ''
-        )
-    );
-    
-    return filteredJson;
+    if (totalCount === 0) return false;
+    const dateRatio = dateCount / totalCount;
+    const potentialDateRatio = potentialExcelDates / totalCount;
+    const combinedDateRatio = (dateCount + potentialExcelDates) / totalCount;
+    // Столбец считается датой, если большинство значений — даты, и максимальный год <= 2050
+    return ((headerSuggestsDate && combinedDateRatio > 0.3) || dateRatio > 0.7 || (potentialDateRatio > 0.7 && numberCount > 0) || combinedDateRatio > 0.8) && maxYear <= 2050;
 }
 
 function processSelectedSheet(fileNum, selectedSheetName) {
@@ -2494,7 +2500,7 @@ function performComparison() {
     
     const loadingDiv = document.getElementById('comparison-loading');
     if (loadingDiv) {
-        loadingDiv.remove();
+        loadingDiv.parentNode.removeChild(loadingDiv);
     }
 
     function rowKey(row) { 
