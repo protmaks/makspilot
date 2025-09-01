@@ -36,6 +36,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="../style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Unified DuckDB integration (no CORS issues, no duplicate declarations) -->
+    <script src="../javascript/duckdb-unified.js"></script>
 </head>
 <body>
     <!-- Mobile Warning -->
@@ -96,6 +98,10 @@
             📝 Read my detailed guide 
             <a href="../how_use/" class="help-link">here</a>
         </p>
+        <!-- DuckDB Status Indicator -->
+        <div id="duckdb-status" class="duckdb-status">
+            🔄 Initializing fast comparison engine...
+        </div>
         <div id="summary"></div>
         <div class="comparison-container">
             <div class="table-container">
@@ -118,14 +124,24 @@
                 <div class="exclude-compare-row">
                     <div class="buttons-container">
                         <div class="button-half">
-                            <button class="compare-btn button-full-width" onclick="compareTables(false)">Compare</button>
+                            <button class="compare-btn button-full-width" onclick="compareTables(false)">
+                                Compare<span id="fast-indicator-1" class="fast-mode-indicator" style="display:none;">FAST</span>
+                            </button>
                         </div>
                         <div class="button-half">
-                            <button class="compare-btn tolerance-btn button-full-width" onclick="compareTables(true)">Compare with 1.5% tolerance</button>
+                            <button class="compare-btn tolerance-btn button-full-width" onclick="compareTables(true)">
+                                Compare with 1.5% tolerance<span id="fast-indicator-2" class="fast-mode-indicator" style="display:none;">FAST</span>
+                            </button>
                         </div>
                         <div class="button-half">
                             <button id="exportExcelBtn" onclick="exportToExcel()" class="export-btn export-btn-hidden">
                                 📊 Export to Excel
+                            </button>
+                        </div>
+                        <div class="button-half">
+                            <button id="duckdbTestBtn" onclick="runDuckDBTestsInline()" 
+                                    style="background: #17a2b8; color: white; border: none; padding: 12px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; margin-top: 10px;">
+                                🧪 Test DuckDB
                             </button>
                         </div>
                     </div>
@@ -160,7 +176,7 @@
         </div>
     </div>
 
-    <!-- Load the comparison functions -->
+    <!-- Load the comparison functions first -->
     <script src="../javascript/functions.js"></script>
     
     <!-- Load the export functions -->

@@ -1644,11 +1644,13 @@ function handleFile(file, num) {
     if (num === 1) {
         data1 = [];
         fileName1 = file.name;
+        window.fileName1 = file.name; // Make globally accessible
         workbook1 = null;
         sheetName1 = ''; 
     } else {
         data2 = [];
         fileName2 = file.name;
+        window.fileName2 = file.name; // Make globally accessible
         workbook2 = null;
         sheetName2 = ''; 
     }
