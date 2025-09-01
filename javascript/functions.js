@@ -240,24 +240,6 @@ function processExcelSheetOptimized(sheet) {
         return [];
     }
     
-    if (!columnValues || columnValues.length === 0) return false;
-    const values = columnValues.filter(v => v !== null && v !== undefined && v.toString().trim() !== '');
-    if (values.length === 0) return false;
-    let minValue = null, maxValue = null;
-    for (let v of values) {
-        if (typeof v === 'number') {
-            if (minValue === null || v < minValue) minValue = v;
-            if (maxValue === null || v > maxValue) maxValue = v;
-        } else if (typeof v === 'string' && !isNaN(Number(v))) {
-            let num = Number(v);
-            if (minValue === null || num < minValue) minValue = num;
-            if (maxValue === null || num > maxValue) maxValue = num;
-        }
-    }
-    if (minValue !== null && maxValue !== null && minValue >= 29221 && maxValue <= 90000) {
-        return true;
-    }
-    return false;
 }
 
 function processSelectedSheet(fileNum, selectedSheetName) {
