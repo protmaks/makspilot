@@ -240,48 +240,24 @@ function processExcelSheetOptimized(sheet) {
         return [];
     }
     
-    let dateCount = 0;
-    let numberCount = 0;
-    let totalCount = 0;
-    let potentialExcelDates = 0;
-    let maxYear = 0;
-    const headerLower = columnHeader.toString().toLowerCase();
-    const dateKeywords = ['date', 'time', 'created', 'modified', 'updated', 'birth', 'дата', 'время', 'создан', 'изменен', 'обновлен'];
-    const headerSuggestsDate = dateKeywords.some(keyword => headerLower.includes(keyword));
-    for (let value of columnValues) {
-        if (value && value.toString().trim() !== '') {
-            totalCount++;
-            if (typeof value === 'string') {
-                let m = value.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-                if (m) {
-                    let year = parseInt(m[1]);
-                    if (year >= 1900 && year <= 2050) {
-                        dateCount++;
-                        if (year > maxYear) maxYear = year;
-                    }
-                } else if (value.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/) || value.match(/^\d{1,2}-\d{1,2}-\d{4}$/) || value.match(/^\d{4}\/\d{1,2}\/\d{1,2}$/) || value.includes('T') || value.includes('GMT') || value.includes('UTC')) {
-                    dateCount++;
-                }
-            } else if (value instanceof Date) {
-                let year = value.getFullYear();
-                if (year >= 1900 && year <= 2050) {
-                    dateCount++;
-                    if (year > maxYear) maxYear = year;
-                }
-            } else if (typeof value === 'number') {
-                numberCount++;
-                if (value >= 29221 && value <= 90000) {
-                    potentialExcelDates++;
-                }
-            }
+    if (!columnValues || columnValues.length === 0) return false;
+    const values = columnValues.filter(v => v !== null && v !== undefined && v.toString().trim() !== '');
+    if (values.length === 0) return false;
+    let minValue = null, maxValue = null;
+    for (let v of values) {
+        if (typeof v === 'number') {
+            if (minValue === null || v < minValue) minValue = v;
+            if (maxValue === null || v > maxValue) maxValue = v;
+        } else if (typeof v === 'string' && !isNaN(Number(v))) {
+            let num = Number(v);
+            if (minValue === null || num < minValue) minValue = num;
+            if (maxValue === null || num > maxValue) maxValue = num;
         }
     }
-    if (totalCount === 0) return false;
-    const dateRatio = dateCount / totalCount;
-    const potentialDateRatio = potentialExcelDates / totalCount;
-    const combinedDateRatio = (dateCount + potentialExcelDates) / totalCount;
-    // Столбец считается датой, если большинство значений — даты, и максимальный год <= 2050
-    return ((headerSuggestsDate && combinedDateRatio > 0.3) || dateRatio > 0.7 || (potentialDateRatio > 0.7 && numberCount > 0) || combinedDateRatio > 0.8) && maxYear <= 2050;
+    if (minValue !== null && maxValue !== null && minValue >= 29221 && maxValue <= 90000) {
+        return true;
+    }
+    return false;
 }
 
 function processSelectedSheet(fileNum, selectedSheetName) {
