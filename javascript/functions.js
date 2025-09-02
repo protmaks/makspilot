@@ -2288,6 +2288,7 @@ function getColumnsToHide(headers, columnTypes, hideDiff, hideNew) {
 function compareTables(useTolerance = false) {
     
     toleranceMode = useTolerance;
+    window.toleranceMode = useTolerance; // Make it globally accessible
     
     
     clearComparisonResults();
