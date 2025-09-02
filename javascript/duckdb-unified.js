@@ -612,32 +612,35 @@ async function generateDetailedComparisonTable(fastResult, useTolerance) {
     if (headerTable) headerTable.style.display = 'table';
     if (bodyTable) bodyTable.style.display = 'table';
     
-    if (typeof renderComparisonTable === 'function') {
-        try {
-            renderComparisonTable();
-            
-            setTimeout(() => {
-                const renderedRows = document.querySelectorAll('.diff-table-body tbody tr');
-                const headerCells = document.querySelectorAll('.diff-table-header thead th');
-                
-                if (renderedRows.length === 0) {
-                    createBasicFallbackTable(pairs, data1[0] || commonColumns);
-                }
-            }, 200);
-        } catch (error) {
-            await createBasicFallbackTable(pairs, data1[0] || commonColumns);
-        }
-    } else {
-        await createBasicFallbackTable(pairs, data1[0] || commonColumns);
-    }
+    // Skip renderComparisonTable and go directly to createBasicFallbackTable
+    // to avoid column duplication
+    await createBasicFallbackTable(pairs, workingData1[0] || commonColumns);
 }
 
-async function createBasicFallbackTable(pairs, commonColumns) {
+async function createBasicFallbackTable(pairs, headers) {
     // Clear any remaining loading messages at the start
     const resultDiv = document.getElementById('result');
     if (resultDiv) {
         resultDiv.innerHTML = '';
         resultDiv.style.display = 'none';
+    }
+    
+    // Completely recreate the table structure to avoid duplication
+    const diffTableElement = document.getElementById('diffTable');
+    if (diffTableElement) {
+        diffTableElement.innerHTML = `
+            <div class="table-header-fixed">
+                <table class="diff-table-header">
+                    <thead></thead>
+                    <tbody class="filter-row"></tbody>
+                </table>
+            </div>
+            <div class="table-body-scrollable">
+                <table class="diff-table-body">
+                    <tbody></tbody>
+                </table>
+            </div>
+        `;
     }
     
     const headerTable = document.querySelector('.diff-table-header thead');
@@ -648,7 +651,13 @@ async function createBasicFallbackTable(pairs, commonColumns) {
         return;
     }
     
-    const realHeaders = data1[0] || commonColumns;
+    // Clear any existing content first to prevent duplication
+    headerTable.innerHTML = '';
+    filterRow.innerHTML = '';
+    bodyTable.innerHTML = '';
+    
+    // Use the passed headers parameter instead of data1[0]
+    const realHeaders = headers || [];
     
     let headerHtml = '<tr><th title="Source - shows which file the data comes from" class="source-column">Source</th>';
     realHeaders.forEach((header, index) => {
@@ -704,9 +713,9 @@ async function createBasicFallbackTable(pairs, commonColumns) {
     
     bodyTable.innerHTML = bodyHtml;
     
-    const diffTable = document.getElementById('diffTable');
-    if (diffTable) {
-        diffTable.style.display = 'block';
+    const diffTableFinal = document.getElementById('diffTable');
+    if (diffTableFinal) {
+        diffTableFinal.style.display = 'block';
     }
 }
 

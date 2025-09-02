@@ -2380,6 +2380,9 @@ async function performComparison() {
     // Check if fast comparator is available and try to use it first
     if (window.MaxPilotDuckDB && window.MaxPilotDuckDB.fastComparator && window.MaxPilotDuckDB.fastComparator.initialized) {
         try {
+            // Set flag to prevent other table rendering functions from interfering
+            window.fastComparisonActive = true;
+            
             const excludedColumns = getExcludedColumns();
             const useTolerance = toleranceMode || false;
             const tolerance = window.currentTolerance || 1.5; // Default tolerance value
@@ -2401,6 +2404,9 @@ async function performComparison() {
             }
         } catch (error) {
             console.log('Fast comparison failed, falling back to standard:', error);
+        } finally {
+            // Reset flag regardless of success or failure
+            window.fastComparisonActive = false;
         }
     }
     
@@ -3245,6 +3251,16 @@ function compareValuesWithTolerance(v1, v2) {
 
 
 function renderComparisonTable() {
+    // Skip rendering if fast comparator is active to avoid duplication
+    if (window.MaxPilotDuckDB && window.MaxPilotDuckDB.fastComparator && window.MaxPilotDuckDB.fastComparator.initialized) {
+        return;
+    }
+    
+    // Skip rendering if fast comparison flag is set
+    if (window.fastComparisonActive) {
+        return;
+    }
+    
     if (!currentPairs || currentPairs.length === 0) {
         document.querySelector('.diff-table-header thead').innerHTML = '';
         document.querySelector('.filter-row').innerHTML = '';

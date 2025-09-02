@@ -1219,6 +1219,7 @@ button.export-btn:disabled {
 
 .diff-table-body tr.row-identical {
     background-color: #d4edda;
+    text-align: center;
 }
 
 .diff-table-body td.new-cell1 {
