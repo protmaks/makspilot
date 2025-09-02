@@ -1644,11 +1644,13 @@ function handleFile(file, num) {
     if (num === 1) {
         data1 = [];
         fileName1 = file.name;
+        window.fileName1 = file.name; // Make globally accessible
         workbook1 = null;
         sheetName1 = ''; 
     } else {
         data2 = [];
         fileName2 = file.name;
+        window.fileName2 = file.name; // Make globally accessible
         workbook2 = null;
         sheetName2 = ''; 
     }
@@ -2286,6 +2288,7 @@ function getColumnsToHide(headers, columnTypes, hideDiff, hideNew) {
 function compareTables(useTolerance = false) {
     
     toleranceMode = useTolerance;
+    window.toleranceMode = useTolerance; // Make it globally accessible
     
     
     clearComparisonResults();
@@ -2368,12 +2371,45 @@ function compareTables(useTolerance = false) {
     }
     
     
-    setTimeout(() => {
-        performComparison();
+    setTimeout(async () => {
+        await performComparison();
     }, 10);
 }
 
-function performComparison() {
+async function performComparison() {
+    
+    // Check if fast comparator is available and try to use it first
+    if (window.MaxPilotDuckDB && window.MaxPilotDuckDB.fastComparator && window.MaxPilotDuckDB.fastComparator.initialized) {
+        try {
+            // Set flag to prevent other table rendering functions from interfering
+            window.fastComparisonActive = true;
+            
+            const excludedColumns = getExcludedColumns();
+            const useTolerance = toleranceMode || false;
+            const tolerance = window.currentTolerance || 1.5; // Default tolerance value
+            
+            const fastResult = await window.MaxPilotDuckDB.compareTablesWithFastComparator(
+                data1, data2, excludedColumns, useTolerance, tolerance
+            );
+            
+            if (fastResult) {
+                // Clear the loading message first
+                const resultDiv = document.getElementById('result');
+                if (resultDiv) {
+                    resultDiv.innerHTML = '';
+                    resultDiv.style.display = 'none';
+                }
+                
+                await window.MaxPilotDuckDB.processFastComparisonResults(fastResult, useTolerance);
+                return; // Exit early since fast comparison was successful
+            }
+        } catch (error) {
+            console.log('Fast comparison failed, falling back to standard:', error);
+        } finally {
+            // Reset flag regardless of success or failure
+            window.fastComparisonActive = false;
+        }
+    }
     
     const tableHeaders = getSummaryTableHeaders();
     
@@ -3216,6 +3252,16 @@ function compareValuesWithTolerance(v1, v2) {
 
 
 function renderComparisonTable() {
+    // Skip rendering if fast comparator is active to avoid duplication
+    if (window.MaxPilotDuckDB && window.MaxPilotDuckDB.fastComparator && window.MaxPilotDuckDB.fastComparator.initialized) {
+        return;
+    }
+    
+    // Skip rendering if fast comparison flag is set
+    if (window.fastComparisonActive) {
+        return;
+    }
+    
     if (!currentPairs || currentPairs.length === 0) {
         document.querySelector('.diff-table-header thead').innerHTML = '';
         document.querySelector('.filter-row').innerHTML = '';

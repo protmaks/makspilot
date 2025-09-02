@@ -1,21 +1,137 @@
-function exportToExcel() {
+async function exportToExcel() {
     if (!currentPairs || currentPairs.length === 0) {
         alert('No data to export. Please compare files first.');
         return;
     }
     
+    console.log('📊 Export to Excel started', {
+        currentPairsLength: currentPairs.length,
+        hasFastResult: !!(window.currentFastResult),
+        hasFastComparator: !!(window.MaxPilotDuckDB && window.MaxPilotDuckDB.prepareDataForExportFast),
+        fastComparatorMode: window.MaxPilotDuckDB?.fastComparator?.mode
+    });
+    
+    // Run performance benchmark
+    if (window.MaxPilotDuckDB && window.MaxPilotDuckDB.benchmarkExportPerformance) {
+        await window.MaxPilotDuckDB.benchmarkExportPerformance();
+    }
+    
     try {
-        const exportData = prepareDataForExport();
-        const htmlContent = createStyledHTMLTable(exportData);
-        downloadExcelFromHTML(htmlContent);
+        // Try fast export first if available
+        if (window.currentFastResult && window.MaxPilotDuckDB && window.MaxPilotDuckDB.prepareDataForExportFast) {
+            console.log('⚡ Using fast export engine');
+            await exportWithFastEngine();
+        } else {
+            console.log('🔄 Using standard export method');
+            // Fallback to old method
+            const exportData = prepareDataForExport();
+            const htmlContent = await createStyledHTMLTable(exportData);
+            downloadExcelFromHTML(htmlContent);
+        }
     } catch (error) {
         console.error('Export error:', error);
         alert('Error exporting to Excel: ' + error.message);
     }
 }
 
-function createStyledHTMLTable(exportData) {
-    let html = `
+async function exportWithFastEngine() {
+    try {
+        const exportBtn = document.getElementById('exportExcelBtn');
+        const originalText = exportBtn ? exportBtn.innerHTML : '';
+        const startTime = performance.now();
+        
+        if (exportBtn) {
+            exportBtn.innerHTML = '⚡ Fast export processing...';
+            exportBtn.disabled = true;
+        }
+        
+        // Show progress for large files
+        const totalRows = window.currentFastResult ? 
+            (window.currentFastResult.table1Count + window.currentFastResult.table2Count) : 0;
+        
+        console.log(`⚡ Fast export starting for ${totalRows.toLocaleString()} total rows`);
+        
+        if (totalRows > 10000 && exportBtn) {
+            exportBtn.innerHTML = `⚡ Fast export - processing ${totalRows.toLocaleString()} rows...`;
+        }
+        
+        const fastExportData = await window.MaxPilotDuckDB.prepareDataForExportFast(window.currentFastResult, window.toleranceMode || false);
+        
+        if (fastExportData) {
+            const dataProcessingTime = performance.now() - startTime;
+            console.log(`⚡ Data processing completed in ${dataProcessingTime.toFixed(2)}ms`);
+            
+            if (exportBtn) {
+                exportBtn.innerHTML = '⚡ Generating Excel file...';
+            }
+            
+            const htmlContent = await createStyledHTMLTable(fastExportData);
+            downloadExcelFromHTML(htmlContent);
+            
+            const totalTime = performance.now() - startTime;
+            console.log(`⚡ Total fast export time: ${totalTime.toFixed(2)}ms`);
+            
+            // Show success message
+            showFastExportSuccess(fastExportData.data.length - 1, totalTime); // -1 for header
+            
+        } else {
+            throw new Error('Fast export failed, falling back to standard method');
+        }
+        
+        if (exportBtn) {
+            exportBtn.innerHTML = originalText;
+            exportBtn.disabled = false;
+        }
+        
+    } catch (error) {
+        console.error('Fast export failed:', error);
+        
+        const exportBtn = document.getElementById('exportExcelBtn');
+        if (exportBtn) {
+            exportBtn.innerHTML = '🔄 Using standard export...';
+        }
+        
+        // Fallback to old method
+        setTimeout(async () => {
+            const exportData = prepareDataForExport();
+            const htmlContent = await createStyledHTMLTable(exportData);
+            downloadExcelFromHTML(htmlContent);
+            
+            if (exportBtn) {
+                exportBtn.innerHTML = 'Export to Excel';
+                exportBtn.disabled = false;
+            }
+        }, 100);
+    }
+}
+
+function showFastExportSuccess(rowCount, totalTime = null) {
+    const successDiv = document.createElement('div');
+    successDiv.style.cssText = 'position:fixed;top:20px;right:20px;background:#d4edda;color:#155724;padding:15px 25px;border:1px solid #c3e6cb;border-radius:8px;box-shadow:0 4px 15px rgba(0,0,0,0.15);z-index:10000;font-size:14px;font-weight:500;max-width:350px;line-height:1.4;';
+    
+    let message = `⚡ <strong>Fast Excel export completed!</strong><br>Processed ${rowCount.toLocaleString()} rows with enhanced performance.`;
+    
+    if (totalTime) {
+        const timeText = totalTime < 1000 ? `${totalTime.toFixed(0)}ms` : `${(totalTime/1000).toFixed(1)}s`;
+        message += `<br>Total time: ${timeText}`;
+    }
+    
+    successDiv.innerHTML = message;
+    document.body.appendChild(successDiv);
+    setTimeout(() => { successDiv.parentNode && successDiv.parentNode.removeChild(successDiv); }, 6000);
+}
+
+async function createStyledHTMLTable(exportData) {
+    const startTime = performance.now();
+    console.log('⚡ Generating HTML for Excel export...', {
+        rows: exportData.data.length,
+        columns: exportData.data[0]?.length || 0
+    });
+    
+    // Pre-build HTML parts for better performance
+    const htmlParts = [];
+    
+    htmlParts.push(`
     <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
     <head>
         <meta charset="utf-8">
@@ -35,57 +151,86 @@ function createStyledHTMLTable(exportData) {
             <colgroup>
                 <col style="mso-number-format:'@';" />
             </colgroup>
-    `;
+    `);
     
-    exportData.data.forEach((row, rowIndex) => {
-        if (rowIndex === 0) {
-            html += '<tr style="font-weight: bold;">';
-        } else {
-            html += '<tr>';
+    // Process rows in batches for better performance
+    const BATCH_SIZE = 500;
+    const totalRows = exportData.data.length;
+    
+    for (let batchStart = 0; batchStart < totalRows; batchStart += BATCH_SIZE) {
+        const batchEnd = Math.min(batchStart + BATCH_SIZE, totalRows);
+        const batchRows = [];
+        
+        for (let rowIndex = batchStart; rowIndex < batchEnd; rowIndex++) {
+            const row = exportData.data[rowIndex];
+            const isHeader = rowIndex === 0;
+            
+            let rowHtml = isHeader ? '<tr style="font-weight: bold;">' : '<tr>';
+            
+            row.forEach((cellValue, colIndex) => {
+                const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: colIndex });
+                const formatting = exportData.formatting[cellAddress];
+                
+                let style = 'border: 0.5pt solid #D4D4D4; padding: 4px; vertical-align: top;';
+                
+                if (formatting) {
+                    if (formatting.border && formatting.border.top && formatting.border.top.style === 'thick') {
+                        style = 'border-top: 2pt solid #000; border-bottom: 0.5pt solid #D4D4D4; border-left: 0.5pt solid #D4D4D4; border-right: 0.5pt solid #D4D4D4; padding:4px; vertical-align:top;';
+                    } else if (formatting.border && formatting.border.bottom && formatting.border.bottom.style === 'thick') {
+                        style = 'border-top: 0.5pt solid #D4D4D4; border-bottom: 2pt solid #000; border-left: 0.5pt solid #D4D4D4; border-right: 0.5pt solid #D4D4D4; padding:4px; vertical-align:top;';
+                    }
+                    
+                    if (formatting.fill && formatting.fill.fgColor) {
+                        let bgColor = formatting.fill.fgColor.rgb;
+                        switch (bgColor) {
+                            case 'FF6B6B': bgColor = 'f8d7da'; break;
+                            case '4CAF50': bgColor = 'd4edda'; break;
+                            case 'ffeaa7': bgColor = 'ffeaa7'; break;
+                            case '65add7': bgColor = '65add7'; break;
+                            case '63cfbf': bgColor = '63cfbf'; break;
+                            case 'd4edda': bgColor = 'd4edda'; break;
+                            case 'f8f9fa': bgColor = 'f8f9fa'; break;
+                        }
+                        style += ` background-color:#${bgColor};`;
+                    }
+                    
+                    if (formatting.font) {
+                        if (formatting.font.bold) style += ' font-weight:bold;';
+                        style += ' color:#212529;';
+                    }
+                }
+                
+                const safeValue = String(cellValue || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                
+                if (isHeader) {
+                    rowHtml += `<td style="${style}" class="thin-border" x:autofilter="all">${safeValue}</td>`;
+                } else {
+                    const textValue = ' \t' + safeValue;
+                    rowHtml += `<td style="${style}mso-number-format:'@';mso-data-type:string;white-space:pre;" class="thin-border text-format" x:str="${safeValue}" x:format="@">${textValue}</td>`;
+                }
+            });
+            
+            rowHtml += '</tr>';
+            batchRows.push(rowHtml);
         }
         
-        row.forEach((cellValue, colIndex) => {
-            const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: colIndex });
-            const formatting = exportData.formatting[cellAddress];
-            
-            let style = 'border: 0.5pt solid #D4D4D4; padding: 4px; vertical-align: top;';
-            
-            if (formatting && formatting.border) {
-                if (formatting.border.top && formatting.border.top.style === 'thick') {
-                    style = 'border-top: 2pt solid #000; border-bottom: 0.5pt solid #D4D4D4; border-left: 0.5pt solid #D4D4D4; border-right: 0.5pt solid #D4D4D4; padding:4px; vertical-align:top;';
-                } else if (formatting.border.bottom && formatting.border.bottom.style === 'thick') {
-                    style = 'border-top: 0.5pt solid #D4D4D4; border-bottom: 2pt solid #000; border-left: 0.5pt solid #D4D4D4; border-right: 0.5pt solid #D4D4D4; padding:4px; vertical-align:top;';
-                }
-            }
-            if (formatting && formatting.fill && formatting.fill.fgColor) {
-                let bgColor = formatting.fill.fgColor.rgb;
-                switch (bgColor) {
-                    case 'FF6B6B': bgColor = 'f8d7da'; break;
-                    case '4CAF50': bgColor = 'd4edda'; break;
-                    case 'ffeaa7': bgColor = 'ffeaa7'; break;
-                }
-                style += ` background-color:#${bgColor};`;
-            }
-            if (formatting && formatting.font) {
-                if (formatting.font.bold) style += ' font-weight:bold;';
-                style += ' color:#212529;';
-            }
-            const safeValue = String(cellValue || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-            if (rowIndex === 0) {
-                html += `<td style="${style}" class="thin-border" x:autofilter="all">${safeValue}</td>`;
-            } else {
-                const textValue = ' \t' + safeValue;
-                html += `<td style="${style}mso-number-format:'@';mso-data-type:string;white-space:pre;" class="thin-border text-format" x:str="${safeValue}" x:format="@">${textValue}</td>`;
-            }
-        });
-        html += '</tr>';
-    });
+        htmlParts.push(batchRows.join(''));
+        
+        // Allow UI breathing room for very large files
+        if (batchEnd < totalRows && (batchEnd % (BATCH_SIZE * 4)) === 0) {
+            await new Promise(resolve => setTimeout(resolve, 1));
+        }
+    }
     
-    html += `
+    htmlParts.push(`
         </table>
     </body>
     </html>
-    `;
+    `);
+    
+    const html = htmlParts.join('');
+    const duration = performance.now() - startTime;
+    console.log(`⚡ HTML generation completed in ${duration.toFixed(2)}ms for ${totalRows} rows`);
     
     return html;
 }
@@ -344,8 +489,6 @@ function prepareDataFromRawData() {
     return { data, formatting, colWidths };
 }
 
-function setColumnWidths(ws, colWidths) { ws['!cols'] = colWidths; }
-
 function showExportSuccess() {
     const successDiv = document.createElement('div');
     successDiv.style.cssText = 'position:fixed;top:20px;right:20px;background:#d4edda;color:#155724;padding:15px 25px;border:1px solid #c3e6cb;border-radius:8px;box-shadow:0 4px 15px rgba(0,0,0,0.15);z-index:10000;font-size:14px;font-weight:500;max-width:350px;line-height:1.4;';
@@ -353,3 +496,5 @@ function showExportSuccess() {
     document.body.appendChild(successDiv);
     setTimeout(() => { successDiv.parentNode && successDiv.parentNode.removeChild(successDiv); }, 5000);
 }
+
+function setColumnWidths(ws, colWidths) { ws['!cols'] = colWidths; }

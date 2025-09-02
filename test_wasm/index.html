@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en" data-placeholder-text="Choose files on your computer and click Compare">
+<head>
+    <script src="../javascript/redirect.js" defer></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-C19L2VS3EH"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'G-C19L2VS3EH');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Compare data between Excel and CSV files effortlessly. Free online data comparison tool. Upload your files, identify differences instantly, and export detailed reports.">
+    <meta name="keywords" content="Excel comparison, CSV comparison, file comparison, online tool, Excel diff, CSV diff, XLS comparison, XLSX comparison, free tool, secure comparison">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="MaxPilot">
+    <meta property="og:title" content="Compare Data Between Excel and CSV Files | Free Online Tool - MaksPilot">
+    <meta property="og:description" content="Compare data between Excel and CSV files effortlessly. Free online data comparison tool. Upload your files, identify differences instantly, and export detailed reports..">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://makspilot.com/compare/">
+    <meta property="og:image" content="https://makspilot.com/img/main.webp">
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml">
+    <link rel="canonical" href="https://makspilot.com/compare/">
+    <link rel="alternate" hreflang="en" href="https://makspilot.com/compare/">
+    <link rel="alternate" hreflang="ru" href="https://makspilot.com/ru/compare/">
+    <link rel="alternate" hreflang="pl" href="https://makspilot.com/pl/compare/">
+    <link rel="alternate" hreflang="es" href="https://makspilot.com/es/compare/">
+    <link rel="alternate" hreflang="zh-CN" href="https://makspilot.com/zh/compare/">
+    <link rel="alternate" hreflang="ar" href="https://makspilot.com/ar/compare/">
+    <title>MaksPilot - Excel and CSV File Comparison</title>
+    <link rel="icon" type="image/x-icon" href="../favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="../style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+    <!-- Mobile Warning -->
+    <div class="mobile-warning" id="mobileWarning">
+        <div class="mobile-warning-content">
+            <span class="mobile-warning-icon">💻</span>
+            <h2 class="mobile-warning-title">Desktop Required</h2>
+            <p class="mobile-warning-text">
+                File comparison functionality is optimized for desktop computers. 
+                Please use a PC or laptop with a larger screen for the best experience.
+            </p>
+            <a href="../index.html" class="mobile-warning-button">Back to Home</a>
+        </div>
+    </div>
+
+    <!-- Header will be loaded here -->
+    <header>
+    <div class="header-container">
+        <a href="../index.html" class="logo">
+            <img src="../img/makspilot.svg" alt="MaxPilot Logo">
+        </a>
+        <nav>
+            <ul class="nav-menu">
+                <li><a href="../#block-1">Problems</a></li>
+                <li><a href="../#block-4">Security</a></li>
+                <li><a href="./" class="nav-cta">Start Comparison</a></li>
+                <li><a href="../how_use/">How Use</a></li>
+                <li><a href="https://medium.com/@protmaks" target="_blank">My Blog</a></li>
+                <li><a href="https://www.linkedin.com/in/protmaks/" class="social-link" title="linkedin" target="_blank">
+                    <img src="../img/linkedin.svg" alt="linkedin">
+                </a></li>
+                <li class="lang-switcher">
+                    <select class="lang-select" onchange="window.location.href=this.value">
+                        <option value="index.html" selected>English</option>
+                        <option value="../ru/compare/">Русский</option>
+                        <option value="../pl/compare/">Polski</option>
+                        <option value="../zh/compare/">中文</option>
+                        <option value="../es/compare/">Español</option>
+                        <option value="../ar/compare/">العربية</option>
+                        <option value="../pt/compare/">Português</option>
+                        <option value="../ja/compare/">日本語</option>
+                        <option value="../de/compare/">Deutsch</option>
+                    </select>
+                </li>
+            </ul>
+            <div class="mobile-menu-toggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </nav>
+    </div>
+</header>
+    
+    <div class="main-content main-content-padded">
+        <h1>Compare Data Between Excel and CSV Files - v 5.2 Beta <span id="fast-indicator-2" class="fast-mode-indicator" style="display:none;">FAST</span></h1>
+        <div id="duckdb-status" class="duckdb-status">
+            🔄 Initializing fast comparison engine...
+        </div>
+        <div id="summary"></div>
+        <div class="comparison-container">
+            <div class="table-container">
+                <input type="file" id="file1" accept=".xlsx,.xls,.csv"><br>
+                <div class="sheet-selector sheet-selector-hidden" id="sheetSelector1">
+                    <label for="sheetSelect1">Select sheet:</label>
+                    <select id="sheetSelect1"></select>
+                </div>
+                <div id="table1"></div>
+            </div>
+            <div class="table-container">
+                <input type="file" id="file2" accept=".xlsx,.xls,.csv"><br>
+                <div class="sheet-selector sheet-selector-hidden" id="sheetSelector2">
+                    <label for="sheetSelect2">Select sheet:</label>
+                    <select id="sheetSelect2"></select>
+                </div>
+                <div id="table2"></div>
+            </div>
+            <div class="controls-container">
+                <div class="exclude-compare-row">
+                    <div class="buttons-container">
+                        <div class="button-half">
+                            <button class="compare-btn button-full-width" onclick="compareTables(false)">
+                                Compare
+                            </button>
+                        </div>
+                        <div class="button-half">
+                            <button class="compare-btn tolerance-btn button-full-width" onclick="compareTables(true)">
+                                Compare with 1.5% tolerance
+                            </button>
+                        </div>
+                        <div class="button-half">
+                            <button id="exportExcelBtn" onclick="exportToExcel()" class="export-btn export-btn-hidden">
+                                📊 Export to Excel
+                            </button>
+                        </div>
+                    </div>
+                    <div class="exclude-columns-container">
+                        <label for="excludeColumns" class="exclude-label">Exclude columns:</label>
+                        <input type="text" id="excludeColumns" placeholder="e.g., ID, Timestamp, CreatedDate" class="exclude-input">
+                    </div>
+                </div>
+                <div class="filter-controls filter-controls-hidden">
+                    <div class="filter-options">
+                        <label><input type="checkbox" id="hideSameRows"> Hide COMMA rows</label>
+                        <label><input type="checkbox" id="hideDiffColumns"> Hide DIFF rows</label>
+                        <label><input type="checkbox" id="hideNewRows1"> Hide rows only in file 1</label>
+                        <label><input type="checkbox" id="hideNewRows2"> Hide rows only in file 2</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="result"></div>
+    <div id="diffTable">
+        <div class="table-header-fixed">
+            <table class="diff-table-header">
+                <thead></thead>
+                <tbody class="filter-row"></tbody>
+            </table>
+        </div>
+        <div class="table-body-scrollable">
+            <table class="diff-table-body">
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="../javascript/functions.js"></script>
+    <script src="../javascript/export.js"></script>
+    <script src="../javascript/script.js"></script>
+    <script src="../javascript/duckdb-wasm.js"></script>
+    
+    <script>
+        function isMobileDevice() {
+            const userAgent = navigator.userAgent;
+            const mobileKeywords = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+            const screenWidth = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+            
+            return mobileKeywords.test(userAgent) || screenWidth < 768;
+        }
+        
+        function checkDeviceType() {
+            const mobileWarning = document.getElementById('mobileWarning');
+            const mainContent = document.querySelector('.main-content');
+            const result = document.getElementById('result');
+            const diffTable = document.getElementById('diffTable');
+            const header = document.querySelector('header');
+            
+            if (isMobileDevice()) {
+                if (mobileWarning) mobileWarning.style.display = 'flex';
+                if (mainContent) mainContent.style.display = 'none';
+                if (result) result.style.display = 'none';
+                if (diffTable) diffTable.style.display = 'none';
+                if (header) {
+                    header.style.display = 'block';
+                    header.style.position = 'fixed';
+                    header.style.top = '0';
+                    header.style.zIndex = '10001';
+                }
+            } else {
+                if (mobileWarning) mobileWarning.style.display = 'none';
+                if (mainContent) mainContent.style.display = 'block';
+                if (result) result.style.display = 'block';
+                if (diffTable) diffTable.style.display = 'block';
+                if (header) {
+                    header.style.display = 'block';
+                    header.style.position = 'fixed';
+                    header.style.top = '0';
+                    header.style.zIndex = '1000';
+                }
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', checkDeviceType);
+        
+        window.addEventListener('resize', checkDeviceType);
+    </script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'makspilot-cache-v1.1.8';
+const CACHE_NAME = 'makspilot-cache-v1.1.17';
 
 const urlsToCache = [
   '/style.css',
@@ -69,6 +69,13 @@ const networkFirstStrategy = async (request) => {
 
 const getCacheStrategy = (request) => {
   const url = new URL(request.url);
+  
+  // Allow external libraries (DuckDB, etc.) to bypass cache
+  if (url.hostname.includes('jsdelivr.net') || 
+      url.hostname.includes('unpkg.com') ||
+      url.pathname.includes('duckdb')) {
+    return networkFirstStrategy;
+  }
   
   if (request.destination === 'document' || url.pathname === '/' || url.pathname.endsWith('.html')) {
     return networkFirstStrategy;

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Export Performance Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+    <h1>Export Performance Test</h1>
+    <div id="controls">
+        <button onclick="generateTestData()">Generate Test Data</button>
+        <button onclick="runExportTest()">Test Export Performance</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+    
+    <div id="status"></div>
+    <div id="results"></div>
+    
+    <!-- Include the necessary scripts -->
+    <script src="javascript/duckdb-unified.js"></script>
+    <script src="javascript/export.js"></script>
+    
+    <script>
+        let testData1 = [];
+        let testData2 = [];
+        let currentPairs = [];
+        let currentFinalHeaders = [];
+        let currentFinalAllCols = 0;
+        let fileName1 = 'Test File 1';
+        let fileName2 = 'Test File 2';
+        
+        function generateTestData() {
+            const status = document.getElementById('status');
+            status.innerHTML = 'Generating test data...';
+            
+            const rows = 5000;
+            const cols = 10;
+            
+            // Generate headers
+            const headers = [];
+            for (let c = 0; c < cols; c++) {
+                headers.push(`Column_${c + 1}`);
+            }
+            
+            testData1 = [headers];
+            testData2 = [headers];
+            
+            // Generate data rows
+            for (let r = 0; r < rows; r++) {
+                const row1 = [];
+                const row2 = [];
+                
+                for (let c = 0; c < cols; c++) {
+                    const baseValue = `Data_${r}_${c}`;
+                    row1.push(baseValue);
+                    
+                    // Make some rows different
+                    if (r % 3 === 0) {
+                        row2.push(baseValue + '_modified');
+                    } else if (r % 7 === 0) {
+                        // Skip this row in data2 (only in data1)
+                        continue;
+                    } else {
+                        row2.push(baseValue);
+                    }
+                }
+                
+                testData1.push(row1);
+                if (r % 7 !== 0) { // Add row2 only if not skipped
+                    testData2.push(row2);
+                }
+            }
+            
+            // Add some rows only in data2
+            for (let r = 0; r < 100; r++) {
+                const row2 = [];
+                for (let c = 0; c < cols; c++) {
+                    row2.push(`OnlyInData2_${r}_${c}`);
+                }
+                testData2.push(row2);
+            }
+            
+            status.innerHTML = `✅ Test data generated: ${testData1.length - 1} rows in file 1, ${testData2.length - 1} rows in file 2`;
+            
+            // Set global variables
+            window.data1 = testData1;
+            window.data2 = testData2;
+            window.fileName1 = fileName1;
+            window.fileName2 = fileName2;
+        }
+        
+        async function runExportTest() {
+            const status = document.getElementById('status');
+            const results = document.getElementById('results');
+            
+            if (!testData1.length || !testData2.length) {
+                alert('Please generate test data first');
+                return;
+            }
+            
+            status.innerHTML = 'Initializing fast comparator...';
+            
+            try {
+                // Initialize fast comparator
+                await window.MaxPilotDuckDB.initializeFastComparator();
+                
+                status.innerHTML = 'Running comparison...';
+                
+                // Run comparison
+                const comparisonResult = await window.MaxPilotDuckDB.compareTablesWithFastComparator(
+                    testData1, testData2, [], false, 1.5
+                );
+                
+                if (comparisonResult) {
+                    status.innerHTML = 'Comparison complete, testing export...';
+                    
+                    // Store fast result
+                    window.currentFastResult = comparisonResult;
+                    
+                    // Generate pairs for export
+                    const pairs = [];
+                    
+                    // Add some identical pairs
+                    comparisonResult.identical.slice(0, 100).forEach(identicalPair => {
+                        pairs.push({
+                            row1: testData1[identicalPair.row1],
+                            row2: testData2[identicalPair.row2],
+                            index1: identicalPair.row1 - 1,
+                            index2: identicalPair.row2 - 1,
+                            isDifferent: false,
+                            onlyIn: null
+                        });
+                    });
+                    
+                    // Add table1-only pairs
+                    comparisonResult.onlyInTable1.forEach(diff => {
+                        pairs.push({
+                            row1: testData1[diff.row1],
+                            row2: null,
+                            index1: diff.row1 - 1,
+                            index2: -1,
+                            isDifferent: true,
+                            onlyIn: 'table1'
+                        });
+                    });
+                    
+                    // Add table2-only pairs
+                    comparisonResult.onlyInTable2.forEach(diff => {
+                        pairs.push({
+                            row1: null,
+                            row2: testData2[diff.row2],
+                            index1: -1,
+                            index2: diff.row2 - 1,
+                            isDifferent: true,
+                            onlyIn: 'table2'
+                        });
+                    });
+                    
+                    window.currentPairs = pairs;
+                    window.currentFinalHeaders = testData1[0];
+                    window.currentFinalAllCols = testData1[0].length;
+                    
+                    status.innerHTML = `Testing export performance with ${pairs.length} pairs...`;
+                    
+                    // Test export performance
+                    const exportStartTime = performance.now();
+                    
+                    const fastExportData = await window.MaxPilotDuckDB.prepareDataForExportFast(
+                        window.currentFastResult, false
+                    );
+                    
+                    const exportTime = performance.now() - exportStartTime;
+                    
+                    results.innerHTML = `
+                        <h3>Export Performance Results</h3>
+                        <p><strong>Total export time:</strong> ${exportTime.toFixed(2)}ms</p>
+                        <p><strong>Rows processed:</strong> ${fastExportData.data.length - 1}</p>
+                        <p><strong>Processing speed:</strong> ${Math.round((fastExportData.data.length - 1) / (exportTime / 1000))} rows/sec</p>
+                        <p><strong>Mode:</strong> ${window.MaxPilotDuckDB.fastComparator?.mode || 'local'}</p>
+                        <p><strong>Fast export available:</strong> ${fastExportData ? '✅ Yes' : '❌ No'}</p>
+                    `;
+                    
+                    status.innerHTML = '✅ Export performance test completed!';
+                    
+                } else {
+                    throw new Error('Comparison failed');
+                }
+                
+            } catch (error) {
+                console.error('Export test failed:', error);
+                status.innerHTML = '❌ Export test failed: ' + error.message;
+                results.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+        
+        function clearResults() {
+            document.getElementById('status').innerHTML = '';
+            document.getElementById('results').innerHTML = '';
+            testData1 = [];
+            testData2 = [];
+            currentPairs = [];
+            window.currentFastResult = null;
+        }
+    </script>
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        #controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            margin: 5px;
+            padding: 10px 15px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        #status {
+            margin: 20px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+        }
+        
+        #results {
+            margin: 20px 0;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 4px;
+        }
+    </style>
+</body>
+</html>
