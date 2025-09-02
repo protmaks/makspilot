@@ -36,8 +36,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
     <link rel="stylesheet" href="../style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- Unified DuckDB integration (no CORS issues, no duplicate declarations) -->
-    <script src="../javascript/duckdb-unified.js"></script>
 </head>
 <body>
     <!-- Mobile Warning -->
@@ -92,13 +90,8 @@
     </div>
 </header>
     
-    <div class="main-content main-content-padded"><!-- Account for fixed header -->
-        <h1>Compare Data Between Excel and CSV Files - v 5.2 Beta</h1>
-        <p class="help-text">
-            📝 Read my detailed guide 
-            <a href="../how_use/" class="help-link">here</a>
-        </p>
-        <!-- DuckDB Status Indicator -->
+    <div class="main-content main-content-padded">
+        <h1>Compare Data Between Excel and CSV Files - v 5.2 Beta <span id="fast-indicator-2" class="fast-mode-indicator" style="display:none;">FAST</span></h1>
         <div id="duckdb-status" class="duckdb-status">
             🔄 Initializing fast comparison engine...
         </div>
@@ -125,23 +118,17 @@
                     <div class="buttons-container">
                         <div class="button-half">
                             <button class="compare-btn button-full-width" onclick="compareTables(false)">
-                                Compare<span id="fast-indicator-1" class="fast-mode-indicator" style="display:none;">FAST</span>
+                                Compare
                             </button>
                         </div>
                         <div class="button-half">
                             <button class="compare-btn tolerance-btn button-full-width" onclick="compareTables(true)">
-                                Compare with 1.5% tolerance<span id="fast-indicator-2" class="fast-mode-indicator" style="display:none;">FAST</span>
+                                Compare with 1.5% tolerance
                             </button>
                         </div>
                         <div class="button-half">
                             <button id="exportExcelBtn" onclick="exportToExcel()" class="export-btn export-btn-hidden">
                                 📊 Export to Excel
-                            </button>
-                        </div>
-                        <div class="button-half">
-                            <button id="duckdbTestBtn" onclick="runDuckDBTestsInline()" 
-                                    style="background: #17a2b8; color: white; border: none; padding: 12px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; margin-top: 10px;">
-                                🧪 Test DuckDB
                             </button>
                         </div>
                     </div>
@@ -176,18 +163,12 @@
         </div>
     </div>
 
-    <!-- Load the comparison functions first -->
     <script src="../javascript/functions.js"></script>
-    
-    <!-- Load the export functions -->
     <script src="../javascript/export.js"></script>
-    
-    <!-- Load the shared header -->
     <script src="../javascript/script.js"></script>
+    <script src="../javascript/duckdb-unified.js"></script>
     
-    <!-- Mobile device detection and warning -->
     <script>
-        // Function to detect mobile devices
         function isMobileDevice() {
             const userAgent = navigator.userAgent;
             const mobileKeywords = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
@@ -196,7 +177,6 @@
             return mobileKeywords.test(userAgent) || screenWidth < 768;
         }
         
-        // Show/hide mobile warning based on device type
         function checkDeviceType() {
             const mobileWarning = document.getElementById('mobileWarning');
             const mainContent = document.querySelector('.main-content');
@@ -209,7 +189,6 @@
                 if (mainContent) mainContent.style.display = 'none';
                 if (result) result.style.display = 'none';
                 if (diffTable) diffTable.style.display = 'none';
-                // Ensure header stays visible on mobile
                 if (header) {
                     header.style.display = 'block';
                     header.style.position = 'fixed';
@@ -221,7 +200,6 @@
                 if (mainContent) mainContent.style.display = 'block';
                 if (result) result.style.display = 'block';
                 if (diffTable) diffTable.style.display = 'block';
-                // Reset header styles for desktop
                 if (header) {
                     header.style.display = 'block';
                     header.style.position = 'fixed';
@@ -231,10 +209,8 @@
             }
         }
         
-        // Check device type on page load
         document.addEventListener('DOMContentLoaded', checkDeviceType);
         
-        // Check device type on window resize (in case user rotates device or resizes window)
         window.addEventListener('resize', checkDeviceType);
     </script>
 </body>

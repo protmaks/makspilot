@@ -2370,12 +2370,39 @@ function compareTables(useTolerance = false) {
     }
     
     
-    setTimeout(() => {
-        performComparison();
+    setTimeout(async () => {
+        await performComparison();
     }, 10);
 }
 
-function performComparison() {
+async function performComparison() {
+    
+    // Check if fast comparator is available and try to use it first
+    if (window.MaxPilotDuckDB && window.MaxPilotDuckDB.fastComparator && window.MaxPilotDuckDB.fastComparator.initialized) {
+        try {
+            const excludedColumns = getExcludedColumns();
+            const useTolerance = toleranceMode || false;
+            const tolerance = window.currentTolerance || 1.5; // Default tolerance value
+            
+            const fastResult = await window.MaxPilotDuckDB.compareTablesWithFastComparator(
+                data1, data2, excludedColumns, useTolerance, tolerance
+            );
+            
+            if (fastResult) {
+                // Clear the loading message first
+                const resultDiv = document.getElementById('result');
+                if (resultDiv) {
+                    resultDiv.innerHTML = '';
+                    resultDiv.style.display = 'none';
+                }
+                
+                await window.MaxPilotDuckDB.processFastComparisonResults(fastResult, useTolerance);
+                return; // Exit early since fast comparison was successful
+            }
+        } catch (error) {
+            console.log('Fast comparison failed, falling back to standard:', error);
+        }
+    }
     
     const tableHeaders = getSummaryTableHeaders();
     
