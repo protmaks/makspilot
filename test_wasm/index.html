@@ -90,12 +90,11 @@
     </div>
 </header>
     
-    <div class="main-content main-content-padded"><!-- Account for fixed header -->
-        <h1>Compare Data Between Excel and CSV Files - v 5.2 Beta</h1>
-        <p class="help-text">
-            📝 Read my detailed guide 
-            <a href="../how_use/" class="help-link">here</a>
-        </p>
+    <div class="main-content main-content-padded">
+        <h1>Compare Data Between Excel and CSV Files - v 5.2 Beta <span id="fast-indicator-2" class="fast-mode-indicator" style="display:none;">FAST</span></h1>
+        <div id="duckdb-status" class="duckdb-status">
+            🔄 Initializing fast comparison engine...
+        </div>
         <div id="summary"></div>
         <div class="comparison-container">
             <div class="table-container">
@@ -118,10 +117,14 @@
                 <div class="exclude-compare-row">
                     <div class="buttons-container">
                         <div class="button-half">
-                            <button class="compare-btn button-full-width" onclick="compareTables(false)">Compare</button>
+                            <button class="compare-btn button-full-width" onclick="compareTables(false)">
+                                Compare
+                            </button>
                         </div>
                         <div class="button-half">
-                            <button class="compare-btn tolerance-btn button-full-width" onclick="compareTables(true)">Compare with 1.5% tolerance</button>
+                            <button class="compare-btn tolerance-btn button-full-width" onclick="compareTables(true)">
+                                Compare with 1.5% tolerance
+                            </button>
                         </div>
                         <div class="button-half">
                             <button id="exportExcelBtn" onclick="exportToExcel()" class="export-btn export-btn-hidden">
@@ -160,18 +163,12 @@
         </div>
     </div>
 
-    <!-- Load the comparison functions -->
     <script src="../javascript/functions.js"></script>
-    
-    <!-- Load the export functions -->
     <script src="../javascript/export.js"></script>
-    
-    <!-- Load the shared header -->
     <script src="../javascript/script.js"></script>
+    <script src="../javascript/duckdb-wasm.js"></script>
     
-    <!-- Mobile device detection and warning -->
     <script>
-        // Function to detect mobile devices
         function isMobileDevice() {
             const userAgent = navigator.userAgent;
             const mobileKeywords = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
@@ -180,7 +177,6 @@
             return mobileKeywords.test(userAgent) || screenWidth < 768;
         }
         
-        // Show/hide mobile warning based on device type
         function checkDeviceType() {
             const mobileWarning = document.getElementById('mobileWarning');
             const mainContent = document.querySelector('.main-content');
@@ -193,7 +189,6 @@
                 if (mainContent) mainContent.style.display = 'none';
                 if (result) result.style.display = 'none';
                 if (diffTable) diffTable.style.display = 'none';
-                // Ensure header stays visible on mobile
                 if (header) {
                     header.style.display = 'block';
                     header.style.position = 'fixed';
@@ -205,7 +200,6 @@
                 if (mainContent) mainContent.style.display = 'block';
                 if (result) result.style.display = 'block';
                 if (diffTable) diffTable.style.display = 'block';
-                // Reset header styles for desktop
                 if (header) {
                     header.style.display = 'block';
                     header.style.position = 'fixed';
@@ -215,10 +209,8 @@
             }
         }
         
-        // Check device type on page load
         document.addEventListener('DOMContentLoaded', checkDeviceType);
         
-        // Check device type on window resize (in case user rotates device or resizes window)
         window.addEventListener('resize', checkDeviceType);
     </script>
 </body>
