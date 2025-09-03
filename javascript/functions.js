@@ -1,6 +1,7 @@
 const MAX_ROWS_LIMIT = 55000; 
 const MAX_COLS_LIMIT = 120; 
-const DETAILED_TABLE_LIMIT = 15000; 
+const DETAILED_TABLE_LIMIT = 10000;
+const DETAILED_COLS_LIMIT = 40;
 
 let data1 = [], data2 = [];
 let fileName1 = '', fileName2 = '';
@@ -125,6 +126,560 @@ function getSummaryTableHeaders() {
             file1: 'File 1',
             file2: 'File 2',
             calculating: 'Calculating...'
+        }
+    };
+    
+    return translations[currentLang] || translations['en'];
+}
+
+function getProgressMessages() {
+    const currentLang = window.location.pathname.includes('/ru/') ? 'ru' : 
+                       window.location.pathname.includes('/pl/') ? 'pl' :
+                       window.location.pathname.includes('/es/') ? 'es' :
+                       window.location.pathname.includes('/de/') ? 'de' :
+                       window.location.pathname.includes('/ja/') ? 'ja' :
+                       window.location.pathname.includes('/pt/') ? 'pt' :
+                       window.location.pathname.includes('/zh/') ? 'zh' :
+                       window.location.pathname.includes('/ar/') ? 'ar' : 'en';
+                       
+    const translations = {
+        'ru': {
+            loadingFile: '📊 Загружается файл... Пожалуйста, подождите',
+            startingComparison: '🔄 Начинается сравнение... Пожалуйста, подождите',
+            processingLargeFiles: '🔄 Обработка больших файлов',
+            summaryMode: '- Режим сводки... Пожалуйста, подождите',
+            comparingFiles: '🔄 Сравнение файлов',
+            pleaseWait: '... Пожалуйста, подождите',
+            quickComparison: '🔄 Быстрое сравнение...',
+            differentRowsFound: 'найдено различающихся строк',
+            processingForExport: '🔄 Обработка больших файлов для экспорта...',
+            complete: '% завершено',
+            noDataToDisplay: 'Нет данных для отображения',
+            initializing: 'Инициализация...',
+            analyzingData: 'Анализ данных...',
+            quickMode: 'Быстрый режим:',
+            foundFirst: 'Найдены первые',
+            differentRowsForPreview: 'различающихся строк для предварительного просмотра.',
+            fileContains: 'Файл содержит',
+            rowsTotal: 'строк всего.',
+            fullComparisonExport: 'Полное сравнение будет выполнено при нажатии "Экспорт в Excel".',
+            savesTime: 'Это экономит время, показывая результаты немедленно, сохраняя возможность полного анализа при экспорте.',
+            performanceMode: 'Режим производительности:',
+            displayingFirst: 'Отображаются первые',
+            forBetterPerformance: 'различающихся строк для лучшей производительности.',
+            completeFileContains: 'Полный файл содержит',
+            exportExcelAllRows: 'Экспорт в Excel будет включать ВСЕ строки.',
+            exportExcelFullComparison: '📊 Экспорт в Excel (Полное Сравнение)',
+            largeFileModeTitle: 'Режим Больших Файлов - Ограниченное Отображение',
+            yourFilesContain: 'Ваши файлы содержат',
+            displayingFirstRows: 'Отображаются первые',
+            differentRowsOut: 'различающихся строк из',
+            maximum: 'максимум.',
+            fullComparisonCompleted: 'Полное сравнение выполнено успешно!',
+            viewSummaryTable: '✅ Просмотрите итоговую таблицу выше для полной статистики',
+            useExportButton: '✅ Используйте кнопку Экспорт в Excel для загрузки ВСЕХ результатов',
+            exportContainsComplete: '✅ Экспорт содержит полное сравнение всех строк',
+            performanceTip: '💡 Совет по производительности:',
+            filesWithFewer: 'Файлы с менее чем',
+            rowsAndColumns: 'строк и',
+            largeFileMode: 'Режим Больших Файлов',
+            optimalPerformance: 'Для оптимальной производительности детальная таблица построчного сравнения скрыта.',
+            comparisonCompleted: 'Сравнение было выполнено успешно!',
+            viewSummaryStats: '✅ Просмотрите итоговую таблицу выше для статистики',
+            useExportDetailed: '✅ Используйте кнопку Экспорт в Excel для загрузки детальных результатов',
+            allComparisonData: '✅ Все данные сравнения доступны в экспорте',
+            interactiveBrowsing: 'столбцов покажут детальную таблицу сравнения для интерактивного просмотра.',
+            columnsWillShow: 'столбцов покажут полную детальную таблицу сравнения.',
+            rows: 'строк',
+            noRowsMatchFilters: 'Нет строк, соответствующих текущим фильтрам',
+            hideIdenticalRows: 'Скрыть одинаковые строки',
+            hideRowsOnlyInFile1: 'Скрыть строки только в Файле 1',
+            hideRowsOnlyInFile2: 'Скрыть строки только в Файле 2',
+            hideRowsWithDifferences: 'Скрыть строки с различиями',
+            highMemoryUsage: 'Высокое использование памяти',
+            browserUsing: 'Браузер использует',
+            ofAvailableMemory: 'МБ из',
+            availableMemory: 'МБ доступной памяти.',
+            considerFilters: 'Рассмотрите возможность использования фильтров для уменьшения объема отображаемых данных.'
+        },
+        'pl': {
+            loadingFile: '📊 Ładowanie pliku... Proszę czekać',
+            startingComparison: '🔄 Rozpoczynanie porównania... Proszę czekać',
+            processingLargeFiles: '🔄 Przetwarzanie dużych plików',
+            summaryMode: '- Tryb podsumowania... Proszę czekać',
+            comparingFiles: '🔄 Porównywanie plików',
+            pleaseWait: '... Proszę czekać',
+            quickComparison: '🔄 Szybkie porównanie...',
+            differentRowsFound: 'znalezionych różnych wierszy',
+            processingForExport: '🔄 Przetwarzanie dużych plików do eksportu...',
+            complete: '% ukończone',
+            noDataToDisplay: 'Brak danych do wyświetlenia',
+            initializing: 'Inicjalizacja...',
+            analyzingData: 'Analiza danych...',
+            quickMode: 'Tryb szybki:',
+            foundFirst: 'Znaleziono pierwsze',
+            differentRowsForPreview: 'różnych wierszy do podglądu.',
+            fileContains: 'Plik zawiera',
+            rowsTotal: 'wierszy łącznie.',
+            fullComparisonExport: 'Pełne porównanie zostanie wykonane po kliknięciu "Eksport do Excel".',
+            savesTime: 'To oszczędza czas, pokazując wyniki natychmiast, zachowując możliwość pełnej analizy podczas eksportu.',
+            performanceMode: 'Tryb wydajności:',
+            displayingFirst: 'Wyświetlanie pierwszych',
+            forBetterPerformance: 'różnych wierszy dla lepszej wydajności.',
+            completeFileContains: 'Kompletny plik zawiera',
+            exportExcelAllRows: 'Eksport do Excel będzie zawierał WSZYSTKIE wiersze.',
+            exportExcelFullComparison: '📊 Eksport do Excel (Pełne Porównanie)',
+            largeFileModeTitle: 'Tryb Dużych Plików - Ograniczony Wyświetlacz',
+            yourFilesContain: 'Twoje pliki zawierają',
+            displayingFirstRows: 'Wyświetlanie pierwszych',
+            differentRowsOut: 'różnych wierszy z',
+            maximum: 'maksimum.',
+            fullComparisonCompleted: 'Pełne porównanie zakończone pomyślnie!',
+            viewSummaryTable: '✅ Zobacz powyższą tabelę podsumowania dla pełnych statystyk',
+            useExportButton: '✅ Użyj przycisku Eksport do Excel aby pobrać WSZYSTKIE wyniki',
+            exportContainsComplete: '✅ Eksport zawiera pełne porównanie wszystkich wierszy',
+            performanceTip: '💡 Wskazówka dotycząca wydajności:',
+            filesWithFewer: 'Pliki z mniej niż',
+            largeFileMode: 'Tryb Dużych Plików',
+            optimalPerformance: 'Dla optymalnej wydajności szczegółowa tabela porównania wiersz po wierszu jest ukryta.',
+            comparisonCompleted: 'Porównanie zostało ukończone pomyślnie!',
+            viewSummaryStats: '✅ Zobacz powyższą tabelę podsumowania dla statystyk',
+            useExportDetailed: '✅ Użyj przycisku Eksport do Excel aby pobrać szczegółowe wyniki',
+            allComparisonData: '✅ Wszystkie dane porównania są dostępne w eksporcie',
+            interactiveBrowsing: 'kolumn pokaże szczegółową tabelę porównania do interaktywnego przeglądania.',
+            rowsAndColumns: 'wierszy i',
+            columnsWillShow: 'kolumn pokażą pełną szczegółową tabelę porównania.',
+            rows: 'wierszy',
+            noRowsMatchFilters: 'Brak wierszy pasujących do bieżących filtrów',
+            hideIdenticalRows: 'Ukryj identyczne wiersze',
+            hideRowsOnlyInFile1: 'Ukryj wiersze tylko w Pliku 1',
+            hideRowsOnlyInFile2: 'Ukryj wiersze tylko w Pliku 2',
+            hideRowsWithDifferences: 'Ukryj wiersze z różnicami',
+            highMemoryUsage: 'Wysokie użycie pamięci',
+            browserUsing: 'Przeglądarka używa',
+            ofAvailableMemory: 'MB z',
+            availableMemory: 'MB dostępnej pamięci.',
+            considerFilters: 'Rozważ użycie filtrów, aby zmniejszyć ilość wyświetlanych danych.'
+        },
+        'es': {
+            loadingFile: '📊 Cargando archivo... Por favor espere',
+            startingComparison: '🔄 Iniciando comparación... Por favor espere',
+            processingLargeFiles: '🔄 Procesando archivos grandes',
+            summaryMode: '- Modo resumen... Por favor espere',
+            comparingFiles: '🔄 Comparando archivos',
+            pleaseWait: '... Por favor espere',
+            quickComparison: '🔄 Comparación rápida...',
+            differentRowsFound: 'filas diferentes encontradas',
+            processingForExport: '🔄 Procesando archivos grandes para exportar...',
+            complete: '% completado',
+            noDataToDisplay: 'No hay datos para mostrar',
+            initializing: 'Inicializando...',
+            analyzingData: 'Analizando datos...',
+            quickMode: 'Modo rápido:',
+            foundFirst: 'Se encontraron las primeras',
+            differentRowsForPreview: 'filas diferentes para vista previa.',
+            fileContains: 'El archivo contiene',
+            rowsTotal: 'filas en total.',
+            fullComparisonExport: 'La comparación completa se realizará al hacer clic en "Exportar a Excel".',
+            savesTime: 'Esto ahorra tiempo mostrando resultados inmediatamente mientras mantiene la opción de análisis completo en la exportación.',
+            performanceMode: 'Modo de rendimiento:',
+            displayingFirst: 'Mostrando las primeras',
+            forBetterPerformance: 'filas diferentes para mejor rendimiento.',
+            completeFileContains: 'El archivo completo contiene',
+            exportExcelAllRows: 'Exportar a Excel incluirá TODAS las filas.',
+            exportExcelFullComparison: '📊 Exportar a Excel (Comparación Completa)',
+            largeFileModeTitle: 'Modo de Archivos Grandes - Visualización Limitada',
+            yourFilesContain: 'Sus archivos contienen',
+            displayingFirstRows: 'Mostrando las primeras',
+            differentRowsOut: 'filas diferentes de',
+            maximum: 'máximo.',
+            largeFileMode: 'Modo de Archivos Grandes',
+            optimalPerformance: 'Para un rendimiento óptimo, la tabla de comparación detallada fila por fila está oculta.',
+            comparisonCompleted: '¡La comparación se ha completado con éxito!',
+            viewSummaryStats: '✅ Ver la tabla resumen arriba para estadísticas',
+            useExportDetailed: '✅ Usar el botón Exportar a Excel para descargar resultados detallados',
+            allComparisonData: '✅ Todos los datos de comparación están disponibles en la exportación',
+            interactiveBrowsing: 'columnas mostrarán la tabla de comparación detallada para navegación interactiva.',
+            fullComparisonCompleted: '¡Comparación completa realizada con éxito!',
+            viewSummaryTable: '✅ Ver la tabla resumen arriba para estadísticas completas',
+            useExportButton: '✅ Usar el botón Exportar a Excel para descargar TODOS los resultados',
+            exportContainsComplete: '✅ La exportación contiene la comparación completa de todas las filas',
+            performanceTip: '💡 Consejo de rendimiento:',
+            filesWithFewer: 'Archivos con menos de',
+            rowsAndColumns: 'filas y',
+            columnsWillShow: 'columnas mostrarán la tabla de comparación detallada completa.',
+            rows: 'filas',
+            noRowsMatchFilters: 'No hay filas que coincidan con los filtros actuales',
+            hideIdenticalRows: 'Ocultar filas idénticas',
+            hideRowsOnlyInFile1: 'Ocultar filas solo en Archivo 1',
+            hideRowsOnlyInFile2: 'Ocultar filas solo en Archivo 2',
+            hideRowsWithDifferences: 'Ocultar filas con diferencias',
+            highMemoryUsage: 'Alto uso de memoria',
+            browserUsing: 'El navegador está usando',
+            ofAvailableMemory: 'MB de',
+            availableMemory: 'MB de memoria disponible.',
+            considerFilters: 'Considere usar filtros para reducir la cantidad de datos mostrados.'
+        },
+        'de': {
+            loadingFile: '📊 Datei wird geladen... Bitte warten',
+            startingComparison: '🔄 Vergleich wird gestartet... Bitte warten',
+            processingLargeFiles: '🔄 Verarbeitung großer Dateien',
+            summaryMode: '- Zusammenfassungsmodus... Bitte warten',
+            comparingFiles: '🔄 Dateien vergleichen',
+            pleaseWait: '... Bitte warten',
+            quickComparison: '🔄 Schnellvergleich...',
+            differentRowsFound: 'verschiedene Zeilen gefunden',
+            processingForExport: '🔄 Verarbeitung großer Dateien für Export...',
+            complete: '% abgeschlossen',
+            noDataToDisplay: 'Keine Daten zum Anzeigen',
+            initializing: 'Initialisierung...',
+            analyzingData: 'Daten werden analysiert...',
+            quickMode: 'Schnellmodus:',
+            foundFirst: 'Erste',
+            differentRowsForPreview: 'verschiedene Zeilen für Vorschau gefunden.',
+            fileContains: 'Datei enthält',
+            rowsTotal: 'Zeilen insgesamt.',
+            fullComparisonExport: 'Vollständiger Vergleich wird beim Klick auf "Nach Excel exportieren" durchgeführt.',
+            savesTime: 'Dies spart Zeit, indem Ergebnisse sofort angezeigt werden, während die Option für vollständige Analyse beim Export erhalten bleibt.',
+            performanceMode: 'Leistungsmodus:',
+            displayingFirst: 'Erste',
+            forBetterPerformance: 'verschiedene Zeilen für bessere Leistung angezeigt.',
+            completeFileContains: 'Vollständige Datei enthält',
+            exportExcelAllRows: 'Export nach Excel wird ALLE Zeilen enthalten.',
+            largeFileMode: 'Große Dateien Modus',
+            optimalPerformance: 'Für optimale Leistung ist die detaillierte zeilenweise Vergleichstabelle ausgeblendet.',
+            comparisonCompleted: 'Der Vergleich wurde erfolgreich abgeschlossen!',
+            viewSummaryStats: '✅ Siehe obige Zusammenfassungstabelle für Statistiken',
+            useExportDetailed: '✅ Verwenden Sie den Excel-Export-Button für detaillierte Ergebnisse',
+            allComparisonData: '✅ Alle Vergleichsdaten sind im Export verfügbar',
+            interactiveBrowsing: 'Spalten zeigen die detaillierte Vergleichstabelle für interaktives Browsen.',
+            exportExcelFullComparison: '📊 Nach Excel exportieren (Vollständiger Vergleich)',
+            largeFileModeTitle: 'Große Dateien Modus - Begrenzte Anzeige',
+            yourFilesContain: 'Ihre Dateien enthalten',
+            displayingFirstRows: 'Zeige erste',
+            differentRowsOut: 'verschiedene Zeilen von',
+            maximum: 'Maximum.',
+            fullComparisonCompleted: 'Vollständiger Vergleich erfolgreich abgeschlossen!',
+            viewSummaryTable: '✅ Siehe obige Zusammenfassungstabelle für vollständige Statistiken',
+            useExportButton: '✅ Verwenden Sie den Excel-Export-Button um ALLE Ergebnisse herunterzuladen',
+            exportContainsComplete: '✅ Export enthält den vollständigen Vergleich aller Zeilen',
+            performanceTip: '💡 Leistungstipp:',
+            filesWithFewer: 'Dateien mit weniger als',
+            rowsAndColumns: 'Zeilen und',
+            columnsWillShow: 'Spalten zeigen die vollständige detaillierte Vergleichstabelle.',
+            rows: 'Zeilen',
+            noRowsMatchFilters: 'Keine Zeilen entsprechen den aktuellen Filtern',
+            hideIdenticalRows: 'Identische Zeilen ausblenden',
+            hideRowsOnlyInFile1: 'Zeilen nur in Datei 1 ausblenden',
+            hideRowsOnlyInFile2: 'Zeilen nur in Datei 2 ausblenden',
+            hideRowsWithDifferences: 'Zeilen mit Unterschieden ausblenden',
+            highMemoryUsage: 'Hoher Speicherverbrauch',
+            browserUsing: 'Der Browser verwendet',
+            ofAvailableMemory: 'MB von',
+            availableMemory: 'MB verfügbarem Speicher.',
+            considerFilters: 'Erwägen Sie die Verwendung von Filtern, um die Anzahl der angezeigten Daten zu reduzieren.'
+        },
+        'ja': {
+            loadingFile: '📊 ファイルを読み込み中... お待ちください',
+            startingComparison: '🔄 比較を開始しています... お待ちください',
+            processingLargeFiles: '🔄 大きなファイルの処理中',
+            summaryMode: '- サマリーモード... お待ちください',
+            comparingFiles: '🔄 ファイルを比較中',
+            pleaseWait: '... お待ちください',
+            quickComparison: '🔄 クイック比較...',
+            differentRowsFound: '異なる行が見つかりました',
+            processingForExport: '🔄 エクスポート用の大きなファイルの処理中...',
+            complete: '% 完了',
+            noDataToDisplay: '表示するデータがありません',
+            initializing: '初期化中...',
+            analyzingData: 'データを分析中...',
+            quickMode: 'クイックモード:',
+            foundFirst: '最初の',
+            differentRowsForPreview: '異なる行をプレビュー用に見つけました。',
+            fileContains: 'ファイルには合計',
+            rowsTotal: '行が含まれています。',
+            fullComparisonExport: '"Excelにエクスポート"をクリックすると完全な比較が実行されます。',
+            largeFileMode: '大容量ファイルモード',
+            optimalPerformance: 'パフォーマンス最適化のため、詳細な行ごとの比較テーブルは非表示になっています。',
+            comparisonCompleted: '比較が正常に完了しました！',
+            viewSummaryStats: '✅ 統計については上記の概要表をご覧ください',
+            useExportDetailed: '✅ Excelエクスポートボタンを使用して詳細結果をダウンロード',
+            allComparisonData: '✅ すべての比較データがエクスポートで利用可能です',
+            interactiveBrowsing: '列の場合、詳細比較テーブルがインタラクティブに表示されます。',
+            savesTime: 'これにより、結果をすぐに表示し、エクスポート時に完全な分析のオプションを保持することで時間を節約します。',
+            performanceMode: 'パフォーマンスモード:',
+            displayingFirst: '最初の',
+            forBetterPerformance: '異なる行をより良いパフォーマンスのために表示しています。',
+            completeFileContains: '完全なファイルには',
+            exportExcelAllRows: 'Excelへのエクスポートにはすべての行が含まれます。',
+            exportExcelFullComparison: '📊 Excelにエクスポート（完全比較）',
+            largeFileModeTitle: '大容量ファイルモード - 限定表示',
+            yourFilesContain: 'あなたのファイルには',
+            displayingFirstRows: '最初の',
+            differentRowsOut: '個の異なる行を',
+            maximum: '個の最大値から表示しています。',
+            fullComparisonCompleted: '完全比較が正常に完了しました！',
+            viewSummaryTable: '✅ 完全な統計については上記の概要表をご覧ください',
+            useExportButton: '✅ Excelエクスポートボタンを使用してすべての結果をダウンロード',
+            exportContainsComplete: '✅ エクスポートにはすべての行の完全な比較が含まれています',
+            performanceTip: '💡 パフォーマンスのヒント:',
+            filesWithFewer: 'ファイル数が',
+            rowsAndColumns: '行未満で',
+            columnsWillShow: '列の場合、完全な詳細比較テーブルが表示されます。',
+            rows: '行が含まれています',
+            noRowsMatchFilters: '現在のフィルターに一致する行がありません',
+            hideIdenticalRows: '同じ行を非表示',
+            hideRowsOnlyInFile1: 'ファイル1のみの行を非表示',
+            hideRowsOnlyInFile2: 'ファイル2のみの行を非表示',
+            hideRowsWithDifferences: '差異がある行を非表示',
+            highMemoryUsage: 'メモリ使用量が高い',
+            browserUsing: 'ブラウザは',
+            ofAvailableMemory: 'MBの',
+            availableMemory: 'MB利用可能メモリを使用しています。',
+            considerFilters: 'フィルターを使用して表示データ量を減らすことを検討してください。'
+        },
+        'pt': {
+            loadingFile: '📊 Carregando arquivo... Aguarde',
+            startingComparison: '🔄 Iniciando comparação... Aguarde',
+            processingLargeFiles: '🔄 Processando arquivos grandes',
+            summaryMode: '- Modo resumo... Aguarde',
+            comparingFiles: '🔄 Comparando arquivos',
+            pleaseWait: '... Aguarde',
+            quickComparison: '🔄 Comparação rápida...',
+            differentRowsFound: 'linhas diferentes encontradas',
+            processingForExport: '🔄 Processando arquivos grandes para exportação...',
+            complete: '% completo',
+            noDataToDisplay: 'Nenhum dado para exibir',
+            initializing: 'Inicializando...',
+            analyzingData: 'Analisando dados...',
+            quickMode: 'Modo rápido:',
+            largeFileMode: 'Modo de Arquivos Grandes',
+            optimalPerformance: 'Para desempenho ideal, a tabela de comparação detalhada linha por linha está oculta.',
+            comparisonCompleted: 'A comparação foi concluída com sucesso!',
+            viewSummaryStats: '✅ Veja a tabela de resumo acima para estatísticas',
+            useExportDetailed: '✅ Use o botão Exportar para Excel para baixar resultados detalhados',
+            allComparisonData: '✅ Todos os dados de comparação estão disponíveis na exportação',
+            interactiveBrowsing: 'colunas mostrarão a tabela de comparação detalhada para navegação interativa.',
+            foundFirst: 'Encontradas as primeiras',
+            differentRowsForPreview: 'linhas diferentes para visualização.',
+            fileContains: 'O arquivo contém',
+            rowsTotal: 'linhas no total.',
+            fullComparisonExport: 'A comparação completa será realizada ao clicar em "Exportar para Excel".',
+            savesTime: 'Isso economiza tempo mostrando resultados imediatamente enquanto mantém a opção de análise completa na exportação.',
+            performanceMode: 'Modo de desempenho:',
+            displayingFirst: 'Exibindo as primeiras',
+            forBetterPerformance: 'linhas diferentes para melhor desempenho.',
+            completeFileContains: 'O arquivo completo contém',
+            exportExcelAllRows: 'Exportar para Excel incluirá TODAS as linhas.',
+            exportExcelFullComparison: '📊 Exportar para Excel (Comparação Completa)',
+            largeFileModeTitle: 'Modo de Arquivos Grandes - Exibição Limitada',
+            yourFilesContain: 'Seus arquivos contêm',
+            displayingFirstRows: 'Exibindo as primeiras',
+            differentRowsOut: 'linhas diferentes de',
+            maximum: 'máximo.',
+            fullComparisonCompleted: 'Comparação completa concluída com sucesso!',
+            viewSummaryTable: '✅ Veja a tabela de resumo acima para estatísticas completas',
+            useExportButton: '✅ Use o botão Exportar para Excel para baixar TODOS os resultados',
+            exportContainsComplete: '✅ A exportação contém a comparação completa de todas as linhas',
+            performanceTip: '💡 Dica de desempenho:',
+            filesWithFewer: 'Arquivos com menos de',
+            rowsAndColumns: 'linhas e',
+            columnsWillShow: 'colunas mostrarão a tabela de comparação detalhada completa.',
+            rows: 'linhas',
+            noRowsMatchFilters: 'Nenhuma linha corresponde aos filtros atuais',
+            hideIdenticalRows: 'Ocultar linhas idênticas',
+            hideRowsOnlyInFile1: 'Ocultar linhas apenas no Arquivo 1',
+            hideRowsOnlyInFile2: 'Ocultar linhas apenas no Arquivo 2',
+            hideRowsWithDifferences: 'Ocultar linhas com diferenças',
+            highMemoryUsage: 'Alto uso de memória',
+            browserUsing: 'O navegador está usando',
+            ofAvailableMemory: 'MB de',
+            availableMemory: 'MB de memória disponível.',
+            considerFilters: 'Considere usar filtros para reduzir a quantidade de dados exibidos.'
+        },
+        'zh': {
+            loadingFile: '📊 正在加载文件... 请稍候',
+            startingComparison: '🔄 开始比较... 请稍候',
+            processingLargeFiles: '🔄 正在处理大文件',
+            summaryMode: '- 汇总模式... 请稍候',
+            comparingFiles: '🔄 正在比较文件',
+            pleaseWait: '... 请稍候',
+            quickComparison: '🔄 快速比较...',
+            differentRowsFound: '找到不同行',
+            largeFileMode: '大文件模式',
+            optimalPerformance: '为了获得最佳性能，隐藏了详细的逐行比较表。',
+            comparisonCompleted: '比较已成功完成！',
+            viewSummaryStats: '✅ 查看上方摘要表获取统计信息',
+            useExportDetailed: '✅ 使用导出到Excel按钮下载详细结果',
+            allComparisonData: '✅ 所有比较数据都可在导出中获得',
+            interactiveBrowsing: '列将显示详细比较表供交互浏览。',
+            processingForExport: '🔄 正在处理大文件以供导出...',
+            complete: '% 完成',
+            noDataToDisplay: '没有数据可显示',
+            initializing: '正在初始化...',
+            analyzingData: '正在分析数据...',
+            quickMode: '快速模式：',
+            foundFirst: '找到前',
+            differentRowsForPreview: '个不同行进行预览。',
+            fileContains: '文件总共包含',
+            rowsTotal: '行。',
+            fullComparisonExport: '点击"导出到Excel"时将执行完整比较。',
+            savesTime: '这通过立即显示结果来节省时间，同时在导出时保留完整分析的选项。',
+            performanceMode: '性能模式：',
+            displayingFirst: '显示前',
+            forBetterPerformance: '个不同行以获得更好的性能。',
+            completeFileContains: '完整文件包含',
+            exportExcelAllRows: '导出到Excel将包含所有行。',
+            exportExcelFullComparison: '📊 导出到Excel（完整比较）',
+            largeFileModeTitle: '大文件模式 - 有限显示',
+            yourFilesContain: '您的文件包含',
+            displayingFirstRows: '显示前',
+            differentRowsOut: '个不同行，最大',
+            maximum: '行。',
+            fullComparisonCompleted: '完整比较成功完成！',
+            viewSummaryTable: '✅ 查看上方摘要表获取完整统计信息',
+            useExportButton: '✅ 使用导出到Excel按钮下载所有结果',
+            exportContainsComplete: '✅ 导出包含所有行的完整比较',
+            performanceTip: '💡 性能提示：',
+            filesWithFewer: '少于',
+            rowsAndColumns: '行和',
+            columnsWillShow: '列的文件将显示完整的详细比较表。',
+            largeFileMode: '大文件模式',
+            optimalPerformance: '为了获得最佳性能，隐藏了详细的逐行比较表。',
+            comparisonCompleted: '比较已成功完成！',
+            viewSummaryStats: '✅ 查看上方摘要表获取统计信息',
+            useExportDetailed: '✅ 使用导出到Excel按钮下载详细结果',
+            allComparisonData: '✅ 所有比较数据都可在导出中获得',
+            interactiveBrowsing: '列将显示详细比较表供交互浏览。',
+            rows: '行',
+            noRowsMatchFilters: '没有行与当前过滤器匹配',
+            hideIdenticalRows: '隐藏相同行',
+            hideRowsOnlyInFile1: '隐藏仅在文件1中的行',
+            hideRowsOnlyInFile2: '隐藏仅在文件2中的行',
+            hideRowsWithDifferences: '隐藏有差异的行',
+            highMemoryUsage: '内存使用量高',
+            browserUsing: '浏览器正在使用',
+            ofAvailableMemory: 'MB的',
+            availableMemory: 'MB可用内存。',
+            considerFilters: '考虑使用过滤器来减少显示的数据量。'
+        },
+        'ar': {
+            loadingFile: '📊 جاري تحميل الملف... يرجى الانتظار',
+            startingComparison: '🔄 بدء المقارنة... يرجى الانتظار',
+            processingLargeFiles: '🔄 معالجة الملفات الكبيرة',
+            summaryMode: '- وضع الملخص... يرجى الانتظار',
+            comparingFiles: '🔄 مقارنة الملفات',
+            pleaseWait: '... يرجى الانتظار',
+            quickComparison: '🔄 مقارنة سريعة...',
+            differentRowsFound: 'تم العثور على صفوف مختلفة',
+            processingForExport: '🔄 معالجة الملفات الكبيرة للتصدير...',
+            complete: '% مكتمل',
+            noDataToDisplay: 'لا توجد بيانات للعرض',
+            initializing: 'جاري التهيئة...',
+            analyzingData: 'جاري تحليل البيانات...',
+            quickMode: 'الوضع السريع:',
+            foundFirst: 'تم العثور على أول',
+            largeFileMode: 'وضع الملفات الكبيرة',
+            optimalPerformance: 'لتحقيق الأداء الأمثل، جدول المقارنة المفصل صف بصف مخفي.',
+            comparisonCompleted: 'تمت المقارنة بنجاح!',
+            viewSummaryStats: '✅ اعرض جدول الملخص أعلاه للإحصائيات',
+            useExportDetailed: '✅ استخدم زر التصدير إلى Excel لتنزيل النتائج المفصلة',
+            allComparisonData: '✅ جميع بيانات المقارنة متاحة في التصدير',
+            interactiveBrowsing: 'عمود ستظهر جدول المقارنة المفصل للتصفح التفاعلي.',
+            differentRowsForPreview: 'صفوف مختلفة للمعاينة.',
+            fileContains: 'يحتوي الملف على',
+            rowsTotal: 'صف إجمالي.',
+            fullComparisonExport: 'ستتم المقارنة الكاملة عند النقر على "تصدير إلى Excel".',
+            savesTime: 'هذا يوفر الوقت من خلال عرض النتائج فورًا مع الاحتفاظ بخيار التحليل الكامل عند التصدير.',
+            performanceMode: 'وضع الأداء:',
+            displayingFirst: 'عرض أول',
+            forBetterPerformance: 'صفوف مختلفة لأداء أفضل.',
+            completeFileContains: 'يحتوي الملف الكامل على',
+            exportExcelAllRows: 'سيتضمن التصدير إلى Excel جميع الصفوف.',
+            exportExcelFullComparison: '📊 تصدير إلى Excel (مقارنة كاملة)',
+            largeFileModeTitle: 'وضع الملفات الكبيرة - عرض محدود',
+            yourFilesContain: 'تحتوي ملفاتك على',
+            displayingFirstRows: 'عرض أول',
+            differentRowsOut: 'صف مختلف من',
+            maximum: 'كحد أقصى.',
+            fullComparisonCompleted: 'تمت المقارنة الكاملة بنجاح!',
+            viewSummaryTable: '✅ اعرض جدول الملخص أعلاه للإحصائيات الكاملة',
+            useExportButton: '✅ استخدم زر التصدير إلى Excel لتنزيل جميع النتائج',
+            exportContainsComplete: '✅ يحتوي التصدير على المقارنة الكاملة لجميع الصفوف',
+            performanceTip: '💡 نصيحة للأداء:',
+            filesWithFewer: 'الملفات التي تحتوي على أقل من',
+            rowsAndColumns: 'صف و',
+            columnsWillShow: 'عمود ستظهر جدول المقارنة المفصل الكامل.',
+            rows: 'صف',
+            noRowsMatchFilters: 'لا توجد صفوف تطابق المرشحات الحالية',
+            hideIdenticalRows: 'إخفاء الصفوف المتطابقة',
+            hideRowsOnlyInFile1: 'إخفاء الصفوف الموجودة في الملف 1 فقط',
+            hideRowsOnlyInFile2: 'إخفاء الصفوف الموجودة في الملف 2 فقط',
+            hideRowsWithDifferences: 'إخفاء الصفوف التي بها اختلافات',
+            highMemoryUsage: 'استخدام ذاكرة عالي',
+            browserUsing: 'المتصفح يستخدم',
+            ofAvailableMemory: 'ميجابايت من',
+            availableMemory: 'ميجابايت من الذاكرة المتاحة.',
+            considerFilters: 'فكر في استخدام المرشحات لتقليل كمية البيانات المعروضة.'
+        },
+        'en': {
+            loadingFile: '📊 Loading file... Please wait',
+            startingComparison: '🔄 Starting comparison... Please wait',
+            processingLargeFiles: '🔄 Processing large files',
+            summaryMode: '- Summary mode... Please wait',
+            comparingFiles: '🔄 Comparing files',
+            pleaseWait: '... Please wait',
+            quickComparison: '🔄 Quick comparison...',
+            differentRowsFound: 'different rows found',
+            processingForExport: '🔄 Processing large files for export...',
+            complete: '% complete',
+            noDataToDisplay: 'No data to display',
+            initializing: 'Initializing...',
+            analyzingData: 'Analyzing data...',
+            largeFileMode: 'Large File Mode',
+            optimalPerformance: 'For optimal performance, the detailed row-by-row comparison table is hidden.',
+            comparisonCompleted: 'The comparison has been completed successfully!',
+            viewSummaryStats: '✅ View the summary table above for statistics',
+            useExportDetailed: '✅ Use the Export to Excel button to download detailed results',
+            allComparisonData: '✅ All comparison data is available in the export',
+            interactiveBrowsing: 'columns will show the detailed comparison table for interactive browsing.',
+            quickMode: 'Quick Mode:',
+            foundFirst: 'Found first',
+            differentRowsForPreview: 'different rows for preview.',
+            fileContains: 'File contains',
+            rowsTotal: 'rows total.',
+            fullComparisonExport: 'Full comparison will be performed when you click "Export to Excel".',
+            savesTime: 'This saves time by showing results immediately while keeping the option for complete analysis on export.',
+            performanceMode: 'Performance Mode:',
+            displayingFirst: 'Displaying first',
+            forBetterPerformance: 'different rows for better performance.',
+            completeFileContains: 'Complete file contains',
+            exportExcelAllRows: 'Export to Excel will include ALL rows.',
+            exportExcelFullComparison: '📊 Export to Excel (Full Comparison)',
+            largeFileModeTitle: 'Large File Mode - Limited Display',
+            yourFilesContain: 'Your files contain',
+            displayingFirstRows: 'Displaying first',
+            differentRowsOut: 'different rows out of',
+            maximum: 'maximum.',
+            fullComparisonCompleted: 'Full comparison completed successfully!',
+            viewSummaryTable: '✅ View the summary table above for complete statistics',
+            useExportButton: '✅ Use the Export to Excel button to download ALL results',
+            exportContainsComplete: '✅ Export contains the complete comparison of all rows',
+            performanceTip: '💡 Performance Tip:',
+            filesWithFewer: 'Files with fewer than',
+            rowsAndColumns: 'rows and',
+            columnsWillShow: 'columns will show the complete detailed comparison table.',
+            rows: 'rows',
+            noRowsMatchFilters: 'No rows match the current filters',
+            hideIdenticalRows: 'Hide identical rows',
+            hideRowsOnlyInFile1: 'Hide rows only in File 1',
+            hideRowsOnlyInFile2: 'Hide rows only in File 2',
+            hideRowsWithDifferences: 'Hide rows with differences',
+            highMemoryUsage: 'High Memory Usage',
+            browserUsing: 'The browser is using',
+            ofAvailableMemory: 'MB of',
+            availableMemory: 'MB available memory.',
+            considerFilters: 'Consider using filters to reduce the amount of data displayed.'
         }
     };
     
@@ -1638,7 +2193,8 @@ function handleFile(file, num) {
     
     
     const tableElement = document.getElementById(num === 1 ? 'table1' : 'table2');
-    tableElement.innerHTML = '<div style="text-align: center; padding: 20px; font-size: 16px;">📊 Loading file... Please wait</div>';
+    const progressMessages = getProgressMessages();
+    tableElement.innerHTML = `<div style="text-align: center; padding: 20px; font-size: 16px;">${progressMessages.loadingFile}</div>`;
     
     
     if (num === 1) {
@@ -2297,8 +2853,9 @@ function compareTables(useTolerance = false) {
     let resultDiv = document.getElementById('result');
     let summaryDiv = document.getElementById('summary');
     
-    resultDiv.innerHTML = '<div id="comparison-loading" style="text-align: center; padding: 20px; font-size: 16px;">🔄 Starting comparison... Please wait</div>';
-    summaryDiv.innerHTML = '<div style="text-align: center; padding: 10px;">Initializing...</div>';
+    const progressMessages = getProgressMessages();
+    resultDiv.innerHTML = `<div id="comparison-loading" style="text-align: center; padding: 20px; font-size: 16px;">${progressMessages.startingComparison}</div>`;
+    summaryDiv.innerHTML = `<div style="text-align: center; padding: 10px;">${progressMessages.initializing}</div>`;
     
     if (!data1.length || !data2.length) {
         document.getElementById('result').innerText = 'Please, load both files.';
@@ -2362,12 +2919,13 @@ function compareTables(useTolerance = false) {
     
     if (totalRows > 1000) {
         const fileInfo = `${data1.length.toLocaleString()} vs ${data2.length.toLocaleString()} rows`;
+        const progressMessages = getProgressMessages();
         const loadingMessage = totalRows > DETAILED_TABLE_LIMIT ? 
-            `🔄 Processing large files (${fileInfo}) - Summary mode... Please wait` :
-            `🔄 Comparing files (${fileInfo})... Please wait`;
+            `${progressMessages.processingLargeFiles} (${fileInfo}) ${progressMessages.summaryMode}` :
+            `${progressMessages.comparingFiles} (${fileInfo})${progressMessages.pleaseWait}`;
         
         document.getElementById('result').innerHTML = `<div style="text-align: center; padding: 20px; font-size: 16px;">${loadingMessage}</div>`;
-        document.getElementById('summary').innerHTML = '<div style="text-align: center; padding: 10px;">Analyzing data...</div>';
+        document.getElementById('summary').innerHTML = `<div style="text-align: center; padding: 10px;">${progressMessages.analyzingData}</div>`;
     }
     
     
@@ -2663,15 +3221,16 @@ async function performComparison() {
     
     
     const totalRowsForCheck = Math.max(body1.length, body2.length);
-    const isLargeFile = totalRowsForCheck > DETAILED_TABLE_LIMIT;
+    const totalColsForCheck = finalAllCols;
+    const isLargeFile = totalRowsForCheck > DETAILED_TABLE_LIMIT || totalColsForCheck > DETAILED_COLS_LIMIT;
     
     if (isLargeFile) {
-        
-        performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols, true, tableHeaders);
+        // For large files, do quick comparison first (only first 100 different rows)
+        performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols, true, tableHeaders, true);
         return;
     } else {
-        
-        performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols, false, tableHeaders);
+        // For smaller files, render detailed table
+        performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols, false, tableHeaders, false);
     }
 }
 
@@ -3014,7 +3573,7 @@ function smartDetectKeyColumns(headers, data) {
 }
 
 
-function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols, isLargeFile, tableHeaders) {
+function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols, isLargeFile, tableHeaders, quickModeOnly = false) {
     
     
     const combinedData = [finalHeaders, ...body1, ...body2];
@@ -3023,6 +3582,9 @@ function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols,
     
     let used2 = new Array(body2.length).fill(false);
     let pairs = [];
+    let limitedPairsForDisplay = []; // For large files, limit display to first 100 different rows
+    let differentRowsCount = 0;
+    const MAX_DISPLAY_DIFFERENT_ROWS = quickModeOnly ? 100 : 100; // Limit to 100 different rows
     
     function countMatches(rowA, rowB) {
         let matches = 0;
@@ -3107,47 +3669,136 @@ function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols,
             }
             
             if (bestScore >= minKeyMatches || bestScore >= minTotalMatches) {
-                pairs.push({row1: body1[i], row2: body2[bestIdx]});
+                const pair = {row1: body1[i], row2: body2[bestIdx]};
+                pairs.push(pair);
                 used2[bestIdx] = true;
+                
+                // For large files, limit display pairs to first 100 different rows
+                if (isLargeFile) {
+                    // Check if rows are different
+                    let isDifferent = false;
+                    for (let c = 0; c < finalAllCols; c++) {
+                        const v1 = body1[i][c] !== undefined ? body1[i][c].toString().toUpperCase() : '';
+                        const v2 = body2[bestIdx][c] !== undefined ? body2[bestIdx][c].toString().toUpperCase() : '';
+                        if (v1 !== v2) {
+                            isDifferent = true;
+                            break;
+                        }
+                    }
+                    
+                    if (isDifferent && differentRowsCount < MAX_DISPLAY_DIFFERENT_ROWS) {
+                        limitedPairsForDisplay.push(pair);
+                        differentRowsCount++;
+                    } else if (!isDifferent) {
+                        limitedPairsForDisplay.push(pair);
+                    }
+                    
+                    if (quickModeOnly && differentRowsCount >= MAX_DISPLAY_DIFFERENT_ROWS) {
+                        break;
+                    }
+                } else {
+                    limitedPairsForDisplay.push(pair);
+                }
             } else {
-                pairs.push({row1: body1[i], row2: null});
+                const pair = {row1: body1[i], row2: null};
+                pairs.push(pair);
+                
+                if (isLargeFile) {
+                    if (differentRowsCount < MAX_DISPLAY_DIFFERENT_ROWS) {
+                        limitedPairsForDisplay.push(pair);
+                        differentRowsCount++;
+                    }
+                    
+                    if (quickModeOnly && differentRowsCount >= MAX_DISPLAY_DIFFERENT_ROWS) {
+                        break;
+                    }
+                } else {
+                    limitedPairsForDisplay.push(pair);
+                }
             }
         }
         
+        
+        if (quickModeOnly && differentRowsCount >= MAX_DISPLAY_DIFFERENT_ROWS) {
+            finalizeBatchProcessing();
+            return;
+        }
         
         if (endIndex < body1.length) {
             
             if (body1.length > 1000) {
                 const progress = Math.round((endIndex / body1.length) * 100);
+                const progressMessages = getProgressMessages();
                 const progressMessage = isLargeFile ? 
-                    `🔄 Processing large files for export... ${progress}% complete` :
-                    `🔄 Comparing files... ${progress}% complete`;
+                    (quickModeOnly ? `${progressMessages.quickComparison} ${progress}% (${differentRowsCount}/${MAX_DISPLAY_DIFFERENT_ROWS} ${progressMessages.differentRowsFound})` :
+                     `${progressMessages.processingForExport} ${progress}${progressMessages.complete}`) :
+                    `${progressMessages.comparingFiles} ${progress}${progressMessages.complete}`;
                 document.getElementById('result').innerHTML = `<div style="text-align: center; padding: 20px; font-size: 16px;">${progressMessage}</div>`;
             }
             setTimeout(() => processBatch(endIndex, batchSize), 10);
         } else {
-            
+            finalizeBatchProcessing();
+        }
+    }
+    
+    function finalizeBatchProcessing() {
+        const resultDiv = document.getElementById('result');
+        if (resultDiv) {
+            resultDiv.innerHTML = '';
+            resultDiv.style.display = 'none';
+        }
+        
+        if (!quickModeOnly || differentRowsCount < MAX_DISPLAY_DIFFERENT_ROWS) {
             for (let j = 0; j < body2.length; j++) {
                 if (!used2[j]) {
-                    pairs.push({row1: null, row2: body2[j]});
+                    const pair = {row1: null, row2: body2[j]};
+                    pairs.push(pair);
+                    
+                    if (isLargeFile) {
+                        if (differentRowsCount < MAX_DISPLAY_DIFFERENT_ROWS) {
+                            limitedPairsForDisplay.push(pair);
+                            differentRowsCount++;
+                            
+                            if (quickModeOnly && differentRowsCount >= MAX_DISPLAY_DIFFERENT_ROWS) {
+                                break;
+                            }
+                        }
+                    } else {
+                        limitedPairsForDisplay.push(pair);
+                    }
                 }
             }
+        }
             
-            
-            currentPairs = pairs;
-            currentFinalHeaders = finalHeaders;
-            currentFinalAllCols = finalAllCols;
-            
-            
+        currentPairs = quickModeOnly ? limitedPairsForDisplay : pairs;
+        currentFinalHeaders = finalHeaders;
+        currentFinalAllCols = finalAllCols;
+        
+        if (!quickModeOnly) {
             updateSummaryStatistics(tableHeaders, body1.length, body2.length);
-            
-            if (isLargeFile) {
-                
-                showLargeFileMessage(Math.max(body1.length, body2.length));
-            } else {
+        }
+        
+        if (isLargeFile) {
+            if (quickModeOnly) {
+                window.displayPairs = limitedPairsForDisplay;
+                window.isQuickMode = true;
                 
                 renderComparisonTable();
+                
+                showQuickModeInfo(differentRowsCount, MAX_DISPLAY_DIFFERENT_ROWS, Math.max(body1.length, body2.length));
+            } else {
+                const originalPairs = currentPairs;
+                currentPairs = limitedPairsForDisplay;
+                
+                window.fullComparisonPairs = originalPairs; // Store for export
+                window.displayPairs = limitedPairsForDisplay; // Store for display
+                
+                renderComparisonTable();
+                
+                showLimitedDisplayInfo(differentRowsCount, MAX_DISPLAY_DIFFERENT_ROWS, Math.max(body1.length, body2.length));
             }
+        } else {
+            renderComparisonTable();
         }
     }
     
@@ -3252,6 +3903,13 @@ function compareValuesWithTolerance(v1, v2) {
 
 
 function renderComparisonTable() {
+    // Clear any remaining progress messages
+    const resultDiv = document.getElementById('result');
+    if (resultDiv && (resultDiv.innerHTML.includes('Quick comparison') || resultDiv.innerHTML.includes('Processing') || resultDiv.innerHTML.includes('Comparing'))) {
+        resultDiv.innerHTML = '';
+        resultDiv.style.display = 'none';
+    }
+    
     // Skip rendering if fast comparator is active to avoid duplication
     if (window.MaxPilotDuckDB && window.MaxPilotDuckDB.fastComparator && window.MaxPilotDuckDB.fastComparator.initialized) {
         return;
@@ -3263,9 +3921,10 @@ function renderComparisonTable() {
     }
     
     if (!currentPairs || currentPairs.length === 0) {
+        const progressMessages = getProgressMessages();
         document.querySelector('.diff-table-header thead').innerHTML = '';
         document.querySelector('.filter-row').innerHTML = '';
-        document.querySelector('.diff-table-body tbody').innerHTML = '<tr><td colspan="100" style="text-align:center; padding:20px;">No data to display</td></tr>';
+        document.querySelector('.diff-table-body tbody').innerHTML = `<tr><td colspan="100" style="text-align:center; padding:20px;">${progressMessages.noDataToDisplay}</td></tr>`;
         return;
     }
     
@@ -3347,13 +4006,14 @@ function renderComparisonTable() {
     
     
     if (visibleRowCount === 0) {
+        const progressMessages = getProgressMessages();
         const activeFilters = [];
-        if (hideSame) activeFilters.push('Hide identical rows');
-        if (hideNewRows1) activeFilters.push('Hide rows only in File 1');
-        if (hideNewRows2) activeFilters.push('Hide rows only in File 2');
-        if (hideDiffRows) activeFilters.push('Hide rows with differences');
+        if (hideSame) activeFilters.push(progressMessages.hideIdenticalRows);
+        if (hideNewRows1) activeFilters.push(progressMessages.hideRowsOnlyInFile1);
+        if (hideNewRows2) activeFilters.push(progressMessages.hideRowsOnlyInFile2);
+        if (hideDiffRows) activeFilters.push(progressMessages.hideRowsWithDifferences);
         
-        let message = 'No rows match the current filters';
+        let message = progressMessages.noRowsMatchFilters;
         if (activeFilters.length > 0) {
             message += ': ' + activeFilters.join(', ');
         }
@@ -3753,11 +4413,12 @@ function getMemoryUsage() {
 function showMemoryWarning() {
     const memory = getMemoryUsage();
     if (memory && memory.used > memory.limit * 0.8) {
+        const progressMessages = getProgressMessages();
         const warningDiv = document.createElement('div');
         warningDiv.innerHTML = `
             <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; margin: 10px 0; border-radius: 5px;">
-                <strong>⚠️ High Memory Usage:</strong> The browser is using ${memory.used}MB of ${memory.limit}MB available memory.
-                <br><small>Consider using filters to reduce the amount of data displayed.</small>
+                <strong>⚠️ ${progressMessages.highMemoryUsage}:</strong> ${progressMessages.browserUsing} ${memory.used}${progressMessages.ofAvailableMemory} ${memory.limit}${progressMessages.availableMemory}
+                <br><small>${progressMessages.considerFilters}</small>
             </div>
         `;
         document.getElementById('result').appendChild(warningDiv);
@@ -3972,24 +4633,167 @@ function forceTableWidthSync() {
 }
 
 
-function showLargeFileMessage(totalRows) {
+function showQuickModeInfo(displayedDifferentRows, maxDisplayRows, totalRows) {
+    // Clear any remaining progress messages
+    const resultDiv = document.getElementById('result');
+    if (resultDiv) {
+        resultDiv.innerHTML = '';
+        resultDiv.style.display = 'none';
+    }
+    
+    // Add info message above the table
+    let infoDiv = document.getElementById('quick-mode-info');
+    if (infoDiv) {
+        infoDiv.remove();
+    }
+    
+    infoDiv = document.createElement('div');
+    infoDiv.id = 'quick-mode-info';
+    infoDiv.style.cssText = 'background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 12px; margin: 15px 0; border-radius: 6px; font-size: 14px;';
+    
+    const progressMessages = getProgressMessages();
+    infoDiv.innerHTML = `
+        <strong>⚡ ${progressMessages.quickMode}</strong> ${progressMessages.foundFirst} <strong>${displayedDifferentRows.toLocaleString()}</strong> ${progressMessages.differentRowsForPreview} 
+        ${progressMessages.fileContains} <strong>${totalRows.toLocaleString()}</strong> ${progressMessages.rowsTotal} 
+        <br><strong>📊 ${progressMessages.fullComparisonExport}</strong>
+        <br>${progressMessages.savesTime}
+    `;
+    
+    const diffTable = document.getElementById('diffTable');
+    if (diffTable && diffTable.firstChild) {
+        diffTable.insertBefore(infoDiv, diffTable.firstChild);
+    }
+    
+    const exportBtn = document.getElementById('exportExcelBtn');
+    const buttonsContainer = document.querySelector('.buttons-container');
+    const exportButtonHalf = exportBtn ? exportBtn.closest('.button-half') : null;
+    
+    if (exportBtn && buttonsContainer) {
+        exportBtn.style.display = 'inline-block';
+        exportBtn.style.backgroundColor = '#ffc107';
+        exportBtn.style.color = '#212529';
+        exportBtn.style.fontWeight = 'bold';
+        exportBtn.innerHTML = progressMessages.exportExcelFullComparison;
+        
+        if (exportButtonHalf) {
+            exportButtonHalf.classList.remove('export-hidden');
+        }
+        buttonsContainer.classList.remove('export-hidden');
+    }
+}
+
+function showLimitedDisplayInfo(displayedDifferentRows, maxDisplayRows, totalRows) {
+    const resultDiv = document.getElementById('result');
+    if (resultDiv) {
+        resultDiv.innerHTML = '';
+        resultDiv.style.display = 'none';
+    }
+    
+    let infoDiv = document.getElementById('limited-display-info');
+    if (infoDiv) {
+        infoDiv.remove();
+    }
+    
+    infoDiv = document.createElement('div');
+    infoDiv.id = 'limited-display-info';
+    infoDiv.style.cssText = 'background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 12px; margin: 15px 0; border-radius: 6px; font-size: 14px;';
+    
+    const progressMessages = getProgressMessages();
+    infoDiv.innerHTML = `
+        <strong>⚡ ${progressMessages.performanceMode}</strong> ${progressMessages.displayingFirst} <strong>${displayedDifferentRows.toLocaleString()}</strong> ${progressMessages.forBetterPerformance} 
+        ${progressMessages.completeFileContains} <strong>${totalRows.toLocaleString()}</strong> ${progressMessages.rows}. 
+        <strong>${progressMessages.exportExcelAllRows}</strong>
+    `;
+    
+    const diffTable = document.getElementById('diffTable');
+    if (diffTable && diffTable.firstChild) {
+        diffTable.insertBefore(infoDiv, diffTable.firstChild);
+    }
+    
+    const exportBtn = document.getElementById('exportExcelBtn');
+    const buttonsContainer = document.querySelector('.buttons-container');
+    const exportButtonHalf = exportBtn ? exportBtn.closest('.button-half') : null;
+    
+    if (exportBtn && buttonsContainer) {
+        exportBtn.style.display = 'inline-block';
+        exportBtn.style.backgroundColor = '#28a745';
+        exportBtn.style.fontWeight = 'bold';
+        
+        if (exportButtonHalf) {
+            exportButtonHalf.classList.remove('export-hidden');
+        }
+        buttonsContainer.classList.remove('export-hidden');
+    }
+}
+
+function showLargeFileMessageWithLimit(totalRows, displayedDifferentRows, maxDisplayRows) {
+    const progressMessages = getProgressMessages();
+    
     document.getElementById('diffTable').innerHTML = `
         <div style="text-align: center; padding: 40px; background-color: #e7f3ff; border: 1px solid #bee5eb; border-radius: 8px; margin: 20px 0;">
             <div style="font-size: 24px; margin-bottom: 16px;">📊</div>
-            <div style="font-size: 18px; font-weight: 600; color: #0c5460; margin-bottom: 10px;">Large File Mode</div>
+            <div style="font-size: 18px; font-weight: 600; color: #0c5460; margin-bottom: 10px;">${progressMessages.largeFileModeTitle}</div>
             <div style="color: #0c5460; margin-bottom: 15px; line-height: 1.5;">
-                Your files contain <strong>${totalRows.toLocaleString()}</strong> rows.<br>
-                For optimal performance, the detailed row-by-row comparison table is hidden.<br>
-                <strong>The comparison has been completed successfully!</strong>
+                ${progressMessages.yourFilesContain} <strong>${totalRows.toLocaleString()}</strong> ${progressMessages.rows}.<br>
+                ${progressMessages.displayingFirstRows} <strong>${displayedDifferentRows.toLocaleString()}</strong> ${progressMessages.differentRowsOut} <strong>${maxDisplayRows.toLocaleString()}</strong> ${progressMessages.maximum}<br>
+                <strong>${progressMessages.fullComparisonCompleted}</strong>
             </div>
             <div style="color: #0c5460; font-size: 14px; margin-bottom: 20px;">
-                ✅ View the summary table above for statistics<br>
-                ✅ Use the Export to Excel button to download detailed results<br>
-                ✅ All comparison data is available in the export
+                ${progressMessages.viewSummaryTable}<br>
+                ${progressMessages.useExportButton}<br>
+                ${progressMessages.exportContainsComplete}
             </div>
             <div style="background-color: #d1ecf1; padding: 15px; border-radius: 6px; margin-top: 15px;">
-                <strong>💡 Performance Tip:</strong> Files with fewer than ${DETAILED_TABLE_LIMIT.toLocaleString()} rows 
-                will show the detailed comparison table for interactive browsing.
+                <strong>${progressMessages.performanceTip}</strong> ${progressMessages.filesWithFewer} ${DETAILED_TABLE_LIMIT.toLocaleString()} ${progressMessages.rowsAndColumns} ${DETAILED_COLS_LIMIT} ${progressMessages.columnsWillShow}
+            </div>
+        </div>
+    `;
+    
+    
+    const filterControls = document.querySelector('.filter-controls');
+    if (filterControls) {
+        filterControls.style.display = 'none';
+    }
+    
+    
+    const exportBtn = document.getElementById('exportExcelBtn');
+    const buttonsContainer = document.querySelector('.buttons-container');
+    const exportButtonHalf = exportBtn ? exportBtn.closest('.button-half') : null;
+    
+    if (exportBtn && buttonsContainer) {
+        exportBtn.style.display = 'inline-block';
+        exportBtn.style.fontSize = '16px';
+        exportBtn.style.padding = '12px 24px';
+        exportBtn.style.backgroundColor = '#28a745';
+        exportBtn.style.fontWeight = 'bold';
+        
+        
+        if (exportButtonHalf) {
+            exportButtonHalf.classList.remove('export-hidden');
+        }
+        buttonsContainer.classList.remove('export-hidden');
+    }
+}
+
+function showLargeFileMessage(totalRows) {
+    const progressMessages = getProgressMessages();
+    
+    document.getElementById('diffTable').innerHTML = `
+        <div style="text-align: center; padding: 40px; background-color: #e7f3ff; border: 1px solid #bee5eb; border-radius: 8px; margin: 20px 0;">
+            <div style="font-size: 24px; margin-bottom: 16px;">📊</div>
+            <div style="font-size: 18px; font-weight: 600; color: #0c5460; margin-bottom: 10px;">${progressMessages.largeFileMode}</div>
+            <div style="color: #0c5460; margin-bottom: 15px; line-height: 1.5;">
+                ${progressMessages.yourFilesContain} <strong>${totalRows.toLocaleString()}</strong> ${progressMessages.rows}.<br>
+                ${progressMessages.optimalPerformance}<br>
+                <strong>${progressMessages.comparisonCompleted}</strong>
+            </div>
+            <div style="color: #0c5460; font-size: 14px; margin-bottom: 20px;">
+                ${progressMessages.viewSummaryStats}<br>
+                ${progressMessages.useExportDetailed}<br>
+                ${progressMessages.allComparisonData}
+            </div>
+            <div style="background-color: #d1ecf1; padding: 15px; border-radius: 6px; margin-top: 15px;">
+                <strong>${progressMessages.performanceTip}</strong> ${progressMessages.filesWithFewer} ${DETAILED_TABLE_LIMIT.toLocaleString()} ${progressMessages.rowsAndColumns} ${DETAILED_COLS_LIMIT} ${progressMessages.interactiveBrowsing}
             </div>
         </div>
     `;
