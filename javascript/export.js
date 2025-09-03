@@ -4,8 +4,42 @@ async function exportToExcel() {
         return;
     }
     
+    // Check if we need to perform full comparison first
+    if (window.isQuickMode) {
+        console.log('🔄 Quick mode detected - performing full comparison for export');
+        
+        const exportBtn = document.getElementById('exportExcelBtn');
+        const originalText = exportBtn ? exportBtn.innerHTML : '';
+        
+        if (exportBtn) {
+            exportBtn.innerHTML = '⚡ Performing full comparison...';
+            exportBtn.disabled = true;
+        }
+        
+        try {
+            // Perform full comparison
+            await performFullComparisonForExport();
+        } catch (error) {
+            console.error('Full comparison failed:', error);
+            alert('Error performing full comparison: ' + error.message);
+            if (exportBtn) {
+                exportBtn.innerHTML = originalText;
+                exportBtn.disabled = false;
+            }
+            return;
+        }
+        
+        // Reset quick mode flag
+        window.isQuickMode = false;
+        
+        if (exportBtn) {
+            exportBtn.innerHTML = '📊 Exporting to Excel...';
+        }
+    }
+    
     console.log('📊 Export to Excel started', {
         currentPairsLength: currentPairs.length,
+        fullComparisonPairsLength: window.fullComparisonPairs ? window.fullComparisonPairs.length : 0,
         hasFastResult: !!(window.currentFastResult),
         hasFastComparator: !!(window.MaxPilotDuckDB && window.MaxPilotDuckDB.prepareDataForExportFast),
         fastComparatorMode: window.MaxPilotDuckDB?.fastComparator?.mode
@@ -22,8 +56,8 @@ async function exportToExcel() {
             console.log('⚡ Using fast export engine');
             await exportWithFastEngine();
         } else {
-            console.log('🔄 Using standard export method');
-            // Fallback to old method
+            console.log('🔄 Using standard export method - will use full data if available');
+            // Fallback to old method - will use full comparison data if available
             const exportData = prepareDataForExport();
             const htmlContent = await createStyledHTMLTable(exportData);
             downloadExcelFromHTML(htmlContent);
@@ -386,7 +420,11 @@ function prepareDataFromRawData() {
     data.push(headers); colWidths.push({ wch: 20 }); for (let c = 0; c < currentFinalAllCols; c++) colWidths.push({ wch: 15 });
     headers.forEach((_, col) => { const addr = XLSX.utils.encode_cell({ r:0, c:col }); formatting[addr] = { fill:{ fgColor:{ rgb:'f8f9fa'}}, font:{ bold:true, color:{rgb:'212529'}}, border:{ top:{style:'thin',color:{rgb:'D4D4D4'}}, bottom:{style:'thin',color:{rgb:'D4D4D4'}}, left:{style:'thin',color:{rgb:'D4D4D4'}}, right:{style:'thin',color:{rgb:'D4D4D4'}} } }; });
     let rowIndex = 1;
-    currentPairs.forEach(pair => {
+    
+    // Use full comparison data for export if available, otherwise use currentPairs
+    const pairsForExport = window.fullComparisonPairs || currentPairs;
+    
+    pairsForExport.forEach(pair => {
         const row1 = pair.row1, row2 = pair.row2;
         const row1Upper = row1 ? row1.map(v => v !== undefined ? v.toString().toUpperCase() : '') : null;
         const row2Upper = row2 ? row2.map(v => v !== undefined ? v.toString().toUpperCase() : '') : null;
@@ -498,3 +536,132 @@ function showExportSuccess() {
 }
 
 function setColumnWidths(ws, colWidths) { ws['!cols'] = colWidths; }
+
+async function performFullComparisonForExport() {
+    return new Promise((resolve, reject) => {
+        try {
+            // Get the original data that was used for quick comparison
+            const body1 = window.originalBody1 || [];
+            const body2 = window.originalBody2 || [];
+            const finalHeaders = currentFinalHeaders || [];
+            const finalAllCols = currentFinalAllCols || 0;
+            
+            if (!body1.length || !body2.length) {
+                reject(new Error('Original comparison data not available'));
+                return;
+            }
+            
+            // Clear quick mode flag during processing
+            const quickModeInfoDiv = document.getElementById('quick-mode-info');
+            if (quickModeInfoDiv) {
+                quickModeInfoDiv.innerHTML = `
+                    <strong>⚡ Full Comparison in Progress:</strong> Processing all <strong>${Math.max(body1.length, body2.length).toLocaleString()}</strong> rows for complete analysis...
+                    <br><div style="margin-top: 5px; background-color: #e9ecef; height: 4px; border-radius: 2px;"><div id="full-comparison-progress" style="background-color: #28a745; height: 100%; width: 0%; border-radius: 2px; transition: width 0.3s;"></div></div>
+                `;
+            }
+            
+            // Perform full comparison without quickModeOnly flag
+            performFuzzyMatchingForExportInternal(body1, body2, finalHeaders, finalAllCols, true, {}, false, (fullPairs) => {
+                // Store full comparison results
+                window.fullComparisonPairs = fullPairs;
+                currentPairs = fullPairs; // Update current pairs for export
+                
+                // Update the info message
+                if (quickModeInfoDiv) {
+                    quickModeInfoDiv.innerHTML = `
+                        <strong>✅ Full Comparison Complete:</strong> Analyzed all <strong>${Math.max(body1.length, body2.length).toLocaleString()}</strong> rows. 
+                        Ready for complete Excel export with all comparison data.
+                    `;
+                }
+                
+                resolve();
+            });
+            
+        } catch (error) {
+            reject(error);
+        }
+    });
+}
+
+// Internal version of the comparison function for export use
+function performFuzzyMatchingForExportInternal(body1, body2, finalHeaders, finalAllCols, isLargeFile, tableHeaders, quickModeOnly, callback) {
+    // Store original data for later use
+    window.originalBody1 = body1;
+    window.originalBody2 = body2;
+    
+    const combinedData = [finalHeaders, ...body1, ...body2];
+    const keyColumnIndexes = smartDetectKeyColumns ? smartDetectKeyColumns(finalHeaders, combinedData) : [];
+    
+    let used2 = new Array(body2.length).fill(false);
+    let pairs = [];
+    let processedRows = 0;
+    
+    function countMatches(rowA, rowB) {
+        let matches = 0;
+        let keyMatches = 0;
+        
+        for (let i = 0; i < finalAllCols; i++) {
+            let valueA = (rowA[i] || '').toString();
+            let valueB = (rowB[i] || '').toString();
+            
+            if (valueA.toUpperCase() === valueB.toUpperCase()) {
+                matches++;
+                if (keyColumnIndexes.includes(i)) {
+                    keyMatches++;
+                }
+            }
+        }
+        
+        return (keyMatches * 3) + (matches - keyMatches);
+    }
+    
+    function processBatchInternal(startIndex, batchSize) {
+        const endIndex = Math.min(startIndex + batchSize, body1.length);
+        
+        for (let i = startIndex; i < endIndex; i++) {
+            let bestIdx = -1, bestScore = -1;
+            for (let j = 0; j < body2.length; j++) {
+                if (used2[j]) continue;
+                let score = countMatches(body1[i], body2[j]);
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestIdx = j;
+                }
+            }
+            
+            const minTotalMatches = Math.ceil(finalAllCols * 0.5);
+            
+            if (bestScore >= minTotalMatches) {
+                pairs.push({row1: body1[i], row2: body2[bestIdx]});
+                used2[bestIdx] = true;
+            } else {
+                pairs.push({row1: body1[i], row2: null});
+            }
+            
+            processedRows++;
+        }
+        
+        // Update progress
+        const progress = Math.round((endIndex / body1.length) * 100);
+        const progressBar = document.getElementById('full-comparison-progress');
+        if (progressBar) {
+            progressBar.style.width = progress + '%';
+        }
+        
+        if (endIndex < body1.length) {
+            setTimeout(() => processBatchInternal(endIndex, batchSize), 10);
+        } else {
+            // Add remaining rows from body2
+            for (let j = 0; j < body2.length; j++) {
+                if (!used2[j]) {
+                    pairs.push({row1: null, row2: body2[j]});
+                }
+            }
+            
+            callback(pairs);
+        }
+    }
+    
+    const batchSize = body1.length > 5000 ? 100 : body1.length > 1000 ? 250 : 1000;
+    processBatchInternal(0, batchSize);
+}
