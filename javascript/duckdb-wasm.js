@@ -1,4 +1,114 @@
 if (typeof window.MaxPilotDuckDB === 'undefined') {
+
+// Функции для отображения прогресса
+let activeProgressIntervals = []; // Для отслеживания активных интервалов
+let progressState = {
+    totalRows: 0,
+    processedRows: 0,
+    currentStage: '',
+    stageProgress: 0
+};
+
+function createProgressIndicator(type = 'normal') {
+    const isLarge = type === 'large';
+    return `
+        <div style="text-align: center; padding: 20px; font-family: Arial, sans-serif;">
+            <div style="font-size: 16px; color: #333; margin-bottom: 15px;">
+                ⚡ ${isLarge ? 'Processing large dataset' : 'Fast comparison mode'}
+            </div>
+            <div style="width: 100%; max-width: 400px; margin: 0 auto; background: #f0f0f0; border-radius: 10px; padding: 3px;">
+                <div id="progress-bar" style="width: 0%; height: 20px; background: linear-gradient(90deg, #4CAF50, #45a049); border-radius: 8px; transition: width 0.3s ease;"></div>
+            </div>
+            <div id="progress-message" style="margin-top: 10px; font-size: 14px; color: #666;">
+                Initializing...
+            </div>
+            <div id="progress-details" style="margin-top: 5px; font-size: 12px; color: #999;">
+                ${isLarge ? 'Large datasets may take up to 2 minutes' : 'This should complete in seconds'}
+            </div>
+        </div>
+    `;
+}
+
+function updateProgressMessage(message, progress = null) {
+    const messageEl = document.getElementById('progress-message');
+    const progressBar = document.getElementById('progress-bar');
+    
+    if (messageEl) {
+        messageEl.textContent = message;
+    }
+    
+    if (progress !== null && progressBar) {
+        progressBar.style.width = `${Math.min(100, Math.max(0, progress))}%`;
+    }
+}
+
+function updateProgressWithSteps(currentStep, totalSteps, stepName) {
+    const progress = Math.round((currentStep / totalSteps) * 100);
+    updateProgressMessage(`Step ${currentStep}/${totalSteps}: ${stepName}`, progress);
+}
+
+function simulateProgressDuringLongOperation(startProgress, endProgress, stepName, duration = 30000) {
+    // Симулирует плавное увеличение прогресса во время долгих операций
+    const startTime = Date.now();
+    const progressRange = endProgress - startProgress;
+    
+    const progressInterval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const progressFactor = Math.min(elapsed / duration, 1);
+        const currentProgress = startProgress + (progressRange * progressFactor);
+        
+        if (progressFactor < 1) {
+            updateProgressMessage(`${stepName}... ${Math.round(elapsed / 1000)}s`, currentProgress);
+        } else {
+            clearInterval(progressInterval);
+            activeProgressIntervals = activeProgressIntervals.filter(id => id !== progressInterval);
+        }
+    }, 1000);
+    
+    activeProgressIntervals.push(progressInterval);
+    return progressInterval;
+}
+
+function clearAllProgressIntervals() {
+    activeProgressIntervals.forEach(interval => clearInterval(interval));
+    activeProgressIntervals = [];
+}
+
+function initializeProgress(totalRows, currentStage = 'Starting...') {
+    progressState.totalRows = totalRows;
+    progressState.processedRows = 0;
+    progressState.currentStage = currentStage;
+    progressState.stageProgress = 0;
+    updateProgressFromState();
+}
+
+function updateRowProgress(processedRows, stageName = null) {
+    progressState.processedRows = Math.min(processedRows, progressState.totalRows);
+    if (stageName) {
+        progressState.currentStage = stageName;
+    }
+    updateProgressFromState();
+}
+
+function updateStageProgress(stageName, stageProgress = 0) {
+    progressState.currentStage = stageName;
+    progressState.stageProgress = stageProgress;
+    updateProgressFromState();
+}
+
+function updateProgressFromState() {
+    const rowProgress = progressState.totalRows > 0 ? 
+        (progressState.processedRows / progressState.totalRows) * 80 : 0; // 80% для обработки строк
+    const stageProgress = progressState.stageProgress * 0.2; // 20% для стадий
+    const totalProgress = Math.min(100, rowProgress + stageProgress);
+    
+    const message = progressState.totalRows > 0 ? 
+        `${progressState.currentStage} (${progressState.processedRows.toLocaleString()}/${progressState.totalRows.toLocaleString()} rows)` :
+        progressState.currentStage;
+    
+    updateProgressMessage(message, totalProgress);
+}
+
 class FastTableComparator {
     constructor() {
         this.initialized = false;
@@ -247,12 +357,27 @@ class FastTableComparator {
 
     async compareTablesWithOriginalLogic(data1, data2, excludeColumns = [], useTolerance = false) {
         //console.log('🚀 Using DuckDB WASM with multi-stage comparison logic...');
-        //console.log('🔧 compareTablesWithOriginalLogic - excludeColumns debug:', { excludeColumns: excludeColumns, excludeColumnsType: typeof excludeColumns,  excludeColumnsIsArray: Array.isArray(excludeColumns), excludeColumnsLength: excludeColumns?.length || 0, excludeColumnsStringified: JSON.stringify(excludeColumns) });
         const startTime = performance.now();
 
         try {
-            // Детальная отладка входящих данных
-            //console.log('🔍 Detailed input analysis:', { data1Type: typeof data1, data1IsArray: Array.isArray(data1), data1Length: data1?.length, data1Sample: data1?.slice ? data1.slice(0, 3) : 'No slice method', data2Type: typeof data2, data2IsArray: Array.isArray(data2), data2Length: data2?.length, data2Sample: data2?.slice ? data2.slice(0, 3) : 'No slice method', excludeColumns, useTolerance });
+            // Проверка размера данных для выбора оптимальной стратегии
+            const table1Size = data1.length - 1; // исключаем заголовки
+            const table2Size = data2.length - 1;
+            const totalSize = table1Size + table2Size;
+            const columnCount = Math.max(data1[0]?.length || 0, data2[0]?.length || 0);
+            
+            console.log('📊 Data size analysis:', { 
+                table1Rows: table1Size, 
+                table2Rows: table2Size, 
+                totalRows: totalSize, 
+                columns: columnCount 
+            });
+
+            // Для очень больших таблиц используем упрощенную стратегию
+            if (totalSize > 30000 || columnCount > 40) {
+                console.log('🚀 Using optimized strategy for large dataset');
+                return await this.compareTablesOptimizedForLargeData(data1, data2, excludeColumns, useTolerance);
+            }
 
             if (!Array.isArray(data1) || !Array.isArray(data2) || data1.length === 0 || data2.length === 0) {
                 console.error('❌ Data validation failed:', {
@@ -758,6 +883,232 @@ class FastTableComparator {
 
         } catch (error) {
             console.error('❌ Multi-stage DuckDB comparison failed:', error);
+            throw error;
+        }
+    }
+
+    async compareTablesOptimizedForLargeData(data1, data2, excludeColumns = [], useTolerance = false) {
+        console.log('🚀 Using optimized strategy for large dataset');
+        const startTime = performance.now();
+
+        try {
+            // Инициализируем прогресс с общим количеством строк
+            const totalRows = Math.max(data1.length - 1, data2.length - 1);
+            initializeProgress(totalRows, 'Preparing data structure');
+            
+            const headers1 = data1[0] || [];
+            const headers2 = data2[0] || [];
+            
+            // Упрощенная подготовка данных
+            const sanitizeColumnName = (name, index) => {
+                if (!name || typeof name !== 'string') {
+                    return `col_${index}`;
+                }
+                return name.replace(/[^a-zA-Z0-9_]/g, '_').replace(/^[0-9]/, 'col_$&') || `col_${index}`;
+            };
+
+            const sanitizedHeaders1 = headers1.map((h, i) => sanitizeColumnName(h, i));
+            const sanitizedHeaders2 = headers2.map((h, i) => sanitizeColumnName(h, i));
+
+            updateStageProgress('Creating database tables', 5);
+            
+            // Простая типизация - только VARCHAR для больших данных
+            console.log('📝 Creating optimized tables with VARCHAR types for performance...');
+            
+            const createTable1SQL = `CREATE OR REPLACE TABLE table1 (
+                rowid INTEGER,
+                ${sanitizedHeaders1.map(h => `"${h}" VARCHAR`).join(', ')}
+            )`;
+
+            const createTable2SQL = `CREATE OR REPLACE TABLE table2 (
+                rowid INTEGER,
+                ${sanitizedHeaders2.map(h => `"${h}" VARCHAR`).join(', ')}
+            )`;
+
+            await window.duckdbLoader.query(createTable1SQL);
+            await window.duckdbLoader.query(createTable2SQL);
+
+            updateStageProgress('Loading data into tables', 10);
+            
+            // Оптимизированная вставка данных большими пакетами
+            console.log('📊 Inserting data in optimized batches...');
+            const LARGE_BATCH_SIZE = 2000; // Увеличиваем размер пакета для больших данных
+            
+            const insertOptimizedBatch = async (tableName, data, headers) => {
+                const totalBatches = Math.ceil((data.length - 1) / LARGE_BATCH_SIZE);
+                let currentBatch = 0;
+                let processedRows = 0;
+                
+                updateRowProgress(processedRows, `Loading ${tableName}`);
+                
+                for (let i = 1; i < data.length; i += LARGE_BATCH_SIZE) {
+                    currentBatch++;
+                    const batchEnd = Math.min(i + LARGE_BATCH_SIZE, data.length);
+                    const batchData = data.slice(i, batchEnd);
+                    
+                    const values = batchData.map((row, idx) => {
+                        const rowId = i + idx - 1;
+                        const cleanRow = headers.map((_, colIdx) => {
+                            const val = row[colIdx];
+                            if (val === null || val === undefined || val === '') {
+                                return 'NULL';
+                            }
+                            return `'${val.toString().replace(/'/g, "''")}'`;
+                        }).join(', ');
+                        return `(${rowId}, ${cleanRow})`;
+                    }).join(', ');
+
+                    if (values) {
+                        const insertSQL = `INSERT INTO ${tableName} VALUES ${values}`;
+                        await window.duckdbLoader.query(insertSQL);
+                        
+                        // Обновляем реальный прогресс на основе обработанных строк
+                        processedRows = batchEnd - 1;
+                        updateRowProgress(processedRows, `Loading ${tableName} (batch ${currentBatch}/${totalBatches})`);
+                    }
+                }
+            };
+
+            await insertOptimizedBatch('table1', data1, headers1);
+            await insertOptimizedBatch('table2', data2, headers2);
+
+            updateStageProgress('Analyzing columns for comparison', 15);
+
+            // Упрощенная логика сравнения - только поиск точных совпадений
+            console.log('🔍 Finding exact matches with simplified logic...');
+            
+            const comparisonColumns = [];
+            headers1.forEach((header, index) => {
+                const shouldExclude = excludeColumns.some(excCol => {
+                    if (typeof excCol === 'string') {
+                        return header.toLowerCase().includes(excCol.toLowerCase());
+                    } else if (typeof excCol === 'number') {
+                        return index === excCol;
+                    }
+                    return false;
+                });
+                
+                if (!shouldExclude && index < headers2.length) {
+                    comparisonColumns.push(index);
+                }
+            });
+
+            if (comparisonColumns.length === 0) {
+                throw new Error('No columns available for comparison');
+            }
+
+            // Для очень больших данных ограничиваем количество сравниваемых колонок
+            const dataSize = (data1.length - 1) + (data2.length - 1);
+            const maxColumns = dataSize > 40000 ? 5 : (dataSize > 20000 ? 8 : 10);
+            
+            console.log(`📊 Using ${Math.min(maxColumns, comparisonColumns.length)} columns for comparison out of ${comparisonColumns.length} available`);
+
+            // Создаем простые условия сравнения для VARCHAR полей
+            const simpleConditions = comparisonColumns.slice(0, Math.min(maxColumns, comparisonColumns.length)).map(colIdx => {
+                const col1Name = sanitizedHeaders1[colIdx];
+                const col2Name = sanitizedHeaders2[colIdx];
+                return `UPPER(TRIM(COALESCE(t1."${col1Name}", ''))) = UPPER(TRIM(COALESCE(t2."${col2Name}", '')))`;
+            });
+
+            // Поиск идентичных строк с ограничением на количество условий
+            updateStageProgress('Finding identical records', 80);
+            
+            const identicalSQL = `
+                CREATE OR REPLACE TABLE identical_pairs AS
+                SELECT 
+                    t1.rowid as row1_id,
+                    t2.rowid as row2_id,
+                    'IDENTICAL' as match_type
+                FROM table1 t1
+                INNER JOIN table2 t2 ON (${simpleConditions.join(' AND ')})
+                LIMIT 50000
+            `;
+            
+            console.log('🔍 Executing simplified identical query...');
+            await window.duckdbLoader.query(identicalSQL);
+            
+            // Поиск уникальных записей только в первой таблице
+            updateStageProgress('Finding records only in first table', 90);
+            
+            console.log('🔍 Finding records only in table1...');
+            const onlyTable1SQL = `
+                CREATE OR REPLACE TABLE only_table1 AS
+                SELECT t1.rowid as row1_id, 'ONLY_IN_TABLE1' as type
+                FROM table1 t1
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM identical_pairs ip WHERE ip.row1_id = t1.rowid
+                )
+                LIMIT 25000
+            `;
+            await window.duckdbLoader.query(onlyTable1SQL);
+
+            // Поиск уникальных записей только во второй таблице
+            updateStageProgress('Finding records only in second table', 95);
+            
+            console.log('🔍 Finding records only in table2...');
+            const onlyTable2SQL = `
+                CREATE OR REPLACE TABLE only_table2 AS
+                SELECT t2.rowid as row2_id, 'ONLY_IN_TABLE2' as type
+                FROM table2 t2
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM identical_pairs ip WHERE ip.row2_id = t2.rowid
+                )
+                LIMIT 25000
+            `;
+            await window.duckdbLoader.query(onlyTable2SQL);
+
+            // Получение результатов
+            updateStageProgress('Collecting final results', 100);
+            console.log('📊 Collecting results...');
+            const identicalResult = await window.duckdbLoader.query('SELECT * FROM identical_pairs');
+            const onlyTable1Result = await window.duckdbLoader.query('SELECT * FROM only_table1');
+            const onlyTable2Result = await window.duckdbLoader.query('SELECT * FROM only_table2');
+
+            const identical = identicalResult.toArray().map(r => ({
+                row1: r.row1_id,
+                row2: r.row2_id,
+                status: 'IDENTICAL'
+            }));
+
+            const onlyInTable1 = onlyTable1Result.toArray().map(r => ({
+                row1: r.row1_id,
+                row2: null,
+                status: 'ONLY_IN_TABLE1'
+            }));
+
+            const onlyInTable2 = onlyTable2Result.toArray().map(r => ({
+                row1: null,
+                row2: r.row2_id,
+                status: 'ONLY_IN_TABLE2'
+            }));
+
+            const duration = performance.now() - startTime;
+            updateProgressMessage('Comparison completed successfully!', 100);
+            console.log(`🚀 Optimized large data comparison completed in ${duration.toFixed(2)}ms`);
+            console.log(`📊 Results: ${identical.length} identical, ${onlyInTable1.length} only in table1, ${onlyInTable2.length} only in table2`);
+
+            return {
+                identical: identical,
+                similar: [], // Для больших данных не ищем похожие записи
+                onlyInTable1: onlyInTable1,
+                onlyInTable2: onlyInTable2,
+                table1Count: data1.length - 1,
+                table2Count: data2.length - 1,
+                commonColumns: headers1,
+                comparisonColumns: comparisonColumns,
+                excludedColumns: excludeColumns,
+                keyColumns: comparisonColumns.slice(0, 3), // Первые 3 колонки как ключевые
+                performance: {
+                    duration: duration,
+                    rowsPerSecond: Math.round(((data1.length + data2.length) / duration) * 1000),
+                    strategy: 'optimized_large_data'
+                }
+            };
+
+        } catch (error) {
+            clearAllProgressIntervals(); // Очищаем все активные интервалы прогресса
+            updateProgressMessage('Comparison failed - switching to fallback mode', 0);
+            console.error('❌ Optimized large data comparison failed:', error);
             throw error;
         }
     }
@@ -1317,7 +1668,46 @@ async function compareTablesEnhanced(useTolerance = false) {
     //console.log('📊 Total rows check:', { totalRows, limit: MAX_ROWS_LIMIT });
     
     if (totalRows > MAX_ROWS_LIMIT) {
-        console.log('❌ Row limit exceeded');
+        console.log('❌ Row limit exceeded for standard mode, checking if fast comparator can handle it');
+        
+        // Если есть быстрый компаратор, попробуем его для больших данных
+        if (fastComparator && fastComparator.initialized && totalRows <= 100000) {
+            console.log('🚀 Using fast comparator for large dataset within extended limits');
+            resultDiv.innerHTML = '<div class="comparison-loading-enhanced">⚡ Processing large dataset with fast engine...</div>';
+            summaryDiv.innerHTML = '<div style="text-align: center; padding: 10px;">Large dataset detected - using optimized processing...</div>';
+            
+            setTimeout(async () => {
+                try {
+                    const excludedColumns = getExcludedColumns ? getExcludedColumns() : [];
+                    const tolerance = window.currentTolerance || 1.5;
+                    
+                    resultDiv.innerHTML = createProgressIndicator('large');
+                    updateProgressMessage('Processing large dataset - please wait...');
+                    
+                    const fastResult = await compareTablesWithFastComparator(
+                        data1, data2, excludedColumns, useTolerance, tolerance
+                    );
+                    
+                    if (fastResult) {
+                        await processFastComparisonResults(fastResult, useTolerance);
+                    } else {
+                        throw new Error('Fast comparison failed for large dataset');
+                    }
+                } catch (error) {
+                    console.error('❌ Fast comparison failed for large dataset:', error);
+                    resultDiv.innerHTML = generateLimitErrorMessage(
+                        'rows', data1.length, MAX_ROWS_LIMIT, '', 
+                        'columns', Math.max(data1[0]?.length || 0, data2[0]?.length || 0), MAX_COLS_LIMIT
+                    );
+                    summaryDiv.innerHTML = '';
+                }
+            }, 100);
+            
+            return;
+        }
+        
+        // Если быстрый компаратор недоступен или данные слишком большие
+        console.log('❌ Row limit exceeded and fast comparator unavailable');
         resultDiv.innerHTML = generateLimitErrorMessage(
             'rows', data1.length, MAX_ROWS_LIMIT, '', 
             'columns', Math.max(data1[0]?.length || 0, data2[0]?.length || 0), MAX_COLS_LIMIT
@@ -1334,12 +1724,21 @@ async function compareTablesEnhanced(useTolerance = false) {
         if (fastComparator && fastComparator.initialized) {
             //console.log('🚀 Using fast comparison engine with mode:', fastComparator.mode);
             resultDiv.innerHTML = '<div class="comparison-loading-enhanced">⚡ Using fast comparison engine...</div>';
-            summaryDiv.innerHTML = '<div style="text-align: center; padding: 10px;">Processing with enhanced performance...</div>';
+            summaryDiv.innerHTML = '<div style="text-align: center; padding: 10px;">Processing large dataset with enhanced performance...</div>';
             
             setTimeout(async () => {
                 try {
                     //console.log('📊 Starting DuckDB WASM comparison...');
-                    resultDiv.innerHTML = '<div style="text-align: center; padding: 20px; font-size: 16px;">⚡ Fast mode - processing comparison...</div>';
+                    const totalRows = Math.max(data1.length, data2.length);
+                    const columnCount = Math.max(data1[0]?.length || 0, data2[0]?.length || 0);
+                    
+                    if (totalRows > 20000 || columnCount > 30) {
+                        resultDiv.innerHTML = createProgressIndicator('large');
+                        updateProgressMessage('Initializing comparison for large dataset...');
+                    } else {
+                        resultDiv.innerHTML = createProgressIndicator('normal');
+                        updateProgressMessage('Processing comparison...');
+                    }
                     
                     const excludedColumns = getExcludedColumns ? getExcludedColumns() : [];
                     const tolerance = window.currentTolerance || 1.5;
@@ -1347,9 +1746,10 @@ async function compareTablesEnhanced(useTolerance = false) {
                     //console.log('🔧 Fast comparison parameters:', { excludedColumns: excludedColumns, excludedColumnsType: typeof excludedColumns, excludedColumnsLength: excludedColumns?.length || 0, useTolerance: useTolerance, tolerance: tolerance, getExcludedColumnsExists: typeof getExcludedColumns !== 'undefined' });
                     
                     //console.log('🔧 Calling compareTablesWithFastComparator...');
-                    const fastResult = await compareTablesWithFastComparator(
-                        data1, data2, excludedColumns, useTolerance, tolerance
-                    );
+                    
+                    console.log(`📊 Starting comparison for ${totalRows.toLocaleString()} rows × ${columnCount} columns`);
+                    
+                    const fastResult = await compareTablesWithFastComparator(data1, data2, excludedColumns, useTolerance, tolerance);
                     
                     if (fastResult) {
                         //console.log('✅ DuckDB WASM comparison completed successfully');
@@ -1359,7 +1759,10 @@ async function compareTablesEnhanced(useTolerance = false) {
                         await performComparison();
                     }
                 } catch (error) {
+                    clearAllProgressIntervals(); // Очищаем все интервалы при ошибке
                     console.error('❌ DuckDB WASM comparison failed:', error);
+                    
+                    // Фоллбэк к стандартному режиму
                     await performComparison();
                 }
                 
@@ -1396,6 +1799,9 @@ async function compareTablesEnhanced(useTolerance = false) {
 }
 
 async function processFastComparisonResults(fastResult, useTolerance) {
+    // Показываем финальную стадию обработки
+    updateProgressMessage('Processing results...', 95);
+    
     const { identical, similar, onlyInTable1, onlyInTable2, table1Count, table2Count, commonColumns, performance } = fastResult;
     
     window.currentFastResult = fastResult;
@@ -1405,11 +1811,16 @@ async function processFastComparisonResults(fastResult, useTolerance) {
     
     //console.log('🔍 Detailed comparison results breakdown:', { identicalRows: identical?.length || 0, identicalSample: identical?.slice(0, 3), similarRows: similar?.length || 0, similarSample: similar?.slice(0, 3), onlyInTable1Rows: onlyInTable1?.length || 0, onlyInTable1Sample: onlyInTable1?.slice(0, 3), onlyInTable2Rows: onlyInTable2?.length || 0,  onlyInTable2Sample: onlyInTable2?.slice(0, 3), table1Count, table2Count });
     
-    const resultDiv = document.getElementById('result');
-    if (resultDiv) {
-        resultDiv.innerHTML = '';
-        resultDiv.style.display = 'none';
-    }
+    // Скрываем прогресс-бар и показываем результаты
+    updateProgressMessage('Displaying results...', 100);
+    
+    setTimeout(() => {
+        const resultDiv = document.getElementById('result');
+        if (resultDiv) {
+            resultDiv.innerHTML = '';
+            resultDiv.style.display = 'none';
+        }
+    }, 500); // Даем время показать 100% перед скрытием
     
     const identicalCount = identical?.length || 0;
     const similarCount = similar?.length || 0;
