@@ -306,27 +306,191 @@ class FastTableComparator {
                 return sanitized || `col_${index}`;
             };
 
+            // Функция для определения типа данных колонки
+            const detectColumnType = (data, columnIndex) => {
+                const sampleSize = Math.min(100, data.length - 1); // Анализируем первые 100 строк (исключая заголовок)
+                let numericCount = 0;
+                let integerCount = 0;
+                let dateCount = 0;
+                let totalNonEmpty = 0;
+                let hasDecimals = false; // Флаг для отслеживания десятичных чисел
+
+                for (let i = 1; i <= sampleSize; i++) { // Начинаем с 1, пропуская заголовок
+                    if (i >= data.length) break;
+                    
+                    const value = data[i]?.[columnIndex];
+                    if (value && value.toString().trim() !== '') {
+                        totalNonEmpty++;
+                        const strValue = value.toString().trim();
+                        
+                        // Проверяем, является ли значение числом
+                        if (!isNaN(strValue) && !isNaN(parseFloat(strValue)) && isFinite(strValue)) {
+                            numericCount++;
+                            const numValue = parseFloat(strValue);
+                            
+                            // Проверяем, является ли число целым
+                            if (Number.isInteger(numValue)) {
+                                integerCount++;
+                            } else {
+                                hasDecimals = true; // Нашли десятичное число
+                            }
+                        }
+                        
+                        // Проверяем, является ли значение датой (простая проверка)
+                        const dateValue = new Date(strValue);
+                        if (!isNaN(dateValue.getTime()) && strValue.match(/\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4}|\d{2}\.\d{2}\.\d{4}/)) {
+                            dateCount++;
+                        }
+                    }
+                }
+
+                if (totalNonEmpty === 0) return 'VARCHAR';
+                
+                const numericRatio = numericCount / totalNonEmpty;
+                const dateRatio = dateCount / totalNonEmpty;
+
+                // Если 80% или больше значений являются датами
+                if (dateRatio >= 0.8) {
+                    return 'DATE';
+                }
+                
+                // Если 90% или больше значений являются числами
+                if (numericRatio >= 0.9) {
+                    // Если есть хотя бы одно десятичное число, вся колонка должна быть DOUBLE
+                    if (hasDecimals) {
+                        return 'DOUBLE';
+                    } else {
+                        return 'BIGINT';
+                    }
+                }
+                
+                return 'VARCHAR';
+            };
+
             // Создаем массивы очищенных имен колонок для использования в SQL
             const sanitizedHeaders1 = headers1.map((h, i) => sanitizeColumnName(h, i));
             const sanitizedHeaders2 = headers2.map((h, i) => sanitizeColumnName(h, i));
 
-            // Создаем SQL для создания таблиц с реальными именами колонок
+            // Определяем типы данных для каждой колонки
+            const columnTypes1 = sanitizedHeaders1.map((_, i) => detectColumnType(data1, i));
+            const columnTypes2 = sanitizedHeaders2.map((_, i) => detectColumnType(data2, i));
+
+            console.log('🔍 Detected column types for table1:', 
+                sanitizedHeaders1.map((header, i) => `${header}: ${columnTypes1[i]}`));
+            console.log('🔍 Detected column types for table2:', 
+                sanitizedHeaders2.map((header, i) => `${header}: ${columnTypes2[i]}`));
+
+            // Функция для согласования типов данных между таблицами
+            const harmonizeColumnTypes = (types1, types2) => {
+                const harmonized1 = [...types1];
+                const harmonized2 = [...types2];
+                
+                for (let i = 0; i < Math.min(types1.length, types2.length); i++) {
+                    const type1 = types1[i];
+                    const type2 = types2[i];
+                    
+                    // Если типы разные и оба числовые, используем более общий тип
+                    if (type1 !== type2) {
+                        if ((type1 === 'BIGINT' && type2 === 'DOUBLE') || 
+                            (type1 === 'DOUBLE' && type2 === 'BIGINT')) {
+                            // Если один BIGINT, а другой DOUBLE, используем DOUBLE для обеих таблиц
+                            harmonized1[i] = 'DOUBLE';
+                            harmonized2[i] = 'DOUBLE';
+                            console.log(`🔄 Harmonized column ${i} (${sanitizedHeaders1[i]}): ${type1} + ${type2} → DOUBLE`);
+                        }
+                        else if ((type1 === 'INTEGER' && type2 === 'BIGINT') || 
+                                 (type1 === 'BIGINT' && type2 === 'INTEGER')) {
+                            // INTEGER и BIGINT → BIGINT
+                            harmonized1[i] = 'BIGINT';
+                            harmonized2[i] = 'BIGINT';
+                            console.log(`🔄 Harmonized column ${i} (${sanitizedHeaders1[i]}): ${type1} + ${type2} → BIGINT`);
+                        }
+                        else if ((type1 === 'INTEGER' && type2 === 'DOUBLE') || 
+                                 (type1 === 'DOUBLE' && type2 === 'INTEGER') ||
+                                 (type1 === 'FLOAT' && type2 === 'DOUBLE') || 
+                                 (type1 === 'DOUBLE' && type2 === 'FLOAT')) {
+                            // Любой числовой тип с DOUBLE → DOUBLE
+                            harmonized1[i] = 'DOUBLE';
+                            harmonized2[i] = 'DOUBLE';
+                            console.log(`🔄 Harmonized column ${i} (${sanitizedHeaders1[i]}): ${type1} + ${type2} → DOUBLE`);
+                        }
+                        else {
+                            // Для всех остальных несовпадающих типов используем VARCHAR
+                            console.log(`⚠️ Type mismatch for column ${i} (${sanitizedHeaders1[i]}): ${type1} vs ${type2}, using VARCHAR`);
+                            harmonized1[i] = 'VARCHAR';
+                            harmonized2[i] = 'VARCHAR';
+                        }
+                    }
+                }
+                
+                return { types1: harmonized1, types2: harmonized2 };
+            };
+
+            // Согласовываем типы данных
+            const { types1: finalColumnTypes1, types2: finalColumnTypes2 } = harmonizeColumnTypes(columnTypes1, columnTypes2);
+
+            console.log('🔄 Harmonized column types for table1:', 
+                sanitizedHeaders1.map((header, i) => `${header}: ${finalColumnTypes1[i]}`));
+            console.log('🔄 Harmonized column types for table2:', 
+                sanitizedHeaders2.map((header, i) => `${header}: ${finalColumnTypes2[i]}`));
+
+            // Создаем SQL для создания таблиц с согласованными типами данных
             const createTable1SQL = `CREATE OR REPLACE TABLE table1 (
                 rowid INTEGER,
-                ${sanitizedHeaders1.map(h => `"${h}" VARCHAR`).join(', ')}
+                ${sanitizedHeaders1.map((h, i) => `"${h}" ${finalColumnTypes1[i]}`).join(', ')}
             )`;
 
             const createTable2SQL = `CREATE OR REPLACE TABLE table2 (
                 rowid INTEGER,
-                ${sanitizedHeaders2.map(h => `"${h}" VARCHAR`).join(', ')}
+                ${sanitizedHeaders2.map((h, i) => `"${h}" ${finalColumnTypes2[i]}`).join(', ')}
             )`;
 
             await window.duckdbLoader.query(createTable1SQL);
             await window.duckdbLoader.query(createTable2SQL);
+            await window.duckdbLoader.query(createTable2SQL);
 
             console.log('📊 Step 2: Inserting data in batches...');
+            // Функция для форматирования значения в зависимости от типа данных
+            const formatValue = (value, columnType) => {
+                if (value === null || value === undefined || value === '') {
+                    return 'NULL';
+                }
+                
+                const strValue = value.toString().trim();
+                
+                switch (columnType) {
+                    case 'BIGINT':
+                    case 'INTEGER':
+                        const intValue = parseInt(strValue);
+                        return isNaN(intValue) ? 'NULL' : intValue.toString();
+                    
+                    case 'DOUBLE':
+                    case 'FLOAT':
+                        const floatValue = parseFloat(strValue);
+                        if (isNaN(floatValue)) {
+                            return 'NULL';
+                        } else {
+                            // Округляем DOUBLE значения до 2 знаков после запятой
+                            return columnType === 'DOUBLE' ? 
+                                (Math.round(floatValue * 100) / 100).toString() : 
+                                floatValue.toString();
+                        }
+                    
+                    case 'DATE':
+                        const dateValue = new Date(strValue);
+                        if (isNaN(dateValue.getTime())) {
+                            return `'${strValue.replace(/'/g, "''")}'`;
+                        }
+                        return `'${dateValue.toISOString().split('T')[0]}'`;
+                    
+                    case 'VARCHAR':
+                    default:
+                        return `'${strValue.replace(/'/g, "''")}'`;
+                }
+            };
+
             // Вставляем данные пакетами
-            const insertBatch = async (tableName, data, headers) => {
+            const insertBatch = async (tableName, data, headers, columnTypes) => {
                 const BATCH_SIZE = 1000;
                 for (let i = 1; i < data.length; i += BATCH_SIZE) {
                     const batchEnd = Math.min(i + BATCH_SIZE, data.length);
@@ -335,8 +499,8 @@ class FastTableComparator {
                     const values = batchData.map((row, idx) => {
                         const rowId = i + idx - 1; // 0-based row index
                         const cleanRow = headers.map((_, colIdx) => {
-                            const val = row[colIdx] || '';
-                            return `'${val.toString().replace(/'/g, "''")}'`;
+                            const val = row[colIdx];
+                            return formatValue(val, columnTypes[colIdx]);
                         }).join(', ');
                         return `(${rowId}, ${cleanRow})`;
                     }).join(', ');
@@ -348,10 +512,36 @@ class FastTableComparator {
                 }
             };
 
-            await insertBatch('table1', data1, headers1);
-            await insertBatch('table2', data2, headers2);
+            await insertBatch('table1', data1, headers1, finalColumnTypes1);
+            await insertBatch('table2', data2, headers2, finalColumnTypes2);
 
             console.log('🔍 Step 3: Filtering columns and detecting key columns...');
+            
+            // Функция для создания правильного условия сравнения в зависимости от типа данных
+            const createComparisonCondition = (colIdx, useTolerance = false) => {
+                const col1Type = finalColumnTypes1[colIdx];
+                const col2Type = finalColumnTypes2[colIdx];
+                const col1Name = sanitizedHeaders1[colIdx];
+                const col2Name = sanitizedHeaders2[colIdx];
+                
+                // Для DOUBLE значений используем округление до 2 знаков после запятой
+                if (col1Type === 'DOUBLE' || col2Type === 'DOUBLE') {
+                    return `ROUND(t1."${col1Name}", 2) = ROUND(t2."${col2Name}", 2)`;
+                }
+                
+                // Если используется толерантность или колонки числовые (кроме DOUBLE), делаем прямое сравнение
+                if (useTolerance || col1Type === 'BIGINT' || col1Type === 'INTEGER' || col1Type === 'FLOAT') {
+                    return `t1."${col1Name}" = t2."${col2Name}"`;
+                }
+                
+                // Для строковых и других типов используем UPPER и TRIM (но только для VARCHAR)
+                if (col1Type === 'VARCHAR' && col2Type === 'VARCHAR') {
+                    return `UPPER(TRIM(t1."${col1Name}")) = UPPER(TRIM(t2."${col2Name}"))`;
+                }
+                
+                // Для DATE и других типов - прямое сравнение
+                return `t1."${col1Name}" = t2."${col2Name}"`;
+            };
             
             // Определяем колонки для сравнения (исключаем указанные)
             const comparisonColumns = [];
@@ -389,13 +579,27 @@ class FastTableComparator {
             const keyColumns = allKeyColumns.filter(keyCol => comparisonColumns.includes(keyCol));
             
             console.log('🔑 Key columns detected:', keyColumns);
-            console.log('🔑 Headers analysis:', {
+            console.log('🔑 Key column names:', keyColumns.map(idx => headers1[idx] || `Column ${idx}`));
+            
+            // Анализируем какие колонки используют округление
+            const doubleColumns = comparisonColumns.filter(idx => 
+                finalColumnTypes1[idx] === 'DOUBLE' || finalColumnTypes2[idx] === 'DOUBLE'
+            );
+            if (doubleColumns.length > 0) {
+                console.log('� DOUBLE columns (will use ROUND(x, 2) for comparison):', 
+                    doubleColumns.map(idx => `${headers1[idx]} (${finalColumnTypes1[idx]})`));
+            }
+            
+            console.log('�🔑 Headers analysis:', {
                 headers1: headers1,
                 headers2: headers2,
                 headers1Length: headers1.length,
                 headers2Length: headers2.length,
                 allKeyColumns: allKeyColumns,
-                filteredKeyColumns: keyColumns
+                allKeyColumnNames: allKeyColumns.map(idx => headers1[idx] || `Column ${idx}`),
+                filteredKeyColumns: keyColumns,
+                filteredKeyColumnNames: keyColumns.map(idx => headers1[idx] || `Column ${idx}`),
+                doubleColumnsCount: doubleColumns.length
             });
 
             console.log('🎯 Step 4: Finding identical rows...');
@@ -416,20 +620,14 @@ class FastTableComparator {
                     'IDENTICAL' as match_type
                 FROM table1 t1
                 INNER JOIN table2 t2 ON (
-                    ${comparisonColumns.map(colIdx => 
-                        useTolerance 
-                            ? `t1."${sanitizedHeaders1[colIdx]}" = t2."${sanitizedHeaders2[colIdx]}"`
-                            : `UPPER(TRIM(t1."${sanitizedHeaders1[colIdx]}")) = UPPER(TRIM(t2."${sanitizedHeaders2[colIdx]}"))`
-                    ).join(' AND ')}
+                    ${comparisonColumns.map(colIdx => createComparisonCondition(colIdx, useTolerance)).join(' AND ')}
                 )
             `;
             
             console.log('🔍 Identical SQL query sample conditions:', {
                 useTolerance,
                 comparisonColumns: comparisonColumns,
-                firstCondition: useTolerance 
-                    ? `t1."${sanitizedHeaders1[comparisonColumns[0]]}" = t2."${sanitizedHeaders2[comparisonColumns[0]]}"`
-                    : `UPPER(TRIM(t1."${sanitizedHeaders1[comparisonColumns[0]]}")) = UPPER(TRIM(t2."${sanitizedHeaders2[comparisonColumns[0]]}"))`,
+                firstCondition: createComparisonCondition(comparisonColumns[0], useTolerance),
                 firstColumnName: headers1[comparisonColumns[0]],
                 totalConditions: comparisonColumns.length,
                 excludedColumns: excludeColumns
@@ -445,11 +643,7 @@ class FastTableComparator {
 
             console.log('🔍 Step 5: Finding similar rows by key columns...');
             // Затем ищем похожие строки по ключевым полям (исключая уже найденные идентичные)
-            const keyColumnChecks = keyColumns.map(colIdx => 
-                useTolerance 
-                    ? `t1."${sanitizedHeaders1[colIdx]}" = t2."${sanitizedHeaders2[colIdx]}"`
-                    : `UPPER(TRIM(t1."${sanitizedHeaders1[colIdx]}")) = UPPER(TRIM(t2."${sanitizedHeaders2[colIdx]}"))`
-            ).join(' AND ');
+            const keyColumnChecks = keyColumns.map(colIdx => createComparisonCondition(colIdx, useTolerance)).join(' AND ');
 
             // Более строгие требования для сопоставления (основанные на колонках для сравнения)
             const minKeyMatchesRequired = Math.max(1, Math.ceil(keyColumns.length * (useTolerance ? 0.8 : 0.8))); // Минимум 80% ключевых полей
@@ -476,14 +670,10 @@ class FastTableComparator {
                         t1.rowid as row1_id,
                         t2.rowid as row2_id,
                         ${comparisonColumns.map(colIdx => 
-                            useTolerance 
-                                ? `CASE WHEN t1."${sanitizedHeaders1[colIdx]}" = t2."${sanitizedHeaders2[colIdx]}" THEN 1 ELSE 0 END`
-                                : `CASE WHEN UPPER(TRIM(t1."${sanitizedHeaders1[colIdx]}")) = UPPER(TRIM(t2."${sanitizedHeaders2[colIdx]}")) THEN 1 ELSE 0 END`
+                            `CASE WHEN ${createComparisonCondition(colIdx, useTolerance)} THEN 1 ELSE 0 END`
                         ).join(' + ')} as total_matches,
                         ${keyColumns.map(colIdx => 
-                            useTolerance 
-                                ? `CASE WHEN t1."${sanitizedHeaders1[colIdx]}" = t2."${sanitizedHeaders2[colIdx]}" THEN 1 ELSE 0 END`
-                                : `CASE WHEN UPPER(TRIM(t1."${sanitizedHeaders1[colIdx]}")) = UPPER(TRIM(t2."${sanitizedHeaders2[colIdx]}")) THEN 1 ELSE 0 END`
+                            `CASE WHEN ${createComparisonCondition(colIdx, useTolerance)} THEN 1 ELSE 0 END`
                         ).join(' + ')} as key_matches
                     FROM table1 t1
                     CROSS JOIN table2 t2
@@ -526,14 +716,10 @@ class FastTableComparator {
                         t1.rowid as row1_id,
                         t2.rowid as row2_id,
                         ${comparisonColumns.map(colIdx => 
-                            useTolerance 
-                                ? `CASE WHEN t1."${sanitizedHeaders1[colIdx]}" = t2."${sanitizedHeaders2[colIdx]}" THEN 1 ELSE 0 END`
-                                : `CASE WHEN UPPER(TRIM(t1."${sanitizedHeaders1[colIdx]}")) = UPPER(TRIM(t2."${sanitizedHeaders2[colIdx]}")) THEN 1 ELSE 0 END`
+                            `CASE WHEN ${createComparisonCondition(colIdx, useTolerance)} THEN 1 ELSE 0 END`
                         ).join(' + ')} as total_matches,
                         ${keyColumns.map(colIdx => 
-                            useTolerance 
-                                ? `CASE WHEN t1."${sanitizedHeaders1[colIdx]}" = t2."${sanitizedHeaders2[colIdx]}" THEN 1 ELSE 0 END`
-                                : `CASE WHEN UPPER(TRIM(t1."${sanitizedHeaders1[colIdx]}")) = UPPER(TRIM(t2."${sanitizedHeaders2[colIdx]}")) THEN 1 ELSE 0 END`
+                            `CASE WHEN ${createComparisonCondition(colIdx, useTolerance)} THEN 1 ELSE 0 END`
                         ).join(' + ')} as key_matches
                     FROM table1 t1
                     CROSS JOIN table2 t2
@@ -563,14 +749,10 @@ class FastTableComparator {
                 FROM (
                     SELECT 
                         ${comparisonColumns.map(colIdx => 
-                            useTolerance 
-                                ? `CASE WHEN t1."${sanitizedHeaders1[colIdx]}" = t2."${sanitizedHeaders2[colIdx]}" THEN 1 ELSE 0 END`
-                                : `CASE WHEN UPPER(TRIM(t1."${sanitizedHeaders1[colIdx]}")) = UPPER(TRIM(t2."${sanitizedHeaders2[colIdx]}")) THEN 1 ELSE 0 END`
+                            `CASE WHEN ${createComparisonCondition(colIdx, useTolerance)} THEN 1 ELSE 0 END`
                         ).join(' + ')} as total_matches,
                         ${keyColumns.map(colIdx => 
-                            useTolerance 
-                                ? `CASE WHEN t1."${sanitizedHeaders1[colIdx]}" = t2."${sanitizedHeaders2[colIdx]}" THEN 1 ELSE 0 END`
-                                : `CASE WHEN UPPER(TRIM(t1."${sanitizedHeaders1[colIdx]}")) = UPPER(TRIM(t2."${sanitizedHeaders2[colIdx]}")) THEN 1 ELSE 0 END`
+                            `CASE WHEN ${createComparisonCondition(colIdx, useTolerance)} THEN 1 ELSE 0 END`
                         ).join(' + ')} as key_matches
                     FROM table1 t1
                     CROSS JOIN table2 t2
@@ -806,8 +988,104 @@ class FastTableComparator {
     }
 
     async createDuckDBTable(tableName, tableData) {
-        // Создаем таблицу с данными в DuckDB
-        const columns = tableData.columns.map(col => `"${col}" VARCHAR`).join(', ');
+        // Функция для определения типа данных колонки
+        const detectColumnType = (data, columnIndex) => {
+            const sampleSize = Math.min(100, data.length);
+            let numericCount = 0;
+            let integerCount = 0;
+            let dateCount = 0;
+            let totalNonEmpty = 0;
+            let hasDecimals = false; // Флаг для отслеживания десятичных чисел
+
+            for (let i = 0; i < sampleSize; i++) {
+                if (i >= data.length) break;
+                
+                const value = data[i]?.data?.[columnIndex];
+                if (value && value.toString().trim() !== '') {
+                    totalNonEmpty++;
+                    const strValue = value.toString().trim();
+                    
+                    // Проверяем, является ли значение числом
+                    if (!isNaN(strValue) && !isNaN(parseFloat(strValue)) && isFinite(strValue)) {
+                        numericCount++;
+                        const numValue = parseFloat(strValue);
+                        
+                        // Проверяем, является ли число целым
+                        if (Number.isInteger(numValue)) {
+                            integerCount++;
+                        } else {
+                            hasDecimals = true; // Нашли десятичное число
+                        }
+                    }
+                    
+                    // Проверяем, является ли значение датой
+                    const dateValue = new Date(strValue);
+                    if (!isNaN(dateValue.getTime()) && strValue.match(/\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4}|\d{2}\.\d{2}\.\d{4}/)) {
+                        dateCount++;
+                    }
+                }
+            }
+
+            if (totalNonEmpty === 0) return 'VARCHAR';
+            
+            const numericRatio = numericCount / totalNonEmpty;
+            const dateRatio = dateCount / totalNonEmpty;
+
+            if (dateRatio >= 0.8) return 'DATE';
+            if (numericRatio >= 0.9) {
+                // Если есть хотя бы одно десятичное число, вся колонка должна быть DOUBLE
+                return hasDecimals ? 'DOUBLE' : 'BIGINT';
+            }
+            return 'VARCHAR';
+        };
+
+        // Функция для форматирования значения в зависимости от типа данных
+        const formatValue = (value, columnType) => {
+            if (value === null || value === undefined || value === '') {
+                return 'NULL';
+            }
+            
+            const strValue = value.toString().trim();
+            
+            switch (columnType) {
+                case 'BIGINT':
+                case 'INTEGER':
+                    const intValue = parseInt(strValue);
+                    return isNaN(intValue) ? 'NULL' : intValue.toString();
+                
+                case 'DOUBLE':
+                case 'FLOAT':
+                    const floatValue = parseFloat(strValue);
+                    if (isNaN(floatValue)) {
+                        return 'NULL';
+                    } else {
+                        // Округляем DOUBLE значения до 2 знаков после запятой
+                        return columnType === 'DOUBLE' ? 
+                            Math.round(floatValue * 100) / 100 : 
+                            floatValue.toString();
+                    }
+                
+                case 'DATE':
+                    const dateValue = new Date(strValue);
+                    if (isNaN(dateValue.getTime())) {
+                        return `'${strValue.replace(/'/g, "''")}'`;
+                    }
+                    return `'${dateValue.toISOString().split('T')[0]}'`;
+                
+                case 'VARCHAR':
+                default:
+                    return `'${strValue.replace(/'/g, "''")}'`;
+            }
+        };
+
+        // Определяем типы данных для каждой колонки
+        const columnTypes = tableData.columns.map((_, i) => detectColumnType(tableData.rows, i));
+        
+        console.log(`🔍 Detected column types for ${tableName}:`, 
+            tableData.columns.map((col, i) => `${col}: ${columnTypes[i]}`));
+
+        // Создаем таблицу с автоматически определенными типами данных
+        const columns = tableData.columns.map((col, i) => `"${col}" ${columnTypes[i]}`).join(', ');
         const createTableSQL = `CREATE OR REPLACE TABLE ${tableName} (rowid INTEGER, ${columns})`;
         
         await window.duckdbLoader.query(createTableSQL);
@@ -817,7 +1095,7 @@ class FastTableComparator {
         for (let i = 0; i < tableData.rows.length; i += BATCH_SIZE) {
             const batch = tableData.rows.slice(i, i + BATCH_SIZE);
             const values = batch.map(row => {
-                const rowData = row.data.map(cell => `'${String(cell || '').replace(/'/g, "''")}'`).join(', ');
+                const rowData = row.data.map((cell, colIdx) => formatValue(cell, columnTypes[colIdx])).join(', ');
                 return `(${row.index + 1}, ${rowData})`;
             }).join(', ');
             
