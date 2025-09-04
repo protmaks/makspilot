@@ -1208,8 +1208,19 @@ async function processFastComparisonResults(fastResult, useTolerance) {
     const totalMatches = identicalCount + similarCount;
     const similarity = table1Count > 0 ? ((totalMatches / Math.max(table1Count, table2Count)) * 100).toFixed(1) : 0;
     
-    const file1Name = window.fileName1 || 'File 1';
-    const file2Name = window.fileName2 || 'File 2';
+    // Определяем класс для раскраски процента сходства (как в functions.js)
+    let percentClass = 'percent-high';
+    if (parseFloat(similarity) < 30) percentClass = 'percent-low';
+    else if (parseFloat(similarity) < 70) percentClass = 'percent-medium';
+    else percentClass = 'percent-high';
+    
+    // Используем getFileDisplayName для отображения имени файла с листом
+    const file1Name = window.getFileDisplayName 
+        ? window.getFileDisplayName(window.fileName1 || 'File 1', window.sheetName1 || '')
+        : (window.fileName1 || 'File 1');
+    const file2Name = window.getFileDisplayName 
+        ? window.getFileDisplayName(window.fileName2 || 'File 2', window.sheetName2 || '')
+        : (window.fileName2 || 'File 2');
 
     const tableHeaders = getSummaryTableHeaders();
     
@@ -1237,7 +1248,7 @@ async function processFastComparisonResults(fastResult, useTolerance) {
                         <td rowspan="2" style="vertical-align: middle; font-weight: bold; font-size: 16px; color: #28a745;">${identicalCount.toLocaleString()}</td>
                         <td rowspan="2" style="vertical-align: middle; font-weight: bold; font-size: 16px; color: #ffc107;">${similarCount.toLocaleString()}</td>
                         <td>${onlyInTable1.length.toLocaleString()}</td>
-                        <td rowspan="2" style="vertical-align: middle; font-weight: bold; font-size: 18px;">${similarity}%</td>
+                        <td rowspan="2" style="vertical-align: middle; font-weight: bold; font-size: 18px;" class="percent-cell ${percentClass}">${similarity}%</td>
                     </tr>
                     <tr>
                         <td><strong>${file2Name}</strong></td>
@@ -1560,8 +1571,13 @@ async function createBasicFallbackTable(pairs, headers) {
     }
     
     let bodyHtml = '';
-    const file1Name = window.fileName1 || 'File 1';
-    const file2Name = window.fileName2 || 'File 2';
+    // Используем getFileDisplayName для отображения имени файла с листом в колонке Source
+    const file1Name = window.getFileDisplayName 
+        ? window.getFileDisplayName(window.fileName1 || 'File 1', window.sheetName1 || '')
+        : (window.fileName1 || 'File 1');
+    const file2Name = window.getFileDisplayName 
+        ? window.getFileDisplayName(window.fileName2 || 'File 2', window.sheetName2 || '')
+        : (window.fileName2 || 'File 2');
     
     pairs.slice(0, 1000).forEach((pair, index) => {
         const rowData = pair.row1 || pair.row2;
@@ -1820,8 +1836,13 @@ async function prepareDataForExportFast(fastResult, useTolerance = false) {
     }
     
     let rowIndex = 1;
-    const file1Name = window.fileName1 || 'File 1';
-    const file2Name = window.fileName2 || 'File 2';
+    // Используем getFileDisplayName для отображения имени файла с листом
+    const file1Name = window.getFileDisplayName 
+        ? window.getFileDisplayName(window.fileName1 || 'File 1', window.sheetName1 || '')
+        : (window.fileName1 || 'File 1');
+    const file2Name = window.getFileDisplayName 
+        ? window.getFileDisplayName(window.fileName2 || 'File 2', window.sheetName2 || '')
+        : (window.fileName2 || 'File 2');
     
     // Pre-create formatting templates for different row types
     const identicalFormatting = {

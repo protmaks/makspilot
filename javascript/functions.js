@@ -693,6 +693,9 @@ function getFileDisplayName(fileName, sheetName) {
     return fileName;
 }
 
+// Make the function globally accessible
+window.getFileDisplayName = getFileDisplayName;
+
 function updateSheetInfo(fileName, sheetNames, selectedSheet, fileNum) {
     const sheetInfoContainer = document.getElementById('sheetInfo');
     if (!sheetInfoContainer) return;
@@ -841,8 +844,10 @@ function processSelectedSheet(fileNum, selectedSheetName) {
     
     if (fileNum === 1) {
         sheetName1 = selectedSheetName;
+        window.sheetName1 = selectedSheetName; // Make globally accessible
     } else {
         sheetName2 = selectedSheetName;
+        window.sheetName2 = selectedSheetName; // Make globally accessible
     }
     
     if (!workbook || !workbook.Sheets[selectedSheetName]) return;
@@ -2203,12 +2208,14 @@ function handleFile(file, num) {
         window.fileName1 = file.name; // Make globally accessible
         workbook1 = null;
         sheetName1 = ''; 
+        window.sheetName1 = ''; // Make globally accessible
     } else {
         data2 = [];
         fileName2 = file.name;
         window.fileName2 = file.name; // Make globally accessible
         workbook2 = null;
         sheetName2 = ''; 
+        window.sheetName2 = ''; // Make globally accessible
     }
     
     
@@ -2344,9 +2351,11 @@ function handleFile(file, num) {
                 if (num === 1) {
                     workbook1 = workbook;
                     sheetName1 = workbook.SheetNames[0]; 
+                    window.sheetName1 = workbook.SheetNames[0]; // Make globally accessible
                 } else {
                     workbook2 = workbook;
                     sheetName2 = workbook.SheetNames[0]; 
+                    window.sheetName2 = workbook.SheetNames[0]; // Make globally accessible
                 }
                 
                 
