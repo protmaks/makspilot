@@ -2856,6 +2856,7 @@ function compareTables(useTolerance = false) {
     
     toleranceMode = useTolerance;
     window.toleranceMode = useTolerance; // Make it globally accessible
+    window.currentTolerance = useTolerance ? 1.5 : 0; // Set tolerance value
     
     
     clearComparisonResults();

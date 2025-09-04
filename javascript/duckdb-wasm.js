@@ -526,11 +526,33 @@ class FastTableComparator {
                 
                 // Для DOUBLE значений используем округление до 2 знаков после запятой
                 if (col1Type === 'DOUBLE' || col2Type === 'DOUBLE') {
-                    return `ROUND(t1."${col1Name}", 2) = ROUND(t2."${col2Name}", 2)`;
+                    if (useTolerance) {
+                        // Применяем 1.5% толерантность для DOUBLE значений
+                        const tolerancePercent = (window.currentTolerance || 1.5) / 100;
+                        return `(
+                            (t1."${col1Name}" = 0 AND t2."${col2Name}" = 0) OR
+                            (t1."${col1Name}" = t2."${col2Name}") OR
+                            (t1."${col1Name}" != 0 AND t2."${col2Name}" != 0 AND 
+                             ABS(t1."${col1Name}" - t2."${col2Name}") / ((ABS(t1."${col1Name}") + ABS(t2."${col2Name}")) / 2) <= ${tolerancePercent})
+                        )`;
+                    } else {
+                        return `ROUND(t1."${col1Name}", 2) = ROUND(t2."${col2Name}", 2)`;
+                    }
                 }
                 
-                // Если используется толерантность или колонки числовые (кроме DOUBLE), делаем прямое сравнение
-                if (useTolerance || col1Type === 'BIGINT' || col1Type === 'INTEGER' || col1Type === 'FLOAT') {
+                // Если используется толерантность для числовых колонок, применяем процентный допуск
+                if (useTolerance && (col1Type === 'BIGINT' || col1Type === 'INTEGER' || col1Type === 'FLOAT')) {
+                    const tolerancePercent = (window.currentTolerance || 1.5) / 100;
+                    return `(
+                        (t1."${col1Name}" = 0 AND t2."${col2Name}" = 0) OR
+                        (t1."${col1Name}" = t2."${col2Name}") OR
+                        (t1."${col1Name}" != 0 AND t2."${col2Name}" != 0 AND 
+                         ABS(t1."${col1Name}" - t2."${col2Name}") / ((ABS(t1."${col1Name}") + ABS(t2."${col2Name}")) / 2) <= ${tolerancePercent})
+                    )`;
+                }
+                
+                // Для числовых колонок без толерантности - прямое сравнение
+                if (col1Type === 'BIGINT' || col1Type === 'INTEGER' || col1Type === 'FLOAT') {
                     return `t1."${col1Name}" = t2."${col2Name}"`;
                 }
                 
@@ -652,11 +674,10 @@ class FastTableComparator {
             console.log('🔑 Key column condition:', keyColumnChecks);
             console.log('🔑 Matching requirements updated:', {
                 keyColumns: keyColumns.length,
-                minKeyMatches: Math.ceil(keyColumns.length * (useTolerance ? 0.8 : 0.8)),
+                requiredKeyMatches: keyColumns.length, // Все ключи должны совпадать
                 comparisonColumns: comparisonColumns.length,
-                minTotalMatches: Math.ceil(comparisonColumns.length * (useTolerance ? 0.7 : 0.8)),
-                maxTotalMatches: comparisonColumns.length - 1,
-                strategy: 'strict_similar_matching_with_exclusions'
+                maxTotalMatches: comparisonColumns.length - 1, // Хотя бы одна колонка должна отличаться
+                strategy: 'all_keys_match_with_differences'
             });
 
             // Настраиваемый лимит для SIMILAR пар в зависимости от размера данных
@@ -685,8 +706,7 @@ class FastTableComparator {
                 SELECT 
                     row1_id, row2_id, 'SIMILAR' as match_type, total_matches, key_matches
                 FROM key_matches  
-                WHERE key_matches >= ${Math.ceil(keyColumns.length * (useTolerance ? 0.8 : 0.8))}
-                  AND total_matches >= ${Math.ceil(comparisonColumns.length * (useTolerance ? 0.7 : 0.8))}
+                WHERE key_matches = ${keyColumns.length}
                   AND total_matches < ${comparisonColumns.length}
                 ORDER BY key_matches DESC, total_matches DESC
                 LIMIT ${similarLimit}  -- Динамический лимит на основе размера данных
@@ -696,11 +716,11 @@ class FastTableComparator {
             console.log('🔍 SIMILAR matching criteria:', {
                 keyColumns: keyColumns.length,
                 comparisonColumns: comparisonColumns.length,
-                minKeyMatches: Math.ceil(keyColumns.length * (useTolerance ? 0.8 : 0.8)),
-                minTotalMatches: Math.ceil(comparisonColumns.length * (useTolerance ? 0.7 : 0.8)),
-                maxTotalMatches: comparisonColumns.length - 1,
+                requiredKeyMatches: keyColumns.length, // Все ключевые колонки должны совпадать
+                maxTotalMatches: comparisonColumns.length - 1, // Хотя бы одна колонка должна отличаться
                 useTolerance: useTolerance,
-                excludedColumns: excludeColumns
+                excludedColumns: excludeColumns,
+                logic: 'All keys match AND at least one column differs'
             });
             await window.duckdbLoader.query(similarSQL);
             
@@ -736,11 +756,9 @@ class FastTableComparator {
             const filterStatsResult = await window.duckdbLoader.query(`
                 SELECT 
                     COUNT(*) as total_candidates,
-                    COUNT(CASE WHEN key_matches >= ${Math.ceil(keyColumns.length * (useTolerance ? 0.8 : 0.8))} THEN 1 END) as passed_key_filter,
-                    COUNT(CASE WHEN total_matches >= ${Math.ceil(comparisonColumns.length * (useTolerance ? 0.7 : 0.8))} THEN 1 END) as passed_total_filter,
+                    COUNT(CASE WHEN key_matches = ${keyColumns.length} THEN 1 END) as passed_key_filter,
                     COUNT(CASE WHEN total_matches < ${comparisonColumns.length} THEN 1 END) as passed_not_identical_filter,
-                    COUNT(CASE WHEN key_matches >= ${Math.ceil(keyColumns.length * (useTolerance ? 0.8 : 0.8))} 
-                               AND total_matches >= ${Math.ceil(comparisonColumns.length * (useTolerance ? 0.7 : 0.8))}
+                    COUNT(CASE WHEN key_matches = ${keyColumns.length} 
                                AND total_matches < ${comparisonColumns.length} THEN 1 END) as passed_all_filters,
                     AVG(total_matches) as avg_total_matches,
                     AVG(key_matches) as avg_key_matches,
