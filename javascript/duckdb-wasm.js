@@ -425,37 +425,39 @@ class FastTableComparator {
                         ${headers1.map((h, i) => 
                             useTolerance 
                                 ? `CASE WHEN t1.col_${i} = t2.col_${i} THEN 1 ELSE 0 END`
-                                : `CASE WHEN UPPER(t1.col_${i}) = UPPER(t2.col_${i}) THEN 1 ELSE 0 END`
+                                : `CASE WHEN UPPER(TRIM(t1.col_${i})) = UPPER(TRIM(t2.col_${i})) THEN 1 ELSE 0 END`
                         ).join(' + ')} as total_matches,
                         ${keyColumns.map(colIdx => 
                             useTolerance 
                                 ? `CASE WHEN t1.col_${colIdx} = t2.col_${colIdx} THEN 1 ELSE 0 END`
-                                : `CASE WHEN UPPER(t1.col_${colIdx}) = UPPER(t2.col_${colIdx}) THEN 1 ELSE 0 END`
+                                : `CASE WHEN UPPER(TRIM(t1.col_${colIdx})) = UPPER(TRIM(t2.col_${colIdx})) THEN 1 ELSE 0 END`
                         ).join(' + ')} as key_matches
                     FROM table1 t1
                     CROSS JOIN table2 t2
                     WHERE NOT EXISTS (
                         SELECT 1 FROM identical_pairs ip 
-                        WHERE ip.row1_id = t1.rowid OR ip.row2_id = t2.rowid
+                        WHERE ip.row1_id = t1.rowid AND ip.row2_id = t2.rowid
                     )
-                ),
-                ranked_matches AS (
-                    SELECT 
-                        row1_id, row2_id, total_matches, key_matches,
-                        ROW_NUMBER() OVER (PARTITION BY row1_id ORDER BY key_matches DESC, total_matches DESC, row2_id) as rn1,
-                        ROW_NUMBER() OVER (PARTITION BY row2_id ORDER BY key_matches DESC, total_matches DESC, row1_id) as rn2
-                    FROM key_matches
-                    WHERE key_matches >= ${Math.ceil(keyColumns.length * (useTolerance ? 0.8 : 0.8))}
-                      AND total_matches >= ${Math.ceil(headers1.length * (useTolerance ? 0.7 : 0.8))}
-                      AND total_matches < ${headers1.length}
                 )
                 SELECT 
                     row1_id, row2_id, 'SIMILAR' as match_type, total_matches, key_matches
-                FROM ranked_matches
-                WHERE rn1 = 1 AND rn2 = 1
+                FROM key_matches  
+                WHERE key_matches >= ${Math.ceil(keyColumns.length * (useTolerance ? 0.8 : 0.8))}
+                  AND total_matches >= ${Math.ceil(headers1.length * (useTolerance ? 0.7 : 0.8))}
+                  AND total_matches < ${headers1.length}
+                ORDER BY key_matches DESC, total_matches DESC
+                LIMIT 1000  -- Ограничиваем количество для производительности
             `;
             
             console.log('🔍 Similar SQL query (first part):', similarSQL.substring(0, 500) + '...');
+            console.log('🔍 SIMILAR matching criteria:', {
+                keyColumns: keyColumns.length,
+                totalColumns: headers1.length,
+                minKeyMatches: Math.ceil(keyColumns.length * (useTolerance ? 0.8 : 0.8)),
+                minTotalMatches: Math.ceil(headers1.length * (useTolerance ? 0.7 : 0.8)),
+                maxTotalMatches: headers1.length - 1,
+                useTolerance: useTolerance
+            });
             await window.duckdbLoader.query(similarSQL);
             
             // Проверяем количество найденных похожих строк
@@ -469,10 +471,43 @@ class FastTableComparator {
                 console.log('📝 Similar pairs sample:', similarSampleResult.toArray());
             }
             
-            // Проверим сколько строк прошло через key_matches
-            const keyMatchesDebugResult = await window.duckdbLoader.query(`
+            // Отладочная информация: сколько всего было кандидатов на SIMILAR
+            const candidatesCountResult = await window.duckdbLoader.query(`
+                SELECT COUNT(*) as count FROM (
+                    SELECT 
+                        t1.rowid as row1_id,
+                        t2.rowid as row2_id,
+                        ${headers1.map((h, i) => 
+                            useTolerance 
+                                ? `CASE WHEN t1.col_${i} = t2.col_${i} THEN 1 ELSE 0 END`
+                                : `CASE WHEN UPPER(TRIM(t1.col_${i})) = UPPER(TRIM(t2.col_${i})) THEN 1 ELSE 0 END`
+                        ).join(' + ')} as total_matches,
+                        ${keyColumns.map(colIdx => 
+                            useTolerance 
+                                ? `CASE WHEN t1.col_${colIdx} = t2.col_${colIdx} THEN 1 ELSE 0 END`
+                                : `CASE WHEN UPPER(TRIM(t1.col_${colIdx})) = UPPER(TRIM(t2.col_${colIdx})) THEN 1 ELSE 0 END`
+                        ).join(' + ')} as key_matches
+                    FROM table1 t1
+                    CROSS JOIN table2 t2
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM identical_pairs ip 
+                        WHERE ip.row1_id = t1.rowid AND ip.row2_id = t2.rowid
+                    )
+                ) candidates
+            `);
+            const candidatesCount = candidatesCountResult.toArray()[0]?.count || 0;
+            console.log('🔍 Total SIMILAR candidates (before filtering):', candidatesCount);
+            
+            // Проверим сколько кандидатов прошло каждый фильтр
+            const filterStatsResult = await window.duckdbLoader.query(`
                 SELECT 
                     COUNT(*) as total_candidates,
+                    COUNT(CASE WHEN key_matches >= ${Math.ceil(keyColumns.length * (useTolerance ? 0.8 : 0.8))} THEN 1 END) as passed_key_filter,
+                    COUNT(CASE WHEN total_matches >= ${Math.ceil(headers1.length * (useTolerance ? 0.7 : 0.8))} THEN 1 END) as passed_total_filter,
+                    COUNT(CASE WHEN total_matches < ${headers1.length} THEN 1 END) as passed_not_identical_filter,
+                    COUNT(CASE WHEN key_matches >= ${Math.ceil(keyColumns.length * (useTolerance ? 0.8 : 0.8))} 
+                               AND total_matches >= ${Math.ceil(headers1.length * (useTolerance ? 0.7 : 0.8))}
+                               AND total_matches < ${headers1.length} THEN 1 END) as passed_all_filters,
                     AVG(total_matches) as avg_total_matches,
                     AVG(key_matches) as avg_key_matches,
                     MIN(total_matches) as min_total_matches,
@@ -482,23 +517,23 @@ class FastTableComparator {
                         ${headers1.map((h, i) => 
                             useTolerance 
                                 ? `CASE WHEN t1.col_${i} = t2.col_${i} THEN 1 ELSE 0 END`
-                                : `CASE WHEN UPPER(t1.col_${i}) = UPPER(t2.col_${i}) THEN 1 ELSE 0 END`
+                                : `CASE WHEN UPPER(TRIM(t1.col_${i})) = UPPER(TRIM(t2.col_${i})) THEN 1 ELSE 0 END`
                         ).join(' + ')} as total_matches,
                         ${keyColumns.map(colIdx => 
                             useTolerance 
                                 ? `CASE WHEN t1.col_${colIdx} = t2.col_${colIdx} THEN 1 ELSE 0 END`
-                                : `CASE WHEN UPPER(t1.col_${colIdx}) = UPPER(t2.col_${colIdx}) THEN 1 ELSE 0 END`
+                                : `CASE WHEN UPPER(TRIM(t1.col_${colIdx})) = UPPER(TRIM(t2.col_${colIdx})) THEN 1 ELSE 0 END`
                         ).join(' + ')} as key_matches
                     FROM table1 t1
                     CROSS JOIN table2 t2
                     WHERE NOT EXISTS (
                         SELECT 1 FROM identical_pairs ip 
-                        WHERE ip.row1_id = t1.rowid OR ip.row2_id = t2.rowid
+                        WHERE ip.row1_id = t1.rowid AND ip.row2_id = t2.rowid
                     )
                 ) stats
             `);
-            const keyMatchesStats = keyMatchesDebugResult.toArray()[0];
-            console.log('🔍 Key matches statistics:', keyMatchesStats);
+            const filterStats = filterStatsResult.toArray()[0];
+            console.log('🔍 SIMILAR filter statistics:', filterStats);
 
             console.log('📋 Step 6: Collecting final results...');
             // Получаем все результаты одним запросом
@@ -1205,8 +1240,8 @@ async function processFastComparisonResults(fastResult, useTolerance) {
     // Подсчитываем количество совпадений раздельно
     const identicalCount = identical?.length || 0;
     const similarCount = similar?.length || 0;
-    const totalMatches = identicalCount + similarCount;
-    const similarity = table1Count > 0 ? ((totalMatches / Math.max(table1Count, table2Count)) * 100).toFixed(1) : 0;
+    const totalMatches = identicalCount; // Теперь считаем только identical
+    const similarity = table1Count > 0 ? ((identicalCount / Math.max(table1Count, table2Count)) * 100).toFixed(1) : 0;
     
     // Определяем класс для раскраски процента сходства (как в functions.js)
     let percentClass = 'percent-high';
@@ -1236,7 +1271,6 @@ async function processFastComparisonResults(fastResult, useTolerance) {
                         <th>${tableHeaders.file}</th>
                         <th>${tableHeaders.rowCount}</th>
                         <th>Identical Rows</th>
-                        <th>Similar Rows</th>
                         <th>${tableHeaders.rowsOnlyInFile}</th>
                         <th>${tableHeaders.similarity}</th>
                     </tr>
@@ -1246,7 +1280,6 @@ async function processFastComparisonResults(fastResult, useTolerance) {
                         <td><strong>${file1Name}</strong></td>
                         <td>${table1Count.toLocaleString()}</td>
                         <td rowspan="2" style="vertical-align: middle; font-weight: bold; font-size: 16px; color: #28a745;">${identicalCount.toLocaleString()}</td>
-                        <td rowspan="2" style="vertical-align: middle; font-weight: bold; font-size: 16px; color: #ffc107;">${similarCount.toLocaleString()}</td>
                         <td>${onlyInTable1.length.toLocaleString()}</td>
                         <td rowspan="2" style="vertical-align: middle; font-weight: bold; font-size: 18px;" class="percent-cell ${percentClass}">${similarity}%</td>
                     </tr>
@@ -1257,9 +1290,6 @@ async function processFastComparisonResults(fastResult, useTolerance) {
                     </tr>
                 </tbody>
             </table>
-            <div style="text-align: center; margin-top: 10px; font-size: 14px; color: #666;">
-                📊 Total: ${totalMatches.toLocaleString()} matches (${identicalCount} identical + ${similarCount} similar)
-            </div>
         </div>
     `;
     
@@ -1571,6 +1601,18 @@ async function createBasicFallbackTable(pairs, headers) {
     }
     
     let bodyHtml = '';
+    
+    // Получаем состояние фильтров чекбоксов
+    const hideSameEl = document.getElementById('hideSameRows');
+    const hideDiffEl = document.getElementById('hideDiffColumns');
+    const hideNewRows1El = document.getElementById('hideNewRows1');
+    const hideNewRows2El = document.getElementById('hideNewRows2');
+    
+    const hideSame = hideSameEl ? hideSameEl.checked : false;
+    const hideDiffRows = hideDiffEl ? hideDiffEl.checked : false;
+    const hideNewRows1 = hideNewRows1El ? hideNewRows1El.checked : false;
+    const hideNewRows2 = hideNewRows2El ? hideNewRows2El.checked : false;
+    
     // Используем getFileDisplayName для отображения имени файла с листом в колонке Source
     const file1Name = window.getFileDisplayName 
         ? window.getFileDisplayName(window.fileName1 || 'File 1', window.sheetName1 || '')
@@ -1580,62 +1622,169 @@ async function createBasicFallbackTable(pairs, headers) {
         : (window.fileName2 || 'File 2');
     
     pairs.slice(0, 1000).forEach((pair, index) => {
-        const rowData = pair.row1 || pair.row2;
-        let fileIndicator = '';
+        // Проверяем фильтры чекбоксов
+        const row1 = pair.row1;
+        const row2 = pair.row2;
         
-        // Определяем индикатор источника в зависимости от типа совпадения
-        if (pair.matchType === 'IDENTICAL') {
-            fileIndicator = `${file1Name} ↔ ${file2Name}`;
-        } else if (pair.matchType === 'SIMILAR') {
-            fileIndicator = `${file1Name} ≈ ${file2Name}`;
-        } else if (pair.onlyIn === 'table1') {
-            fileIndicator = file1Name;
-        } else if (pair.onlyIn === 'table2') {
-            fileIndicator = file2Name;
-        }
+        // Определяем характеристики строки для фильтрации
+        let allSame = true;
+        let hasWarn = false;
+        let isEmpty = true;
         
-        let rowClass = 'diff-row';
-        let sourceClass = 'file-indicator';
-        
-        // Устанавливаем стили в зависимости от типа совпадения
-        if (pair.matchType === 'IDENTICAL') {
-            rowClass += ' identical-row';
-            sourceClass += ' file-both';
-        } else if (pair.matchType === 'SIMILAR') {
-            rowClass += ' similar-row';
-            sourceClass += ' file-similar';
-        } else if (pair.onlyIn === 'table1') {
-            rowClass += ' different-row';
-            sourceClass += ' new-cell1';
-        } else if (pair.onlyIn === 'table2') {
-            rowClass += ' different-row';
-            sourceClass += ' new-cell2';
+        if (row1 && row2) {
+            // Сравниваем строки для определения allSame и hasWarn
+            for (let c = 0; c < realHeaders.length; c++) {
+                const v1 = row1[c] !== undefined ? row1[c] : '';
+                const v2 = row2[c] !== undefined ? row2[c] : '';
+                
+                if ((v1 && v1.toString().trim() !== '') || (v2 && v2.toString().trim() !== '')) {
+                    isEmpty = false;
+                }
+                
+                if (v1.toString().toUpperCase().trim() !== v2.toString().toUpperCase().trim()) {
+                    allSame = false;
+                    hasWarn = true;
+                }
+            }
         } else {
-            // Fallback для других случаев
-            rowClass += ' identical-row';
-            sourceClass += ' file-both';
+            allSame = false;
+            hasWarn = false;
+            
+            // Проверяем на пустоту
+            const existingRow = row1 || row2;
+            if (existingRow) {
+                for (let c = 0; c < realHeaders.length; c++) {
+                    const v = existingRow[c] !== undefined ? existingRow[c] : '';
+                    if (v && v.toString().trim() !== '') {
+                        isEmpty = false;
+                        break;
+                    }
+                }
+            }
         }
         
-        bodyHtml += `<tr class="${rowClass}" data-row-index="${pair.index1 >= 0 ? pair.index1 : pair.index2}">`;
-        bodyHtml += `<td class="${sourceClass}">${fileIndicator}</td>`;
+        // Применяем фильтры
+        if (isEmpty) return;
+        if (hideSame && row1 && row2 && allSame) return;
+        if (hideNewRows1 && row1 && !row2) return;
+        if (hideNewRows2 && !row1 && row2) return;
+        if (hideDiffRows && row1 && row2 && hasWarn) return;
         
-        realHeaders.forEach((header, colIndex) => {
-            const value = rowData && rowData[colIndex] !== undefined ? rowData[colIndex] : '';
+        // Для SIMILAR пар создаем группированные строки (как в functions.js)
+        if (pair.matchType === 'SIMILAR' && row1 && row2) {
+            // Анализируем колонки на предмет различий
+            const columnComparisons = [];
+            let hasAnyDifference = false;
             
-            // Улучшенная логика для определения стиля ячейки
-            let cellClass = 'diff-cell';
-            if (pair.matchType === 'IDENTICAL') {
-                cellClass += ' identical';
-            } else if (pair.matchType === 'SIMILAR') {
-                cellClass += ' similar';
+            realHeaders.forEach((header, colIndex) => {
+                const v1 = row1[colIndex] !== undefined ? row1[colIndex] : '';
+                const v2 = row2[colIndex] !== undefined ? row2[colIndex] : '';
+                
+                if (v1 && v2 && v1.toString().toUpperCase().trim() === v2.toString().toUpperCase().trim()) {
+                    columnComparisons[colIndex] = 'identical';
+                } else {
+                    columnComparisons[colIndex] = 'different';
+                    hasAnyDifference = true;
+                }
+            });
+            
+            if (hasAnyDifference) {
+                // Первая строка (File 1)
+                bodyHtml += `<tr class="warn-row warn-row-group-start" data-row-index="${pair.index1}">`;
+                bodyHtml += `<td class="warn-cell">${file1Name}</td>`;
+                
+                realHeaders.forEach((header, colIndex) => {
+                    const v1 = row1[colIndex] !== undefined ? row1[colIndex] : '';
+                    const compResult = columnComparisons[colIndex];
+                    
+                    if (compResult === 'identical') {
+                        // Объединяем одинаковые колонки
+                        bodyHtml += `<td class="identical" rowspan="2" style="vertical-align: middle; text-align: center;">${v1}</td>`;
+                    } else {
+                        // Разные колонки показываем отдельно
+                        bodyHtml += `<td class="warn-cell">${v1}</td>`;
+                    }
+                });
+                bodyHtml += '</tr>';
+                
+                // Вторая строка (File 2)
+                bodyHtml += `<tr class="warn-row warn-row-group-end" data-row-index="${pair.index2}">`;
+                bodyHtml += `<td class="warn-cell">${file2Name}</td>`;
+                
+                realHeaders.forEach((header, colIndex) => {
+                    const v2 = row2[colIndex] !== undefined ? row2[colIndex] : '';
+                    const compResult = columnComparisons[colIndex];
+                    
+                    if (compResult === 'different') {
+                        // Показываем только разные колонки (identical уже показаны с rowspan)
+                        bodyHtml += `<td class="warn-cell">${v2}</td>`;
+                    }
+                    // identical колонки пропускаем, так как они уже отображены с rowspan="2"
+                });
+                bodyHtml += '</tr>';
             } else {
-                cellClass += ' different';
+                // Если нет различий, показываем как identical
+                bodyHtml += `<tr class="identical-row" data-row-index="${pair.index1}">`;
+                bodyHtml += `<td class="file-both">Both files</td>`;
+                
+                realHeaders.forEach((header, colIndex) => {
+                    const value = row1[colIndex] !== undefined ? row1[colIndex] : '';
+                    bodyHtml += `<td class="identical" title="${value}">${value}</td>`;
+                });
+                bodyHtml += `</tr>`;
+            }
+        } else {
+            // Для других типов (IDENTICAL, ONLY_IN_TABLE1, ONLY_IN_TABLE2) используем старую логику
+            const rowData = row1 || row2;
+            let fileIndicator = '';
+            
+            // Определяем индикатор источника в зависимости от типа совпадения
+            if (pair.matchType === 'IDENTICAL') {
+                fileIndicator = 'Both files';
+            } else if (pair.onlyIn === 'table1') {
+                fileIndicator = file1Name;
+            } else if (pair.onlyIn === 'table2') {
+                fileIndicator = file2Name;
             }
             
-            bodyHtml += `<td class="${cellClass}" title="${value}">${value}</td>`;
-        });
-        
-        bodyHtml += `</tr>`;
+            let rowClass = 'diff-row';
+            let sourceClass = 'file-indicator';
+            
+            // Устанавливаем стили в зависимости от типа совпадения
+            if (pair.matchType === 'IDENTICAL') {
+                rowClass += ' identical-row';
+                sourceClass += ' file-both';
+            } else if (pair.onlyIn === 'table1') {
+                rowClass += ' different-row';
+                sourceClass += ' new-cell1';
+            } else if (pair.onlyIn === 'table2') {
+                rowClass += ' different-row';
+                sourceClass += ' new-cell2';
+            } else {
+                // Fallback для других случаев
+                rowClass += ' identical-row';
+                sourceClass += ' file-both';
+            }
+            
+            bodyHtml += `<tr class="${rowClass}" data-row-index="${pair.index1 >= 0 ? pair.index1 : pair.index2}">`;
+            bodyHtml += `<td class="${sourceClass}">${fileIndicator}</td>`;
+            
+            realHeaders.forEach((header, colIndex) => {
+                const value = rowData && rowData[colIndex] !== undefined ? rowData[colIndex] : '';
+                
+                // Улучшенная логика для определения стиля ячейки
+                let cellClass = 'diff-cell';
+                if (pair.matchType === 'IDENTICAL') {
+                    cellClass += ' identical';
+                } else {
+                    cellClass += ' different';
+                }
+                
+                bodyHtml += `<td class="${cellClass}" title="${value}">${value}</td>`;
+            });
+            
+            bodyHtml += `</tr>`;
+        }
     });
     
     if (pairs.length > 1000) {
@@ -1674,6 +1823,43 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     // Включаем обратно DuckDB WASM с улучшенной логикой
     window.compareTables = compareTablesEnhanced;
+    
+    // Добавляем обработчики событий для фильтров чекбоксов
+    const hideSameRowsEl = document.getElementById('hideSameRows');
+    if (hideSameRowsEl) {
+        hideSameRowsEl.addEventListener('change', function() {
+            if (window.currentPairs && window.currentPairs.length > 0 && window.currentFinalHeaders) {
+                createBasicFallbackTable(window.currentPairs, window.currentFinalHeaders);
+            }
+        });
+    }
+    
+    const hideDiffColumnsEl = document.getElementById('hideDiffColumns');
+    if (hideDiffColumnsEl) {
+        hideDiffColumnsEl.addEventListener('change', function() {
+            if (window.currentPairs && window.currentPairs.length > 0 && window.currentFinalHeaders) {
+                createBasicFallbackTable(window.currentPairs, window.currentFinalHeaders);
+            }
+        });
+    }
+    
+    const hideNewRows1El = document.getElementById('hideNewRows1');
+    if (hideNewRows1El) {
+        hideNewRows1El.addEventListener('change', function() {
+            if (window.currentPairs && window.currentPairs.length > 0 && window.currentFinalHeaders) {
+                createBasicFallbackTable(window.currentPairs, window.currentFinalHeaders);
+            }
+        });
+    }
+    
+    const hideNewRows2El = document.getElementById('hideNewRows2');
+    if (hideNewRows2El) {
+        hideNewRows2El.addEventListener('change', function() {
+            if (window.currentPairs && window.currentPairs.length > 0 && window.currentFinalHeaders) {
+                createBasicFallbackTable(window.currentPairs, window.currentFinalHeaders);
+            }
+        });
+    }
 });
 
 function testDOMIntegration() {
