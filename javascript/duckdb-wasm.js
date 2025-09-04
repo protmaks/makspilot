@@ -249,6 +249,13 @@ class FastTableComparator {
 
     async compareTablesWithOriginalLogic(data1, data2, excludeColumns = [], useTolerance = false) {
         console.log('🚀 Using DuckDB WASM with multi-stage comparison logic...');
+        console.log('🔧 compareTablesWithOriginalLogic - excludeColumns debug:', {
+            excludeColumns: excludeColumns,
+            excludeColumnsType: typeof excludeColumns,
+            excludeColumnsIsArray: Array.isArray(excludeColumns),
+            excludeColumnsLength: excludeColumns?.length || 0,
+            excludeColumnsStringified: JSON.stringify(excludeColumns)
+        });
         const startTime = performance.now();
 
         try {
@@ -280,15 +287,38 @@ class FastTableComparator {
             const headers2 = data2[0] || [];
             
             console.log('📝 Step 1: Creating tables with SQL...');
-            // Создаем SQL для создания таблиц
+            // Функция для очистки имен колонок для SQL
+            const sanitizeColumnName = (name, index) => {
+                if (!name || typeof name !== 'string') {
+                    return `col_${index}`;
+                }
+                // Удаляем специальные символы и заменяем пробелы на подчеркивания
+                let sanitized = name.replace(/[^a-zA-Z0-9а-яА-Я_]/g, '_')
+                                   .replace(/\s+/g, '_')
+                                   .replace(/_{2,}/g, '_')
+                                   .replace(/^_|_$/g, '');
+                
+                // Если имя пустое или начинается с цифры, добавляем префикс
+                if (!sanitized || /^\d/.test(sanitized)) {
+                    sanitized = `col_${index}_${sanitized}`;
+                }
+                
+                return sanitized || `col_${index}`;
+            };
+
+            // Создаем массивы очищенных имен колонок для использования в SQL
+            const sanitizedHeaders1 = headers1.map((h, i) => sanitizeColumnName(h, i));
+            const sanitizedHeaders2 = headers2.map((h, i) => sanitizeColumnName(h, i));
+
+            // Создаем SQL для создания таблиц с реальными именами колонок
             const createTable1SQL = `CREATE OR REPLACE TABLE table1 (
                 rowid INTEGER,
-                ${headers1.map((h, i) => `col_${i} VARCHAR`).join(', ')}
+                ${sanitizedHeaders1.map(h => `"${h}" VARCHAR`).join(', ')}
             )`;
 
             const createTable2SQL = `CREATE OR REPLACE TABLE table2 (
                 rowid INTEGER,
-                ${headers2.map((h, i) => `col_${i} VARCHAR`).join(', ')}
+                ${sanitizedHeaders2.map(h => `"${h}" VARCHAR`).join(', ')}
             )`;
 
             await window.duckdbLoader.query(createTable1SQL);
@@ -321,15 +351,51 @@ class FastTableComparator {
             await insertBatch('table1', data1, headers1);
             await insertBatch('table2', data2, headers2);
 
-            console.log('🔍 Step 3: Detecting key columns...');
+            console.log('🔍 Step 3: Filtering columns and detecting key columns...');
+            
+            // Определяем колонки для сравнения (исключаем указанные)
+            const comparisonColumns = [];
+            headers1.forEach((header, index) => {
+                // Проверяем, нужно ли исключить эту колонку
+                const shouldExclude = excludeColumns.some(excCol => {
+                    if (typeof excCol === 'string') {
+                        return header.toLowerCase().includes(excCol.toLowerCase());
+                    } else if (typeof excCol === 'number') {
+                        return index === excCol;
+                    }
+                    return false;
+                });
+                
+                if (!shouldExclude) {
+                    comparisonColumns.push(index);
+                }
+            });
+            
+            console.log('🔍 Column filtering results:', {
+                totalColumns: headers1.length,
+                excludeColumns: excludeColumns,
+                comparisonColumns: comparisonColumns,
+                comparisonColumnNames: comparisonColumns.map(idx => headers1[idx]),
+                excludedColumnNames: excludeColumns
+            });
+            
+            if (comparisonColumns.length === 0) {
+                throw new Error('All columns are excluded from comparison');
+            }
+            
             // Определяем ключевые поля на основе заголовков (используем оригинальный smartDetectKeyColumns)
-            const keyColumns = this.detectKeyColumnsSQL(headers1);
+            const allKeyColumns = this.detectKeyColumnsSQL(headers1);
+            // Фильтруем ключевые колонки, исключая те, что исключены из сравнения
+            const keyColumns = allKeyColumns.filter(keyCol => comparisonColumns.includes(keyCol));
+            
             console.log('🔑 Key columns detected:', keyColumns);
             console.log('🔑 Headers analysis:', {
                 headers1: headers1,
                 headers2: headers2,
                 headers1Length: headers1.length,
-                headers2Length: headers2.length
+                headers2Length: headers2.length,
+                allKeyColumns: allKeyColumns,
+                filteredKeyColumns: keyColumns
             });
 
             console.log('🎯 Step 4: Finding identical rows...');
@@ -337,11 +403,11 @@ class FastTableComparator {
             // Проверим сначала общее количество строк в каждой таблице
             const table1CountResult = await window.duckdbLoader.query('SELECT COUNT(*) as count FROM table1');
             const table2CountResult = await window.duckdbLoader.query('SELECT COUNT(*) as count FROM table2');
-            const table1Count = table1CountResult.toArray()[0]?.count || 0;
-            const table2Count = table2CountResult.toArray()[0]?.count || 0;
+            const table1Count = Number(table1CountResult.toArray()[0]?.count || 0);
+            const table2Count = Number(table2CountResult.toArray()[0]?.count || 0);
             console.log('📊 Table counts:', { table1Count, table2Count });
             
-            // Сначала находим полностью идентичные строки
+            // Сначала находим полностью идентичные строки (используем только колонки для сравнения)
             const identicalSQL = `
                 CREATE OR REPLACE TABLE identical_pairs AS
                 SELECT 
@@ -350,20 +416,23 @@ class FastTableComparator {
                     'IDENTICAL' as match_type
                 FROM table1 t1
                 INNER JOIN table2 t2 ON (
-                    ${headers1.map((h, i) => 
+                    ${comparisonColumns.map(colIdx => 
                         useTolerance 
-                            ? `t1.col_${i} = t2.col_${i}`
-                            : `UPPER(TRIM(t1.col_${i})) = UPPER(TRIM(t2.col_${i}))`
+                            ? `t1."${sanitizedHeaders1[colIdx]}" = t2."${sanitizedHeaders2[colIdx]}"`
+                            : `UPPER(TRIM(t1."${sanitizedHeaders1[colIdx]}")) = UPPER(TRIM(t2."${sanitizedHeaders2[colIdx]}"))`
                     ).join(' AND ')}
                 )
             `;
             
             console.log('🔍 Identical SQL query sample conditions:', {
                 useTolerance,
+                comparisonColumns: comparisonColumns,
                 firstCondition: useTolerance 
-                    ? `t1.col_0 = t2.col_0`
-                    : `UPPER(TRIM(t1.col_0)) = UPPER(TRIM(t2.col_0))`,
-                totalConditions: headers1.length
+                    ? `t1."${sanitizedHeaders1[comparisonColumns[0]]}" = t2."${sanitizedHeaders2[comparisonColumns[0]]}"`
+                    : `UPPER(TRIM(t1."${sanitizedHeaders1[comparisonColumns[0]]}")) = UPPER(TRIM(t2."${sanitizedHeaders2[comparisonColumns[0]]}"))`,
+                firstColumnName: headers1[comparisonColumns[0]],
+                totalConditions: comparisonColumns.length,
+                excludedColumns: excludeColumns
             });
             
             console.log('🔍 Identical SQL query:', identicalSQL);
@@ -371,50 +440,34 @@ class FastTableComparator {
             
             // Проверяем количество найденных идентичных строк
             const identicalCountResult = await window.duckdbLoader.query('SELECT COUNT(*) as count FROM identical_pairs');
-            const identicalCount = identicalCountResult.toArray()[0]?.count || 0;
+            const identicalCount = Number(identicalCountResult.toArray()[0]?.count || 0);
             console.log('📊 Found identical pairs:', identicalCount);
-            
-            // Посмотрим на несколько примеров данных из таблиц
-            const sample1Result = await window.duckdbLoader.query('SELECT * FROM table1 LIMIT 3');
-            const sample2Result = await window.duckdbLoader.query('SELECT * FROM table2 LIMIT 3');
-            console.log('📝 Sample from table1:', sample1Result.toArray());
-            console.log('📝 Sample from table2:', sample2Result.toArray());
-            
-            // Проверим, есть ли различия в данных вообще
-            const distinctCheck1 = await window.duckdbLoader.query('SELECT DISTINCT col_0 FROM table1 LIMIT 5');
-            const distinctCheck2 = await window.duckdbLoader.query('SELECT DISTINCT col_0 FROM table2 LIMIT 5');
-            console.log('🔍 Distinct values col_0 table1:', distinctCheck1.toArray());
-            console.log('🔍 Distinct values col_0 table2:', distinctCheck2.toArray());
-            
-            // Проверим распределение по длине строк
-            if (headers1.length > 1) {
-                const lengthCheck1 = await window.duckdbLoader.query(`SELECT LENGTH(col_0) as len0, LENGTH(col_1) as len1 FROM table1 LIMIT 3`);
-                const lengthCheck2 = await window.duckdbLoader.query(`SELECT LENGTH(col_0) as len0, LENGTH(col_1) as len1 FROM table2 LIMIT 3`);
-                console.log('📏 Length check table1:', lengthCheck1.toArray());
-                console.log('📏 Length check table2:', lengthCheck2.toArray());
-            }
 
             console.log('🔍 Step 5: Finding similar rows by key columns...');
             // Затем ищем похожие строки по ключевым полям (исключая уже найденные идентичные)
             const keyColumnChecks = keyColumns.map(colIdx => 
                 useTolerance 
-                    ? `t1.col_${colIdx} = t2.col_${colIdx}`
-                    : `UPPER(TRIM(t1.col_${colIdx})) = UPPER(TRIM(t2.col_${colIdx}))`
+                    ? `t1."${sanitizedHeaders1[colIdx]}" = t2."${sanitizedHeaders2[colIdx]}"`
+                    : `UPPER(TRIM(t1."${sanitizedHeaders1[colIdx]}")) = UPPER(TRIM(t2."${sanitizedHeaders2[colIdx]}"))`
             ).join(' AND ');
 
-            // Более строгие требования для сопоставления
+            // Более строгие требования для сопоставления (основанные на колонках для сравнения)
             const minKeyMatchesRequired = Math.max(1, Math.ceil(keyColumns.length * (useTolerance ? 0.8 : 0.8))); // Минимум 80% ключевых полей
-            const minTotalMatchesRequired = Math.max(2, Math.ceil(headers1.length * (useTolerance ? 0.6 : 0.7))); // Минимум 60-70% всех полей
+            const minTotalMatchesRequired = Math.max(2, Math.ceil(comparisonColumns.length * (useTolerance ? 0.6 : 0.7))); // Минимум 60-70% колонок для сравнения
 
             console.log('🔑 Key column condition:', keyColumnChecks);
             console.log('🔑 Matching requirements updated:', {
                 keyColumns: keyColumns.length,
                 minKeyMatches: Math.ceil(keyColumns.length * (useTolerance ? 0.8 : 0.8)),
-                totalColumns: headers1.length,
-                minTotalMatches: Math.ceil(headers1.length * (useTolerance ? 0.7 : 0.8)),
-                maxTotalMatches: headers1.length - 1,
-                strategy: 'strict_similar_matching'
+                comparisonColumns: comparisonColumns.length,
+                minTotalMatches: Math.ceil(comparisonColumns.length * (useTolerance ? 0.7 : 0.8)),
+                maxTotalMatches: comparisonColumns.length - 1,
+                strategy: 'strict_similar_matching_with_exclusions'
             });
+
+            // Настраиваемый лимит для SIMILAR пар в зависимости от размера данных
+            const similarLimit = Math.max(1000, Math.min(10000, table1Count + table2Count));
+            console.log('🔧 SIMILAR pairs limit calculated:', similarLimit);
 
             const similarSQL = `
                 CREATE OR REPLACE TABLE similar_pairs AS
@@ -422,15 +475,15 @@ class FastTableComparator {
                     SELECT 
                         t1.rowid as row1_id,
                         t2.rowid as row2_id,
-                        ${headers1.map((h, i) => 
+                        ${comparisonColumns.map(colIdx => 
                             useTolerance 
-                                ? `CASE WHEN t1.col_${i} = t2.col_${i} THEN 1 ELSE 0 END`
-                                : `CASE WHEN UPPER(TRIM(t1.col_${i})) = UPPER(TRIM(t2.col_${i})) THEN 1 ELSE 0 END`
+                                ? `CASE WHEN t1."${sanitizedHeaders1[colIdx]}" = t2."${sanitizedHeaders2[colIdx]}" THEN 1 ELSE 0 END`
+                                : `CASE WHEN UPPER(TRIM(t1."${sanitizedHeaders1[colIdx]}")) = UPPER(TRIM(t2."${sanitizedHeaders2[colIdx]}")) THEN 1 ELSE 0 END`
                         ).join(' + ')} as total_matches,
                         ${keyColumns.map(colIdx => 
                             useTolerance 
-                                ? `CASE WHEN t1.col_${colIdx} = t2.col_${colIdx} THEN 1 ELSE 0 END`
-                                : `CASE WHEN UPPER(TRIM(t1.col_${colIdx})) = UPPER(TRIM(t2.col_${colIdx})) THEN 1 ELSE 0 END`
+                                ? `CASE WHEN t1."${sanitizedHeaders1[colIdx]}" = t2."${sanitizedHeaders2[colIdx]}" THEN 1 ELSE 0 END`
+                                : `CASE WHEN UPPER(TRIM(t1."${sanitizedHeaders1[colIdx]}")) = UPPER(TRIM(t2."${sanitizedHeaders2[colIdx]}")) THEN 1 ELSE 0 END`
                         ).join(' + ')} as key_matches
                     FROM table1 t1
                     CROSS JOIN table2 t2
@@ -443,33 +496,28 @@ class FastTableComparator {
                     row1_id, row2_id, 'SIMILAR' as match_type, total_matches, key_matches
                 FROM key_matches  
                 WHERE key_matches >= ${Math.ceil(keyColumns.length * (useTolerance ? 0.8 : 0.8))}
-                  AND total_matches >= ${Math.ceil(headers1.length * (useTolerance ? 0.7 : 0.8))}
-                  AND total_matches < ${headers1.length}
+                  AND total_matches >= ${Math.ceil(comparisonColumns.length * (useTolerance ? 0.7 : 0.8))}
+                  AND total_matches < ${comparisonColumns.length}
                 ORDER BY key_matches DESC, total_matches DESC
-                LIMIT 1000  -- Ограничиваем количество для производительности
+                LIMIT ${similarLimit}  -- Динамический лимит на основе размера данных
             `;
             
             console.log('🔍 Similar SQL query (first part):', similarSQL.substring(0, 500) + '...');
             console.log('🔍 SIMILAR matching criteria:', {
                 keyColumns: keyColumns.length,
-                totalColumns: headers1.length,
+                comparisonColumns: comparisonColumns.length,
                 minKeyMatches: Math.ceil(keyColumns.length * (useTolerance ? 0.8 : 0.8)),
-                minTotalMatches: Math.ceil(headers1.length * (useTolerance ? 0.7 : 0.8)),
-                maxTotalMatches: headers1.length - 1,
-                useTolerance: useTolerance
+                minTotalMatches: Math.ceil(comparisonColumns.length * (useTolerance ? 0.7 : 0.8)),
+                maxTotalMatches: comparisonColumns.length - 1,
+                useTolerance: useTolerance,
+                excludedColumns: excludeColumns
             });
             await window.duckdbLoader.query(similarSQL);
             
             // Проверяем количество найденных похожих строк
             const similarCountResult = await window.duckdbLoader.query('SELECT COUNT(*) as count FROM similar_pairs');
-            const similarCount = similarCountResult.toArray()[0]?.count || 0;
+            const similarCount = Number(similarCountResult.toArray()[0]?.count || 0);
             console.log('📊 Found similar pairs:', similarCount);
-            
-            // Отладочная информация о промежуточных результатах
-            if (similarCount > 0) {
-                const similarSampleResult = await window.duckdbLoader.query('SELECT * FROM similar_pairs LIMIT 3');
-                console.log('📝 Similar pairs sample:', similarSampleResult.toArray());
-            }
             
             // Отладочная информация: сколько всего было кандидатов на SIMILAR
             const candidatesCountResult = await window.duckdbLoader.query(`
@@ -477,15 +525,15 @@ class FastTableComparator {
                     SELECT 
                         t1.rowid as row1_id,
                         t2.rowid as row2_id,
-                        ${headers1.map((h, i) => 
+                        ${comparisonColumns.map(colIdx => 
                             useTolerance 
-                                ? `CASE WHEN t1.col_${i} = t2.col_${i} THEN 1 ELSE 0 END`
-                                : `CASE WHEN UPPER(TRIM(t1.col_${i})) = UPPER(TRIM(t2.col_${i})) THEN 1 ELSE 0 END`
+                                ? `CASE WHEN t1."${sanitizedHeaders1[colIdx]}" = t2."${sanitizedHeaders2[colIdx]}" THEN 1 ELSE 0 END`
+                                : `CASE WHEN UPPER(TRIM(t1."${sanitizedHeaders1[colIdx]}")) = UPPER(TRIM(t2."${sanitizedHeaders2[colIdx]}")) THEN 1 ELSE 0 END`
                         ).join(' + ')} as total_matches,
                         ${keyColumns.map(colIdx => 
                             useTolerance 
-                                ? `CASE WHEN t1.col_${colIdx} = t2.col_${colIdx} THEN 1 ELSE 0 END`
-                                : `CASE WHEN UPPER(TRIM(t1.col_${colIdx})) = UPPER(TRIM(t2.col_${colIdx})) THEN 1 ELSE 0 END`
+                                ? `CASE WHEN t1."${sanitizedHeaders1[colIdx]}" = t2."${sanitizedHeaders2[colIdx]}" THEN 1 ELSE 0 END`
+                                : `CASE WHEN UPPER(TRIM(t1."${sanitizedHeaders1[colIdx]}")) = UPPER(TRIM(t2."${sanitizedHeaders2[colIdx]}")) THEN 1 ELSE 0 END`
                         ).join(' + ')} as key_matches
                     FROM table1 t1
                     CROSS JOIN table2 t2
@@ -495,7 +543,7 @@ class FastTableComparator {
                     )
                 ) candidates
             `);
-            const candidatesCount = candidatesCountResult.toArray()[0]?.count || 0;
+            const candidatesCount = Number(candidatesCountResult.toArray()[0]?.count || 0);
             console.log('🔍 Total SIMILAR candidates (before filtering):', candidatesCount);
             
             // Проверим сколько кандидатов прошло каждый фильтр
@@ -503,26 +551,26 @@ class FastTableComparator {
                 SELECT 
                     COUNT(*) as total_candidates,
                     COUNT(CASE WHEN key_matches >= ${Math.ceil(keyColumns.length * (useTolerance ? 0.8 : 0.8))} THEN 1 END) as passed_key_filter,
-                    COUNT(CASE WHEN total_matches >= ${Math.ceil(headers1.length * (useTolerance ? 0.7 : 0.8))} THEN 1 END) as passed_total_filter,
-                    COUNT(CASE WHEN total_matches < ${headers1.length} THEN 1 END) as passed_not_identical_filter,
+                    COUNT(CASE WHEN total_matches >= ${Math.ceil(comparisonColumns.length * (useTolerance ? 0.7 : 0.8))} THEN 1 END) as passed_total_filter,
+                    COUNT(CASE WHEN total_matches < ${comparisonColumns.length} THEN 1 END) as passed_not_identical_filter,
                     COUNT(CASE WHEN key_matches >= ${Math.ceil(keyColumns.length * (useTolerance ? 0.8 : 0.8))} 
-                               AND total_matches >= ${Math.ceil(headers1.length * (useTolerance ? 0.7 : 0.8))}
-                               AND total_matches < ${headers1.length} THEN 1 END) as passed_all_filters,
+                               AND total_matches >= ${Math.ceil(comparisonColumns.length * (useTolerance ? 0.7 : 0.8))}
+                               AND total_matches < ${comparisonColumns.length} THEN 1 END) as passed_all_filters,
                     AVG(total_matches) as avg_total_matches,
                     AVG(key_matches) as avg_key_matches,
                     MIN(total_matches) as min_total_matches,
                     MAX(total_matches) as max_total_matches
                 FROM (
                     SELECT 
-                        ${headers1.map((h, i) => 
+                        ${comparisonColumns.map(colIdx => 
                             useTolerance 
-                                ? `CASE WHEN t1.col_${i} = t2.col_${i} THEN 1 ELSE 0 END`
-                                : `CASE WHEN UPPER(TRIM(t1.col_${i})) = UPPER(TRIM(t2.col_${i})) THEN 1 ELSE 0 END`
+                                ? `CASE WHEN t1."${sanitizedHeaders1[colIdx]}" = t2."${sanitizedHeaders2[colIdx]}" THEN 1 ELSE 0 END`
+                                : `CASE WHEN UPPER(TRIM(t1."${sanitizedHeaders1[colIdx]}")) = UPPER(TRIM(t2."${sanitizedHeaders2[colIdx]}")) THEN 1 ELSE 0 END`
                         ).join(' + ')} as total_matches,
                         ${keyColumns.map(colIdx => 
                             useTolerance 
-                                ? `CASE WHEN t1.col_${colIdx} = t2.col_${colIdx} THEN 1 ELSE 0 END`
-                                : `CASE WHEN UPPER(TRIM(t1.col_${colIdx})) = UPPER(TRIM(t2.col_${colIdx})) THEN 1 ELSE 0 END`
+                                ? `CASE WHEN t1."${sanitizedHeaders1[colIdx]}" = t2."${sanitizedHeaders2[colIdx]}" THEN 1 ELSE 0 END`
+                                : `CASE WHEN UPPER(TRIM(t1."${sanitizedHeaders1[colIdx]}")) = UPPER(TRIM(t2."${sanitizedHeaders2[colIdx]}")) THEN 1 ELSE 0 END`
                         ).join(' + ')} as key_matches
                     FROM table1 t1
                     CROSS JOIN table2 t2
@@ -609,7 +657,9 @@ class FastTableComparator {
                 onlyInTable2: onlyInTable2,
                 table1Count: data1.length - 1,
                 table2Count: data2.length - 1,
-                commonColumns: headers1,
+                commonColumns: headers1, // Все колонки (для отображения таблицы)
+                comparisonColumns: comparisonColumns, // Колонки, участвующие в сравнении
+                excludedColumns: excludeColumns, // Исключенные колонки
                 keyColumns: keyColumns,
                 performance: {
                     duration: duration,
@@ -968,6 +1018,15 @@ function showFastModeStatus(available, mode = 'local') {
 
 async function compareTablesWithFastComparator(data1, data2, excludeColumns = [], useTolerance = false, tolerance = 1.5) {
     try {
+        console.log('🔧 compareTablesWithFastComparator called with parameters:', {
+            excludeColumns: excludeColumns,
+            excludeColumnsType: typeof excludeColumns,
+            excludeColumnsLength: excludeColumns?.length || 0,
+            excludeColumnsArray: Array.isArray(excludeColumns),
+            useTolerance: useTolerance,
+            tolerance: tolerance
+        });
+        
         if (!fastComparator || !fastComparator.initialized) {
             console.log('❌ Fast comparator not initialized');
             return null;
@@ -1155,6 +1214,15 @@ async function compareTablesEnhanced(useTolerance = false) {
                     
                     const excludedColumns = getExcludedColumns ? getExcludedColumns() : [];
                     const tolerance = window.currentTolerance || 1.5;
+                    
+                    console.log('🔧 Fast comparison parameters:', {
+                        excludedColumns: excludedColumns,
+                        excludedColumnsType: typeof excludedColumns,
+                        excludedColumnsLength: excludedColumns?.length || 0,
+                        useTolerance: useTolerance,
+                        tolerance: tolerance,
+                        getExcludedColumnsExists: typeof getExcludedColumns !== 'undefined'
+                    });
                     
                     console.log('🔧 Calling compareTablesWithFastComparator...');
                     const fastResult = await compareTablesWithFastComparator(
