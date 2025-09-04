@@ -1,5 +1,14 @@
 async function exportToExcel() {
-    if (!currentPairs || currentPairs.length === 0) {
+    // Check if we have data to export - either from standard comparison or fast comparison
+    const hasStandardData = currentPairs && currentPairs.length > 0;
+    const hasFastData = window.currentFastResult && (
+        (window.currentFastResult.identical && window.currentFastResult.identical.length > 0) ||
+        (window.currentFastResult.similar && window.currentFastResult.similar.length > 0) ||
+        (window.currentFastResult.onlyInTable1 && window.currentFastResult.onlyInTable1.length > 0) ||
+        (window.currentFastResult.onlyInTable2 && window.currentFastResult.onlyInTable2.length > 0)
+    );
+    
+    if (!hasStandardData && !hasFastData) {
         alert('No data to export. Please compare files first.');
         return;
     }
@@ -38,7 +47,7 @@ async function exportToExcel() {
     }
     
     console.log('📊 Export to Excel started', {
-        currentPairsLength: currentPairs.length,
+        currentPairsLength: currentPairs ? currentPairs.length : 0,
         fullComparisonPairsLength: window.fullComparisonPairs ? window.fullComparisonPairs.length : 0,
         hasFastResult: !!(window.currentFastResult),
         hasFastComparator: !!(window.MaxPilotDuckDB && window.MaxPilotDuckDB.prepareDataForExportFast),
@@ -59,6 +68,9 @@ async function exportToExcel() {
             console.log('🔄 Using standard export method - will use full data if available');
             // Fallback to old method - will use full comparison data if available
             const exportData = prepareDataForExport();
+            if (!exportData) {
+                throw new Error('No data available for export from standard method');
+            }
             const htmlContent = await createStyledHTMLTable(exportData);
             downloadExcelFromHTML(htmlContent);
         }
@@ -410,6 +422,15 @@ function prepareDataFromRenderedTable() {
 }
 
 function prepareDataFromRawData() {
+    // Use full comparison data for export if available, otherwise use currentPairs
+    const pairsForExport = window.fullComparisonPairs || currentPairs;
+    
+    // If no data available, return null
+    if (!pairsForExport || pairsForExport.length === 0) {
+        console.log('No pairs data available for export');
+        return null;
+    }
+    
     const data = []; const formatting = []; const colWidths = [];
     const hideSame = document.getElementById('hideSameRows')?.checked || false;
     const hideDiffRows = document.getElementById('hideDiffColumns')?.checked || false;
@@ -420,9 +441,6 @@ function prepareDataFromRawData() {
     data.push(headers); colWidths.push({ wch: 20 }); for (let c = 0; c < currentFinalAllCols; c++) colWidths.push({ wch: 15 });
     headers.forEach((_, col) => { const addr = XLSX.utils.encode_cell({ r:0, c:col }); formatting[addr] = { fill:{ fgColor:{ rgb:'f8f9fa'}}, font:{ bold:true, color:{rgb:'212529'}}, border:{ top:{style:'thin',color:{rgb:'D4D4D4'}}, bottom:{style:'thin',color:{rgb:'D4D4D4'}}, left:{style:'thin',color:{rgb:'D4D4D4'}}, right:{style:'thin',color:{rgb:'D4D4D4'}} } }; });
     let rowIndex = 1;
-    
-    // Use full comparison data for export if available, otherwise use currentPairs
-    const pairsForExport = window.fullComparisonPairs || currentPairs;
     
     pairsForExport.forEach(pair => {
         const row1 = pair.row1, row2 = pair.row2;
