@@ -693,6 +693,9 @@ function getFileDisplayName(fileName, sheetName) {
     return fileName;
 }
 
+// Make the function globally accessible
+window.getFileDisplayName = getFileDisplayName;
+
 function updateSheetInfo(fileName, sheetNames, selectedSheet, fileNum) {
     const sheetInfoContainer = document.getElementById('sheetInfo');
     if (!sheetInfoContainer) return;
@@ -841,8 +844,10 @@ function processSelectedSheet(fileNum, selectedSheetName) {
     
     if (fileNum === 1) {
         sheetName1 = selectedSheetName;
+        window.sheetName1 = selectedSheetName; // Make globally accessible
     } else {
         sheetName2 = selectedSheetName;
+        window.sheetName2 = selectedSheetName; // Make globally accessible
     }
     
     if (!workbook || !workbook.Sheets[selectedSheetName]) return;
@@ -2174,15 +2179,15 @@ function parseCSVValue(value) {
         if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
             return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         }
+        
+        // Попытка обработать как число
+        let numValue = value.replace(',', '.'); 
+        if (numValue !== '' && !isNaN(numValue) && !isNaN(parseFloat(numValue))) {
+            const num = parseFloat(numValue);
+            return Number.isInteger(num) ? num : num;
+        }
+        
         return value;
-    }
-    return value; 
-    
-    
-    let numValue = value.replace(',', '.'); 
-    if (numValue !== '' && !isNaN(numValue) && !isNaN(parseFloat(numValue))) {
-        const num = parseFloat(numValue);
-        return Number.isInteger(num) ? num : num;
     }
     
     return value;
@@ -2203,12 +2208,14 @@ function handleFile(file, num) {
         window.fileName1 = file.name; // Make globally accessible
         workbook1 = null;
         sheetName1 = ''; 
+        window.sheetName1 = ''; // Make globally accessible
     } else {
         data2 = [];
         fileName2 = file.name;
         window.fileName2 = file.name; // Make globally accessible
         workbook2 = null;
         sheetName2 = ''; 
+        window.sheetName2 = ''; // Make globally accessible
     }
     
     
@@ -2344,9 +2351,11 @@ function handleFile(file, num) {
                 if (num === 1) {
                     workbook1 = workbook;
                     sheetName1 = workbook.SheetNames[0]; 
+                    window.sheetName1 = workbook.SheetNames[0]; // Make globally accessible
                 } else {
                     workbook2 = workbook;
                     sheetName2 = workbook.SheetNames[0]; 
+                    window.sheetName2 = workbook.SheetNames[0]; // Make globally accessible
                 }
                 
                 
@@ -2842,9 +2851,12 @@ function getColumnsToHide(headers, columnTypes, hideDiff, hideNew) {
 }
 
 function compareTables(useTolerance = false) {
+    console.log('🎯 ============ COMPARE TABLES STARTED ============');
+    console.log('🎯 compareTables called with useTolerance:', useTolerance);
     
     toleranceMode = useTolerance;
     window.toleranceMode = useTolerance; // Make it globally accessible
+    window.currentTolerance = useTolerance ? 1.5 : 0; // Set tolerance value
     
     
     clearComparisonResults();
@@ -2935,10 +2947,21 @@ function compareTables(useTolerance = false) {
 }
 
 async function performComparison() {
+    console.log('🎯 ============ PERFORM COMPARISON STARTED ============');
     
     // Check if fast comparator is available and try to use it first
+    console.log('🔍 Checking for DuckDB WASM availability:', {
+        MaxPilotDuckDB: !!window.MaxPilotDuckDB,
+        fastComparator: !!window.MaxPilotDuckDB?.fastComparator,
+        initialized: window.MaxPilotDuckDB?.fastComparator?.initialized,
+        compareFunction: !!window.MaxPilotDuckDB?.compareTablesWithFastComparator,
+        data1Length: data1?.length,
+        data2Length: data2?.length
+    });
+    
     if (window.MaxPilotDuckDB && window.MaxPilotDuckDB.fastComparator && window.MaxPilotDuckDB.fastComparator.initialized) {
         try {
+            console.log('🚀 Using DuckDB WASM for comparison...');
             // Set flag to prevent other table rendering functions from interfering
             window.fastComparisonActive = true;
             
@@ -2946,11 +2969,18 @@ async function performComparison() {
             const useTolerance = toleranceMode || false;
             const tolerance = window.currentTolerance || 1.5; // Default tolerance value
             
+            console.log('📊 Calling compareTablesWithFastComparator with:', {
+                excludedColumns,
+                useTolerance,
+                tolerance
+            });
+            
             const fastResult = await window.MaxPilotDuckDB.compareTablesWithFastComparator(
                 data1, data2, excludedColumns, useTolerance, tolerance
             );
             
             if (fastResult) {
+                console.log('✅ DuckDB WASM comparison completed successfully');
                 // Clear the loading message first
                 const resultDiv = document.getElementById('result');
                 if (resultDiv) {
@@ -2960,13 +2990,17 @@ async function performComparison() {
                 
                 await window.MaxPilotDuckDB.processFastComparisonResults(fastResult, useTolerance);
                 return; // Exit early since fast comparison was successful
+            } else {
+                console.log('⚠️ DuckDB WASM returned empty result, falling back to standard');
             }
         } catch (error) {
-            console.log('Fast comparison failed, falling back to standard:', error);
+            console.log('❌ Fast comparison failed, falling back to standard:', error);
         } finally {
             // Reset flag regardless of success or failure
             window.fastComparisonActive = false;
         }
+    } else {
+        console.log('⚠️ DuckDB WASM not available, using standard comparison');
     }
     
     const tableHeaders = getSummaryTableHeaders();
