@@ -136,6 +136,18 @@
                         <label for="excludeColumns" class="exclude-label">Exclude columns:</label>
                         <input type="text" id="excludeColumns" placeholder="e.g., ID, Timestamp, CreatedDate" class="exclude-input">
                     </div>
+                    <div class="key-columns-container">
+                        <label class="key-columns-label">Key columns:</label>
+                        <div class="key-columns-dropdown">
+                            <div class="key-columns-dropdown-button" id="keyColumnsDropdownButton">
+                                <span class="dropdown-text">Select key columns...</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </div>
+                            <div class="key-columns-dropdown-content" id="keyColumnsDropdownContent">
+                                <div class="key-columns-placeholder">Load files to see available columns</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="filter-controls filter-controls-hidden">
                     <div class="filter-options">
@@ -165,6 +177,7 @@
 
     <script src="../javascript/functions.js"></script>
     <script src="../javascript/export.js"></script>
+    <script src="../javascript/key-columns.js"></script>
     <script src="../javascript/script.js"></script>
     <script src="../javascript/duckdb-wasm.js"></script>
     

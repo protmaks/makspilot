@@ -1,4 +1,4 @@
-const CACHE_NAME = 'makspilot-cache-v1.2.30';
+const CACHE_NAME = 'makspilot-cache-v1.2.36';
 
 const urlsToCache = [
   '/style.css',
