@@ -245,12 +245,12 @@ class FastTableComparator {
         return hash;
     }
 
-    async compareTablesFast(data1, data2, excludeColumns = [], useTolerance = false) {
+    async compareTablesFast(data1, data2, excludeColumns = [], useTolerance = false, customKeyColumns = null) {
         if (this.mode === 'wasm') {
             //console.log('--- Using DuckDB WASM with original matching logic');
-            return await this.compareTablesWithOriginalLogic(data1, data2, excludeColumns, useTolerance);
+            return await this.compareTablesWithOriginalLogic(data1, data2, excludeColumns, useTolerance, customKeyColumns);
         } else {
-            return await this.compareTablesLocal(data1, data2, excludeColumns, useTolerance);
+            return await this.compareTablesLocal(data1, data2, excludeColumns, useTolerance, customKeyColumns);
         }
     }
 
@@ -355,7 +355,7 @@ class FastTableComparator {
         }
     }
 
-    async compareTablesWithOriginalLogic(data1, data2, excludeColumns = [], useTolerance = false) {
+    async compareTablesWithOriginalLogic(data1, data2, excludeColumns = [], useTolerance = false, customKeyColumns = null) {
         //console.log('🚀 Using DuckDB WASM with multi-stage comparison logic...');
         const startTime = performance.now();
 
@@ -366,12 +366,7 @@ class FastTableComparator {
             const totalSize = table1Size + table2Size;
             const columnCount = Math.max(data1[0]?.length || 0, data2[0]?.length || 0);
             
-            console.log('📊 Data size analysis:', { 
-                table1Rows: table1Size, 
-                table2Rows: table2Size, 
-                totalRows: totalSize, 
-                columns: columnCount 
-            });
+            // console.log('📊 Data size analysis:', {  table1Rows: table1Size,  table2Rows: table2Size,  totalRows: totalSize, columns: columnCount  });
 
             // Для очень больших таблиц используем упрощенную стратегию
             if (totalSize > 30000 || columnCount > 40) {
@@ -600,6 +595,12 @@ class FastTableComparator {
                 const col1Name = sanitizedHeaders1[colIdx];
                 const col2Name = sanitizedHeaders2[colIdx];
                 
+                // Safety check: ensure both column names exist
+                if (!col1Name || !col2Name) {
+                    console.warn(`⚠️ Missing column name at index ${colIdx}: col1Name="${col1Name}", col2Name="${col2Name}"`);
+                    return 'FALSE'; // Skip this comparison if column is missing
+                }
+                
                 if (col1Type === 'DOUBLE' || col2Type === 'DOUBLE') {
                     if (useTolerance) {
                         // Применяем 1.5% толерантность для DOUBLE значений
@@ -658,8 +659,22 @@ class FastTableComparator {
                 throw new Error('All columns are excluded from comparison');
             }
             
-            const allKeyColumns = this.detectKeyColumnsSQL(headers1);
+            // Use custom key columns if provided, otherwise detect automatically
+            let allKeyColumns;
+            if (customKeyColumns && customKeyColumns.length > 0) {
+                console.log('🔑 Using custom key columns:', customKeyColumns);
+                allKeyColumns = customKeyColumns;
+            } else {
+                console.log('🔑 No custom key columns provided, using automatic detection');
+                allKeyColumns = this.detectKeyColumnsSQL(headers1);
+            }
             const keyColumns = allKeyColumns.filter(keyCol => comparisonColumns.includes(keyCol));
+            
+            // Ensure we have at least one key column
+            if (keyColumns.length === 0) {
+                console.log('⚠️ No valid key columns found, using first column as fallback');
+                keyColumns.push(0);
+            }
             
             //console.log('🔑 Key columns detected:', keyColumns);
             console.log('🔑 Key column names:', keyColumns.map(idx => headers1[idx] || `Column ${idx}`));
@@ -1331,7 +1346,7 @@ class FastTableComparator {
         }
     }
 
-    async compareTablesLocal(table1Name, table2Name, excludeColumns = []) {
+    async compareTablesLocal(table1Name, table2Name, excludeColumns = [], useTolerance = false, customKeyColumns = null) {
         if (!this.initialized) {
             throw new Error('Comparator not initialized');
         }
@@ -1521,9 +1536,9 @@ function showFastModeStatus(available, mode = 'local') {
     }
 }
 
-async function compareTablesWithFastComparator(data1, data2, excludeColumns = [], useTolerance = false, tolerance = 1.5) {
+async function compareTablesWithFastComparator(data1, data2, excludeColumns = [], useTolerance = false, tolerance = 1.5, customKeyColumns = null) {
     try {
-        // console.log('🔧 compareTablesWithFastComparator called with parameters:', { excludeColumns: excludeColumns, excludeColumnsType: typeof excludeColumns, excludeColumnsLength: excludeColumns?.length || 0, excludeColumnsArray: Array.isArray(excludeColumns), useTolerance: useTolerance, tolerance: tolerance });
+        //console.log('🔧 compareTablesWithFastComparator called with parameters:', { excludeColumns: excludeColumns, excludeColumnsType: typeof excludeColumns, excludeColumnsLength: excludeColumns?.length || 0, excludeColumnsArray: Array.isArray(excludeColumns), useTolerance: useTolerance, tolerance: tolerance, customKeyColumns: customKeyColumns });
         
         if (!fastComparator || !fastComparator.initialized) {
             console.log('❌ Fast comparator not initialized');
@@ -1532,14 +1547,14 @@ async function compareTablesWithFastComparator(data1, data2, excludeColumns = []
 
         //console.log(`🔧 Starting comparison using ${fastComparator.mode} mode`);
         
-        //console.log('🔍 FastComparator input debug:', { data1Type: typeof data1, data1IsArray: Array.isArray(data1), data1Length: data1?.length, data1FirstElement: data1?.[0], data2Type: typeof data2, data2IsArray: Array.isArray(data2), data2Length: data2?.length, data2FirstElement: data2?.[0], excludeColumns, useTolerance });
+        //console.log('🔍 FastComparator input debug:', { data1Type: typeof data1, data1IsArray: Array.isArray(data1), data1Length: data1?.length, data1FirstElement: data1?.[0], data2Type: typeof data2, data2IsArray: Array.isArray(data2), data2Length: data2?.length, data2FirstElement: data2?.[0], excludeColumns, useTolerance, customKeyColumns });
         
         const startTime = performance.now();
 
         if (fastComparator.mode === 'wasm') {
             //console.log('📊 Using DuckDB WASM mode - passing data directly');
             
-            const result = await fastComparator.compareTablesFast(data1, data2, excludeColumns, useTolerance);
+            const result = await fastComparator.compareTablesFast(data1, data2, excludeColumns, useTolerance, customKeyColumns);
             
             if (!result) {
                 //console.log('⚠️ DuckDB WASM returned empty result');
@@ -1681,11 +1696,28 @@ async function compareTablesEnhanced(useTolerance = false) {
                     const excludedColumns = getExcludedColumns ? getExcludedColumns() : [];
                     const tolerance = window.currentTolerance || 1.5;
                     
+                    // Get selected key columns from UI
+                    const selectedKeyColumns = getSelectedKeyColumns ? getSelectedKeyColumns() : [];
+                    let customKeyColumns = null;
+                    
+                    if (selectedKeyColumns && selectedKeyColumns.length > 0) {
+                        // Convert selected column names to indexes
+                        const headers = data1.length > 0 ? data1[0] : [];
+                        customKeyColumns = selectedKeyColumns.map(columnName => {
+                            const index = headers.indexOf(columnName);
+                            return index !== -1 ? index : null;
+                        }).filter(index => index !== null);
+                        
+                        //console.log('🔑 compareTablesEnhanced (large data): Using custom key columns:', { selectedColumnNames: selectedKeyColumns, selectedColumnIndexes: customKeyColumns, headers: headers });
+                    } else {
+                        console.log('❌ compareTablesEnhanced (large data): No custom key columns selected, will use automatic detection');
+                    }
+                    
                     resultDiv.innerHTML = createProgressIndicator('large');
                     updateProgressMessage('Processing large dataset - please wait...');
                     
                     const fastResult = await compareTablesWithFastComparator(
-                        data1, data2, excludedColumns, useTolerance, tolerance
+                        data1, data2, excludedColumns, useTolerance, tolerance, customKeyColumns
                     );
                     
                     if (fastResult) {
@@ -1743,13 +1775,30 @@ async function compareTablesEnhanced(useTolerance = false) {
                     const excludedColumns = getExcludedColumns ? getExcludedColumns() : [];
                     const tolerance = window.currentTolerance || 1.5;
                     
-                    //console.log('🔧 Fast comparison parameters:', { excludedColumns: excludedColumns, excludedColumnsType: typeof excludedColumns, excludedColumnsLength: excludedColumns?.length || 0, useTolerance: useTolerance, tolerance: tolerance, getExcludedColumnsExists: typeof getExcludedColumns !== 'undefined' });
+                    // Get selected key columns from UI
+                    const selectedKeyColumns = getSelectedKeyColumns ? getSelectedKeyColumns() : [];
+                    let customKeyColumns = null;
+                    
+                    if (selectedKeyColumns && selectedKeyColumns.length > 0) {
+                        // Convert selected column names to indexes
+                        const headers = data1.length > 0 ? data1[0] : [];
+                        customKeyColumns = selectedKeyColumns.map(columnName => {
+                            const index = headers.indexOf(columnName);
+                            return index !== -1 ? index : null;
+                        }).filter(index => index !== null);
+                        
+                        //console.log('� compareTablesEnhanced: Using custom key columns:', { selectedColumnNames: selectedKeyColumns, selectedColumnIndexes: customKeyColumns, headers: headers  });
+                    } else {
+                        console.log('❌ compareTablesEnhanced: No custom key columns selected, will use automatic detection');
+                    }
+                    
+                    //console.log('�🔧 Fast comparison parameters:', { excludedColumns: excludedColumns, excludedColumnsType: typeof excludedColumns, excludedColumnsLength: excludedColumns?.length || 0, useTolerance: useTolerance, tolerance: tolerance, getExcludedColumnsExists: typeof getExcludedColumns !== 'undefined' });
                     
                     //console.log('🔧 Calling compareTablesWithFastComparator...');
                     
-                    console.log(`📊 Starting comparison for ${totalRows.toLocaleString()} rows × ${columnCount} columns`);
+                    //console.log(`📊 Starting comparison for ${totalRows.toLocaleString()} rows × ${columnCount} columns`);
                     
-                    const fastResult = await compareTablesWithFastComparator(data1, data2, excludedColumns, useTolerance, tolerance);
+                    const fastResult = await compareTablesWithFastComparator(data1, data2, excludedColumns, useTolerance, tolerance, customKeyColumns);
                     
                     if (fastResult) {
                         //console.log('✅ DuckDB WASM comparison completed successfully');

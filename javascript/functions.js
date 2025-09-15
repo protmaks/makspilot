@@ -2323,9 +2323,25 @@ function handleFile(file, num) {
                             if (num === 1) {
                                 data1 = processedJson;
                                 renderPreview(processedJson, 'table1');
+                                
+                                // Update key columns dropdown immediately after table1 is loaded
+                                setTimeout(() => {
+                                    if (typeof updateKeyColumnsOptions === 'function') {
+                                        //console.log('🔄 Updating key columns after table1 CSV load');
+                                        updateKeyColumnsOptions();
+                                    }
+                                }, 100);
                             } else {
                                 data2 = processedJson;
                                 renderPreview(processedJson, 'table2');
+                                
+                                // Update key columns dropdown immediately after table2 is loaded
+                                setTimeout(() => {
+                                    if (typeof updateKeyColumnsOptions === 'function') {
+                                        //console.log('🔄 Updating key columns after table2 CSV load');
+                                        updateKeyColumnsOptions();
+                                    }
+                                }, 100);
                             }
                         }, 10);
                     }, 10);
@@ -2427,9 +2443,21 @@ function handleFile(file, num) {
                             if (num === 1) {
                                 data1 = json;
                                 renderPreview(json, 'table1');
+                                // Update key columns dropdown when first file is loaded
+                                setTimeout(() => {
+                                    if (typeof updateKeyColumnsOptions === 'function') {
+                                        updateKeyColumnsOptions();
+                                    }
+                                }, 100);
                             } else {
                                 data2 = json;
                                 renderPreview(json, 'table2');
+                                // Update key columns dropdown when second file is loaded
+                                setTimeout(() => {
+                                    if (typeof updateKeyColumnsOptions === 'function') {
+                                        updateKeyColumnsOptions();
+                                    }
+                                }, 100);
                             }
                         }, 10);
                     }, 10);
@@ -2851,8 +2879,8 @@ function getColumnsToHide(headers, columnTypes, hideDiff, hideNew) {
 }
 
 function compareTables(useTolerance = false) {
-    console.log('🎯 ============ COMPARE TABLES STARTED ============');
-    console.log('🎯 compareTables called with useTolerance:', useTolerance);
+    //console.log('🎯 ============ COMPARE TABLES STARTED ============');
+    //console.log('🎯 compareTables called with useTolerance:', useTolerance);
     
     toleranceMode = useTolerance;
     window.toleranceMode = useTolerance; // Make it globally accessible
@@ -2947,21 +2975,18 @@ function compareTables(useTolerance = false) {
 }
 
 async function performComparison() {
-    console.log('🎯 ============ PERFORM COMPARISON STARTED ============');
+    //console.log('🎯 ============ PERFORM COMPARISON STARTED ============');
+    
+    // DEBUG: Test key columns selection first
+    const testSelectedKeyColumns = getSelectedKeyColumns ? getSelectedKeyColumns() : [];
+    //console.log('🔍 DEBUG: Key columns at start of performComparison:', { getSelectedKeyColumnsExists: typeof getSelectedKeyColumns === 'function', testSelectedKeyColumns: testSelectedKeyColumns, testSelectedKeyColumnsLength: testSelectedKeyColumns ? testSelectedKeyColumns.length : 0 });
     
     // Check if fast comparator is available and try to use it first
-    console.log('🔍 Checking for DuckDB WASM availability:', {
-        MaxPilotDuckDB: !!window.MaxPilotDuckDB,
-        fastComparator: !!window.MaxPilotDuckDB?.fastComparator,
-        initialized: window.MaxPilotDuckDB?.fastComparator?.initialized,
-        compareFunction: !!window.MaxPilotDuckDB?.compareTablesWithFastComparator,
-        data1Length: data1?.length,
-        data2Length: data2?.length
-    });
+    //console.log('🔍 Checking for DuckDB WASM availability:', { MaxPilotDuckDB: !!window.MaxPilotDuckDB, fastComparator: !!window.MaxPilotDuckDB?.fastComparator, initialized: window.MaxPilotDuckDB?.fastComparator?.initialized, compareFunction: !!window.MaxPilotDuckDB?.compareTablesWithFastComparator, data1Length: data1?.length, data2Length: data2?.length });
     
     if (window.MaxPilotDuckDB && window.MaxPilotDuckDB.fastComparator && window.MaxPilotDuckDB.fastComparator.initialized) {
         try {
-            console.log('🚀 Using DuckDB WASM for comparison...');
+            //console.log('🚀 Using DuckDB WASM for comparison...');
             // Set flag to prevent other table rendering functions from interfering
             window.fastComparisonActive = true;
             
@@ -2969,18 +2994,29 @@ async function performComparison() {
             const useTolerance = toleranceMode || false;
             const tolerance = window.currentTolerance || 1.5; // Default tolerance value
             
-            console.log('📊 Calling compareTablesWithFastComparator with:', {
-                excludedColumns,
-                useTolerance,
-                tolerance
-            });
+            // Get selected key columns from UI
+            const selectedKeyColumns = getSelectedKeyColumns ? getSelectedKeyColumns() : [];
+            let customKeyColumns = null;
+            
+            if (selectedKeyColumns && selectedKeyColumns.length > 0) {
+                // Convert selected column names to indexes
+                const headers = data1.length > 0 ? data1[0] : [];
+                customKeyColumns = selectedKeyColumns.map(columnName => {
+                    const index = headers.indexOf(columnName);
+                    return index !== -1 ? index : null;
+                }).filter(index => index !== null);
+                
+                //console.log('🔑 Using custom key columns:', { selectedColumnNames: selectedKeyColumns, selectedColumnIndexes: customKeyColumns });
+            } //else { console.log('� No custom key columns selected, will use automatic detection'); }
+            
+            //console.log('�📊 Calling compareTablesWithFastComparator with:', { excludedColumns, useTolerance, tolerance, customKeyColumns });
             
             const fastResult = await window.MaxPilotDuckDB.compareTablesWithFastComparator(
-                data1, data2, excludedColumns, useTolerance, tolerance
+                data1, data2, excludedColumns, useTolerance, tolerance, customKeyColumns
             );
             
             if (fastResult) {
-                console.log('✅ DuckDB WASM comparison completed successfully');
+                //console.log('✅ DuckDB WASM comparison completed successfully');
                 // Clear the loading message first
                 const resultDiv = document.getElementById('result');
                 if (resultDiv) {
@@ -3611,7 +3647,10 @@ function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols,
     
     
     const combinedData = [finalHeaders, ...body1, ...body2];
-    const keyColumnIndexes = smartDetectKeyColumns(finalHeaders, combinedData);
+    
+    // Get selected key columns or use auto-detection
+    const selectedKeyColumns = getSelectedKeyColumns ? getSelectedKeyColumns() : [];
+    const keyColumnIndexes = getKeyColumnIndexes ? getKeyColumnIndexes(finalHeaders, selectedKeyColumns) : smartDetectKeyColumns(finalHeaders, combinedData);
     
     
     let used2 = new Array(body2.length).fill(false);
