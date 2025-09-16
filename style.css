@@ -1595,23 +1595,19 @@ button.export-btn:disabled {
 }
 
 .column-type-text {
-    background-color: #e3f2fd;
-    color: #1976d2;
+    color: #008e8a;
 }
 
 .column-type-number {
-    background-color: #fff3e0;
-    color: #f57c00;
+    color: #ff8c00;
 }
 
 .column-type-date {
-    background-color: #f3e5f5;
-    color: #7b1fa2;
+    color: grey;
 }
 
 .column-type-boolean {
-    background-color: #e8f5e8;
-    color: #388e3c;
+    color: #65add7;
 }
 
 .column-type-text::before {
@@ -1635,6 +1631,31 @@ button.export-btn:disabled {
     content: "✓✗";
     font-weight: 600;
     font-size: 9px;
+}
+
+/* Column type icons in table headers */
+.diff-table-header .column-type-icon {
+    margin-right: 4px;
+    margin-left: 0;
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+}
+
+.diff-table-header .column-type-text::before {
+    font-size: 8px;
+}
+
+.diff-table-header .column-type-number::before {
+    font-size: 8px;
+}
+
+.diff-table-header .column-type-date::before {
+    font-size: 9px;
+}
+
+.diff-table-header .column-type-boolean::before {
+    font-size: 8px;
 }
 
 .exclude-label, .key-columns-label {

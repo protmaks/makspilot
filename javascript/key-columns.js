@@ -1,5 +1,8 @@
 // Key columns functionality for comparison
 
+// Debounce timer for updateKeyColumnsOptions
+let updateKeyColumnsTimer = null;
+
 // Get column type based on data analysis
 function getColumnType(columnValues, columnHeader = '') {
     if (!columnValues || columnValues.length === 0) return 'text';
@@ -110,18 +113,28 @@ function extractDataFromTableElement(tableElement) {
     }
 }
 
+// Debounced wrapper for updateKeyColumnsOptions
+function debouncedUpdateKeyColumnsOptions(forceUpdate = false, delay = 150) {
+    // Clear existing timer
+    if (updateKeyColumnsTimer) {
+        clearTimeout(updateKeyColumnsTimer);
+    }
+    
+    // Set new timer
+    updateKeyColumnsTimer = setTimeout(() => {
+        updateKeyColumnsOptionsInternal(forceUpdate);
+        updateKeyColumnsTimer = null;
+    }, delay);
+}
+
 // Update key columns dropdown when files are loaded
-function updateKeyColumnsOptions(forceUpdate = false) {
-    console.log('🔄 updateKeyColumnsOptions called', { forceUpdate });
+function updateKeyColumnsOptionsInternal(forceUpdate = false) {
+    // Only log when force update is requested
     
     const dropdownContent = document.getElementById('keyColumnsDropdownContent');
     const dropdownButton = document.getElementById('keyColumnsDropdownButton');
     
-    console.log('🔍 DOM elements found:', { 
-        dropdownContent: !!dropdownContent, 
-        dropdownButton: !!dropdownButton 
-    });
-    
+    // Reduced logging - only log errors
     if (!dropdownContent || !dropdownButton) {
         console.error('❌ Required DOM elements not found for key columns dropdown');
         return;
@@ -130,8 +143,7 @@ function updateKeyColumnsOptions(forceUpdate = false) {
     // Check if we already have checkboxes and data hasn't changed (unless force update)
     const existingCheckboxes = dropdownContent.querySelectorAll('input[name="keyColumns"]');
     if (!forceUpdate && existingCheckboxes.length > 0) {
-        console.log('🔧 Skipping update - checkboxes already exist and no force update requested');
-        return;
+        return; // Skip silently if not forced
     }
     
     // Save currently selected checkboxes before clearing
@@ -140,16 +152,12 @@ function updateKeyColumnsOptions(forceUpdate = false) {
     existingSelectedCheckboxes.forEach(checkbox => {
         currentlySelected.push(checkbox.value);
     });
-    
-    console.log('💾 Saving currently selected columns:', currentlySelected);
-    
+        
     // Clear existing checkboxes
     dropdownContent.innerHTML = '';
     
     // Get headers from both files
     let allHeaders = new Set();
-    
-    //console.log('🔍 Checking data availability:', {  data1Available: !!(window.data1 || data1),  data1Length: (window.data1 || data1)?.length, data2Available: !!(window.data2 || data2),  data2Length: (window.data2 || data2)?.length, globalData1: !!window.data1, globalData2: !!window.data2, localData1: typeof data1 !== 'undefined' ? !!data1 : false, localData2: typeof data2 !== 'undefined' ? !!data2 : false });
     
     // Try multiple ways to access the data
     let dataTable1 = null;
@@ -178,7 +186,6 @@ function updateKeyColumnsOptions(forceUpdate = false) {
             const table1Data = extractDataFromTableElement(table1Element);
             if (table1Data && table1Data.length > 0) {
                 dataTable1 = table1Data;
-                //console.log('📋 Extracted data from table1 DOM element');
             }
         }
     }
@@ -189,15 +196,11 @@ function updateKeyColumnsOptions(forceUpdate = false) {
             const table2Data = extractDataFromTableElement(table2Element);
             if (table2Data && table2Data.length > 0) {
                 dataTable2 = table2Data;
-                //console.log('📋 Extracted data from table2 DOM element');
             }
         }
     }
     
-    //console.log('🔍 Final data status:', { dataTable1Available: !!dataTable1, dataTable1Length: dataTable1?.length, dataTable2Available: !!dataTable2, dataTable2Length: dataTable2?.length });
-    
     if (dataTable1 && dataTable1.length > 0 && dataTable1[0]) {
-        //console.log('📋 Table 1 headers:', dataTable1[0]);
         dataTable1[0].forEach((header, index) => {
             if (header && header.toString().trim() !== '') {
                 allHeaders.add(header.toString());
@@ -206,15 +209,12 @@ function updateKeyColumnsOptions(forceUpdate = false) {
     }
     
     if (dataTable2 && dataTable2.length > 0 && dataTable2[0]) {
-        //console.log('📋 Table 2 headers:', dataTable2[0]);
         dataTable2[0].forEach((header, index) => {
             if (header && header.toString().trim() !== '') {
                 allHeaders.add(header.toString());
             }
         });
     }
-    
-    //console.log('🔍 All unique headers found:', Array.from(allHeaders));
     
     // Create checkboxes for each header
     if (allHeaders.size > 0) {
@@ -231,7 +231,6 @@ function updateKeyColumnsOptions(forceUpdate = false) {
             // Restore previous selection state if it was selected
             if (currentlySelected.includes(header)) {
                 checkbox.checked = true;
-                console.log('🔧 Restoring selection for column:', header);
             }
             
             // Get column data for type detection
@@ -293,36 +292,16 @@ function updateKeyColumnsOptions(forceUpdate = false) {
             updateCheckboxStyle(checkboxWrapper, checkbox.checked);
         });
         
-        console.log('✅ Created checkboxes for', allHeaders.size, 'columns');
-        
-        // TEST: Automatically mark the first column (NAME) for testing
-        console.log('🧪 TEST: Attempting to auto-mark NAME column');
-        setTimeout(() => {
-            const nameCheckbox = dropdownContent.querySelector('input[name="keyColumns"][value="NAME"]');
-            if (nameCheckbox) {
-                nameCheckbox.checked = true;
-                const wrapper = nameCheckbox.closest('.key-column-checkbox');
-                if (wrapper) {
-                    updateCheckboxStyle(wrapper, true);
-                }
-                updateDropdownButtonText();
-                console.log('✅ TEST: Successfully marked NAME column as selected');
-            } else {
-                console.log('❌ TEST: NAME checkbox not found');
-            }
-        }, 200);
-        
         // Enable dropdown functionality
         setupDropdownToggle();
         updateDropdownButtonText();
     } else {
-        //console.log('⚠️ No headers found, showing placeholder');
         // Show placeholder with manual refresh button
         dropdownContent.innerHTML = `
             <div class="key-columns-placeholder">
                 Load files to see available columns
                 <br><br>
-                <button onclick="window.updateKeyColumnsOptions(true)" style="padding: 4px 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 3px; background: #f8f9fa; cursor: pointer;">
+                <button onclick="window.debouncedUpdateKeyColumnsOptions(true)" style="padding: 4px 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 3px; background: #f8f9fa; cursor: pointer;">
                     🔄 Refresh
                 </button>
             </div>
@@ -333,12 +312,9 @@ function updateKeyColumnsOptions(forceUpdate = false) {
 
 // Setup dropdown toggle functionality
 function setupDropdownToggle() {
-    //console.log('🔧 Setting up dropdown toggle functionality');
     
     const dropdown = document.querySelector('.key-columns-dropdown');
     const dropdownButton = document.getElementById('keyColumnsDropdownButton');
-    
-    //console.log('🔍 Toggle setup elements:', {  dropdown: !!dropdown,  dropdownButton: !!dropdownButton  });
     
     if (!dropdown || !dropdownButton) {
         console.error('❌ Required elements for dropdown toggle not found');
@@ -351,16 +327,13 @@ function setupDropdownToggle() {
     
     // Add click handler for dropdown button
     dropdownButton.addEventListener('click', toggleDropdown);
-    //console.log('✅ Click handler added to dropdown button');
     
     // Close dropdown when clicking outside
     document.addEventListener('click', closeDropdownOnClickOutside);
-    //console.log('✅ Outside click handler added');
 }
 
 // Toggle dropdown open/close
 function toggleDropdown(e) {
-    //console.log('🔽 toggleDropdown called');
     e.stopPropagation();
     const dropdown = document.querySelector('.key-columns-dropdown');
     const dropdownButton = document.getElementById('keyColumnsDropdownButton');
@@ -371,12 +344,9 @@ function toggleDropdown(e) {
     }
     
     if (dropdown.classList.contains('open')) {
-        //console.log('📤 Closing dropdown');
         dropdown.classList.remove('open');
         dropdownButton.classList.remove('active');
-    } else {
-        //console.log('📥 Opening dropdown');
-        
+    } else {        
         dropdown.classList.add('open');
         dropdownButton.classList.add('active');
     }
@@ -425,21 +395,12 @@ function updateCheckboxStyle(wrapper, isChecked) {
 function getSelectedKeyColumns() {
     const checkboxes = document.querySelectorAll('input[name="keyColumns"]:checked');
     const selectedColumns = Array.from(checkboxes).map(checkbox => checkbox.value);
-    
-    //console.log('🔑 getSelectedKeyColumns called - found checkboxes:', { totalCheckboxes: document.querySelectorAll('input[name="keyColumns"]').length, checkedCheckboxes: checkboxes.length, selectedColumns: selectedColumns });
-    
+
     return selectedColumns;
 }
 
 // Set selected key columns in the UI (mark checkboxes as checked)
 function setSelectedKeyColumns(columnNames) {
-    console.log('🔧 setSelectedKeyColumns called with:', columnNames);
-    console.log('🔍 Current DOM state check:', {
-        dropdownContentExists: !!document.getElementById('keyColumnsDropdownContent'),
-        totalCheckboxes: document.querySelectorAll('input[name="keyColumns"]').length,
-        data1Available: !!(window.data1 || (typeof data1 !== 'undefined' && data1)),
-        data2Available: !!(window.data2 || (typeof data2 !== 'undefined' && data2))
-    });
     
     if (!columnNames || !Array.isArray(columnNames) || columnNames.length === 0) {
         console.log('❌ No column names provided to set as selected');
@@ -459,7 +420,6 @@ function setSelectedKeyColumns(columnNames) {
         const headers = (window.data1 && window.data1.length > 0) ? window.data1[0] : 
                        (typeof data1 !== 'undefined' && data1.length > 0) ? data1[0] : [];
         columnsToSelect = columnNames.map(index => headers[index]).filter(name => name);
-        console.log('🔄 Converted indexes to column names:', { indexes: columnNames, columnNames: columnsToSelect });
     }
     
     // Find and check the corresponding checkboxes
@@ -476,13 +436,10 @@ function setSelectedKeyColumns(columnNames) {
                 updateCheckboxStyle(wrapper, true);
             }
             
-            console.log('✅ Marked column as selected:', columnName);
         } else {
             console.warn('⚠️ Checkbox not found for column:', columnName);
         }
     });
-    
-    console.log(`🔧 Successfully marked ${checkedCount} of ${columnsToSelect.length} columns as selected`);
     
     // Update dropdown button text
     updateDropdownButtonText();
@@ -490,19 +447,15 @@ function setSelectedKeyColumns(columnNames) {
 
 // Get indexes of key columns for comparison
 function getKeyColumnIndexes(headers, selectedKeyColumns) {
-    //console.log('🔑 getKeyColumnIndexes called with:', {  headersLength: headers ? headers.length : 0, selectedKeyColumns,  selectedLength: selectedKeyColumns ? selectedKeyColumns.length : 0  });
-    
+
     if (!selectedKeyColumns || selectedKeyColumns.length === 0) {
         // If no key columns selected, use automatic detection
-        //console.log('🔑 No key columns selected, using automatic detection');
         if (typeof smartDetectKeyColumns === 'function') {
             // smartDetectKeyColumns expects (headers, data) where data includes headers as first row
             const mockData = [headers]; // Create minimal data structure for key detection
             const autoDetectedIndexes = smartDetectKeyColumns(headers, mockData);
-            //console.log('🔑 Auto-detected key column indexes:', autoDetectedIndexes);
             return autoDetectedIndexes || [0]; // Fallback to first column if nothing detected
         } else {
-            //console.log('🔑 smartDetectKeyColumns not available, using first column');
             return [0]; // Fallback to first column
         }
     }
@@ -522,7 +475,6 @@ function getKeyColumnIndexes(headers, selectedKeyColumns) {
 
 // Initialize key columns functionality when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    //console.log('🚀 Key columns functionality initialized');
     
     // Setup dropdown toggle immediately
     setTimeout(setupDropdownToggle, 100);
@@ -533,30 +485,32 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (file1Input) {
         file1Input.addEventListener('change', function() {
-            //console.log('📁 File 1 changed, will update key columns in 2 seconds');
             setTimeout(() => {
-                //console.log('⏰ Updating key columns after file 1 load');
-                updateKeyColumnsOptions(true); // Force update when file changes
+                debouncedUpdateKeyColumnsOptions(true); // Force update when file changes
             }, 2000); // Increase timeout to ensure file processing is complete
         });
     }
     
     if (file2Input) {
         file2Input.addEventListener('change', function() {
-            //console.log('📁 File 2 changed, will update key columns in 2 seconds');
             setTimeout(() => {
-                //console.log('⏰ Updating key columns after file 2 load');
-                updateKeyColumnsOptions(true); // Force update when file changes
+                debouncedUpdateKeyColumnsOptions(true); // Force update when file changes
             }, 2000); // Increase timeout to ensure file processing is complete
         });
     }
     
     // Initial update only - no periodic updates to avoid resetting user selections
-    setTimeout(() => updateKeyColumnsOptions(true), 500);
+    setTimeout(() => debouncedUpdateKeyColumnsOptions(true), 500);
 });
+
+// Public function that uses debouncing
+function updateKeyColumnsOptions(forceUpdate = false) {
+    return debouncedUpdateKeyColumnsOptions(forceUpdate);
+}
 
 // Make functions globally available
 window.updateKeyColumnsOptions = updateKeyColumnsOptions;
+window.debouncedUpdateKeyColumnsOptions = debouncedUpdateKeyColumnsOptions;
 window.getSelectedKeyColumns = getSelectedKeyColumns;
 window.setSelectedKeyColumns = setSelectedKeyColumns;
 window.getKeyColumnIndexes = getKeyColumnIndexes;
