@@ -1,7 +1,7 @@
 if (typeof window.MaxPilotDuckDB === 'undefined') {
 
-// Функции для отображения прогресса
-let activeProgressIntervals = []; // Для отслеживания активных интервалов
+// Progress display functions
+let activeProgressIntervals = []; // For tracking active intervals
 let progressState = {
     totalRows: 0,
     processedRows: 0,
@@ -48,7 +48,7 @@ function updateProgressWithSteps(currentStep, totalSteps, stepName) {
 }
 
 function simulateProgressDuringLongOperation(startProgress, endProgress, stepName, duration = 30000) {
-    // Симулирует плавное увеличение прогресса во время долгих операций
+    // Simulates smooth progress increase during long operations
     const startTime = Date.now();
     const progressRange = endProgress - startProgress;
     
@@ -98,8 +98,8 @@ function updateStageProgress(stageName, stageProgress = 0) {
 
 function updateProgressFromState() {
     const rowProgress = progressState.totalRows > 0 ? 
-        (progressState.processedRows / progressState.totalRows) * 80 : 0; // 80% для обработки строк
-    const stageProgress = progressState.stageProgress * 0.2; // 20% для стадий
+        (progressState.processedRows / progressState.totalRows) * 80 : 0; // 80% for row processing
+    const stageProgress = progressState.stageProgress * 0.2; // 20% for stages
     const totalProgress = Math.min(100, rowProgress + stageProgress);
     
     const message = progressState.totalRows > 0 ? 
@@ -269,18 +269,18 @@ class FastTableComparator {
                 throw new Error('No common columns found for comparison');
             }
 
-            // Создаем SELECT для общих колонок
+            // Create SELECT for common columns
             const columnList = commonColumns.map(col => `"${col}"`).join(', ');
             const whereClause = commonColumns.map(col => `t1."${col}" = t2."${col}"`).join(' AND ');
 
-            // SQL для поиска одинаковых строк
+            // SQL for finding identical rows
             const identicalQuery = `
                 SELECT t1.rowid as row1, t2.rowid as row2, 'IDENTICAL' as status
                 FROM temp_table1 t1
                 INNER JOIN temp_table2 t2 ON ${whereClause}
             `;
 
-            // SQL для строк только в таблице 1
+            // SQL for rows only in table 1
             const onlyInTable1Query = `
                 SELECT t1.rowid as row1, NULL as row2, 'ONLY_IN_TABLE1' as status
                 FROM temp_table1 t1
@@ -288,7 +288,7 @@ class FastTableComparator {
                 WHERE t2.rowid IS NULL
             `;
 
-            // SQL для строк только в таблице 2
+            // SQL for rows only in table 2
             const onlyInTable2Query = `
                 SELECT NULL as row1, t2.rowid as row2, 'ONLY_IN_TABLE2' as status
                 FROM temp_table2 t2
@@ -296,14 +296,14 @@ class FastTableComparator {
                 WHERE t1.rowid IS NULL
             `;
 
-            // Выполняем запросы параллельно
+            // Execute queries in parallel
             const [identicalResult, onlyTable1Result, onlyTable2Result] = await Promise.all([
                 window.duckdbLoader.query(identicalQuery),
                 window.duckdbLoader.query(onlyInTable1Query),
                 window.duckdbLoader.query(onlyInTable2Query)
             ]);
 
-            // Преобразуем результаты
+            // Convert results
             const identical = identicalResult.toArray().map(row => ({
                 row1: row.row1,
                 row2: row.row2,
@@ -569,7 +569,7 @@ class FastTableComparator {
                 
                 if (col1Type === 'DOUBLE' || col2Type === 'DOUBLE') {
                     if (useTolerance) {
-                        // Применяем 1.5% толерантность для DOUBLE значений
+                        // Apply 1.5% tolerance for DOUBLE values
                         const tolerancePercent = (window.currentTolerance || 1.5) / 100;
                         return `(
                             (t1."${col1Name}" = 0 AND t2."${col2Name}" = 0) OR
@@ -683,8 +683,8 @@ class FastTableComparator {
 
             const keyColumnChecks = keyColumns.map(colIdx => createComparisonCondition(colIdx, useTolerance)).join(' AND ');
 
-            const minKeyMatchesRequired = Math.max(1, Math.ceil(keyColumns.length * (useTolerance ? 0.8 : 0.8))); // Минимум 80% ключевых полей
-            const minTotalMatchesRequired = Math.max(2, Math.ceil(comparisonColumns.length * (useTolerance ? 0.6 : 0.7))); // Минимум 60-70% колонок для сравнения
+            const minKeyMatchesRequired = Math.max(1, Math.ceil(keyColumns.length * (useTolerance ? 0.8 : 0.8))); // Minimum 80% of key fields
+            const minTotalMatchesRequired = Math.max(2, Math.ceil(comparisonColumns.length * (useTolerance ? 0.6 : 0.7))); // Minimum 60-70% of columns for comparison
 
             const similarLimit = Math.max(1000, Math.min(10000, table1Count + table2Count));
 
@@ -948,7 +948,7 @@ class FastTableComparator {
                 throw new Error('No columns available for comparison');
             }
 
-            // Для очень больших данных ограничиваем количество сравниваемых колонок
+            // For very large data, limit the number of comparison columns
             const dataSize = (data1.length - 1) + (data2.length - 1);
             const maxColumns = dataSize > 40000 ? 5 : (dataSize > 20000 ? 8 : 10);
             
@@ -958,7 +958,7 @@ class FastTableComparator {
                 return `UPPER(TRIM(COALESCE(t1."${col1Name}", ''))) = UPPER(TRIM(COALESCE(t2."${col2Name}", '')))`;
             });
 
-            // Поиск идентичных строк с ограничением на количество условий
+            // Search for identical rows with limited conditions
             updateStageProgress('Finding identical records', 80);
             
             const identicalSQL = `
@@ -974,7 +974,7 @@ class FastTableComparator {
             
             await window.duckdbLoader.query(identicalSQL);
             
-            // Поиск уникальных записей только в первой таблице
+            // Search for unique records only in first table
             updateStageProgress('Finding records only in first table', 90);
             
             const onlyTable1SQL = `
@@ -988,7 +988,7 @@ class FastTableComparator {
             `;
             await window.duckdbLoader.query(onlyTable1SQL);
 
-            // Поиск уникальных записей только во второй таблице
+            // Search for unique records only in second table
             updateStageProgress('Finding records only in second table', 95);
             
             const onlyTable2SQL = `
@@ -1002,7 +1002,7 @@ class FastTableComparator {
             `;
             await window.duckdbLoader.query(onlyTable2SQL);
 
-            // Получение результатов
+            // Get results
             updateStageProgress('Collecting final results', 100);
             const identicalResult = await window.duckdbLoader.query('SELECT * FROM identical_pairs');
             const onlyTable1Result = await window.duckdbLoader.query('SELECT * FROM only_table1');
@@ -1031,7 +1031,7 @@ class FastTableComparator {
 
             return {
                 identical: identical,
-                similar: [], // Для больших данных не ищем похожие записи
+                similar: [], // For large data, don't search for similar records
                 onlyInTable1: onlyInTable1,
                 onlyInTable2: onlyInTable2,
                 table1Count: data1.length - 1,
@@ -1039,7 +1039,7 @@ class FastTableComparator {
                 commonColumns: headers1,
                 comparisonColumns: comparisonColumns,
                 excludedColumns: excludeColumns,
-                keyColumns: comparisonColumns.slice(0, 3), // Первые 3 колонки как ключевые
+                keyColumns: comparisonColumns.slice(0, 3), // First 3 columns as key columns
                 performance: {
                     duration: duration,
                     rowsPerSecond: Math.round(((data1.length + data2.length) / duration) * 1000),
@@ -1048,7 +1048,7 @@ class FastTableComparator {
             };
 
         } catch (error) {
-            clearAllProgressIntervals(); // Очищаем все активные интервалы прогресса
+            clearAllProgressIntervals(); // Clear all active progress intervals
             updateProgressMessage('Comparison failed - switching to fallback mode', 0);
             console.error('❌ Optimized large data comparison failed:', error);
             throw error;
@@ -1200,13 +1200,13 @@ class FastTableComparator {
 
             if (dateRatio >= 0.8) return 'DATE';
             if (numericRatio >= 0.9) {
-                // Если есть хотя бы одно десятичное число, вся колонка должна быть DOUBLE
+                // If there's at least one decimal number, the entire column should be DOUBLE
                 return hasDecimals ? 'DOUBLE' : 'BIGINT';
             }
             return 'VARCHAR';
         };
 
-        // Функция для форматирования значения в зависимости от типа данных
+        // Function for formatting value depending on data type
         const formatValue = (value, columnType) => {
             if (value === null || value === undefined || value === '') {
                 return 'NULL';
@@ -1226,7 +1226,7 @@ class FastTableComparator {
                     if (isNaN(floatValue)) {
                         return 'NULL';
                     } else {
-                        // Округляем DOUBLE значения до 2 знаков после запятой
+                        // Round DOUBLE values to 2 decimal places
                         return columnType === 'DOUBLE' ? 
                             Math.round(floatValue * 100) / 100 : 
                             floatValue.toString();
@@ -1588,7 +1588,7 @@ async function compareTablesEnhanced(useTolerance = false) {
     if (totalRows > MAX_ROWS_LIMIT) {
         console.log('❌ Row limit exceeded for standard mode, checking if fast comparator can handle it');
         
-        // Если есть быстрый компаратор, попробуем его для больших данных
+        // If there's a fast comparator, try it for large data
         if (fastComparator && fastComparator.initialized && totalRows <= 100000) {
             resultDiv.innerHTML = '<div class="comparison-loading-enhanced">⚡ Processing large dataset with fast engine...</div>';
             summaryDiv.innerHTML = '<div style="text-align: center; padding: 10px;">Large dataset detected - using optimized processing...</div>';
@@ -1639,7 +1639,7 @@ async function compareTablesEnhanced(useTolerance = false) {
             return;
         }
         
-        // Если быстрый компаратор недоступен или данные слишком большие
+        // If fast comparator is unavailable or data is too large
         console.log('❌ Row limit exceeded and fast comparator unavailable');
         resultDiv.innerHTML = generateLimitErrorMessage(
             'rows', data1.length, MAX_ROWS_LIMIT, '', 
@@ -1711,10 +1711,10 @@ async function compareTablesEnhanced(useTolerance = false) {
                         await performComparison();
                     }
                 } catch (error) {
-                    clearAllProgressIntervals(); // Очищаем все интервалы при ошибке
+                    clearAllProgressIntervals(); // Clear all intervals on error
                     console.error('❌ DuckDB WASM comparison failed:', error);
                     
-                    // Фоллбэк к стандартному режиму
+                    // Fallback to standard mode
                     await performComparison();
                 }
                 
@@ -1750,7 +1750,7 @@ async function compareTablesEnhanced(useTolerance = false) {
 }
 
 async function processFastComparisonResults(fastResult, useTolerance) {
-    // Показываем финальную стадию обработки
+    // Show final processing stage
     updateProgressMessage('Processing results...', 95);
     
     const { identical, similar, onlyInTable1, onlyInTable2, table1Count, table2Count, commonColumns, performance } = fastResult;
@@ -1767,7 +1767,7 @@ async function processFastComparisonResults(fastResult, useTolerance) {
             resultDiv.innerHTML = '';
             resultDiv.style.display = 'none';
         }
-    }, 500); // Даем время показать 100% перед скрытием
+    }, 500); // Give time to show 100% before hiding
     
     const identicalCount = identical?.length || 0;
     const similarCount = similar?.length || 0;
@@ -2010,7 +2010,7 @@ async function generateDetailedComparisonTable(fastResult, useTolerance) {
     // to avoid column duplication
     await createBasicFallbackTable(pairs, workingData1[0] || commonColumns);
     
-    // Добавляем синхронизацию горизонтальной прокрутки
+    // Add horizontal scroll synchronization
     syncTableScroll();
 }
 
@@ -2106,7 +2106,7 @@ async function createBasicFallbackTable(pairs, headers) {
     
     let bodyHtml = '';
     
-    // Получаем состояние фильтров чекбоксов
+    // Get checkbox filter states
     const hideSameEl = document.getElementById('hideSameRows');
     const hideDiffEl = document.getElementById('hideDiffColumns');
     const hideNewRows1El = document.getElementById('hideNewRows1');
@@ -2117,7 +2117,7 @@ async function createBasicFallbackTable(pairs, headers) {
     const hideNewRows1 = hideNewRows1El ? hideNewRows1El.checked : false;
     const hideNewRows2 = hideNewRows2El ? hideNewRows2El.checked : false;
     
-    // Используем getFileDisplayName для отображения имени файла с листом в колонке Source
+    // Use getFileDisplayName to display filename with sheet in Source column
     const file1Name = window.getFileDisplayName 
         ? window.getFileDisplayName(window.fileName1 || 'File 1', window.sheetName1 || '')
         : (window.fileName1 || 'File 1');
@@ -2126,17 +2126,17 @@ async function createBasicFallbackTable(pairs, headers) {
         : (window.fileName2 || 'File 2');
     
     pairs.slice(0, 1000).forEach((pair, index) => {
-        // Проверяем фильтры чекбоксов
+        // Check checkbox filters
         const row1 = pair.row1;
         const row2 = pair.row2;
         
-        // Определяем характеристики строки для фильтрации
+        // Determine row characteristics for filtering
         let allSame = true;
         let hasWarn = false;
         let isEmpty = true;
         
         if (row1 && row2) {
-            // Сравниваем строки для определения allSame и hasWarn
+            // Compare rows to determine allSame and hasWarn
             for (let c = 0; c < realHeaders.length; c++) {
                 const v1 = row1[c] !== undefined ? row1[c] : '';
                 const v2 = row2[c] !== undefined ? row2[c] : '';
@@ -2154,7 +2154,7 @@ async function createBasicFallbackTable(pairs, headers) {
             allSame = false;
             hasWarn = false;
             
-            // Проверяем на пустоту
+            // Check for emptiness
             const existingRow = row1 || row2;
             if (existingRow) {
                 for (let c = 0; c < realHeaders.length; c++) {
@@ -2167,16 +2167,16 @@ async function createBasicFallbackTable(pairs, headers) {
             }
         }
         
-        // Применяем фильтры
+        // Apply filters
         if (isEmpty) return;
         if (hideSame && row1 && row2 && allSame) return;
         if (hideNewRows1 && row1 && !row2) return;
         if (hideNewRows2 && !row1 && row2) return;
         if (hideDiffRows && row1 && row2 && hasWarn) return;
         
-        // Для SIMILAR пар создаем группированные строки (как в functions.js)
+        // For SIMILAR pairs create grouped rows (like in functions.js)
         if (pair.matchType === 'SIMILAR' && row1 && row2) {
-            // Анализируем колонки на предмет различий
+            // Analyze columns for differences
             const columnComparisons = [];
             let hasAnyDifference = false;
             
@@ -2193,7 +2193,7 @@ async function createBasicFallbackTable(pairs, headers) {
             });
             
             if (hasAnyDifference) {
-                // Первая строка (File 1)
+                // First row (File 1)
                 bodyHtml += `<tr class="warn-row warn-row-group-start" data-row-index="${pair.index1}">`;
                 bodyHtml += `<td class="warn-cell">${file1Name}</td>`;
                 
@@ -2202,16 +2202,16 @@ async function createBasicFallbackTable(pairs, headers) {
                     const compResult = columnComparisons[colIndex];
                     
                     if (compResult === 'identical') {
-                        // Объединяем одинаковые колонки
+                        // Merge identical columns
                         bodyHtml += `<td class="identical" rowspan="2" style="vertical-align: middle; text-align: center;">${v1}</td>`;
                     } else {
-                        // Разные колонки показываем отдельно
+                        // Show different columns separately
                         bodyHtml += `<td class="warn-cell">${v1}</td>`;
                     }
                 });
                 bodyHtml += '</tr>';
                 
-                // Вторая строка (File 2)
+                // Second row (File 2)
                 bodyHtml += `<tr class="warn-row warn-row-group-end" data-row-index="${pair.index2}">`;
                 bodyHtml += `<td class="warn-cell">${file2Name}</td>`;
                 
@@ -2220,14 +2220,14 @@ async function createBasicFallbackTable(pairs, headers) {
                     const compResult = columnComparisons[colIndex];
                     
                     if (compResult === 'different') {
-                        // Показываем только разные колонки (identical уже показаны с rowspan)
+                        // Show only different columns (identical already shown with rowspan)
                         bodyHtml += `<td class="warn-cell">${v2}</td>`;
                     }
-                    // identical колонки пропускаем, так как они уже отображены с rowspan="2"
+                    // Skip identical columns as they are already displayed with rowspan="2"
                 });
                 bodyHtml += '</tr>';
             } else {
-                // Если нет различий, показываем как identical
+                // If no differences, show as identical
                 bodyHtml += `<tr class="identical-row" data-row-index="${pair.index1}">`;
                 bodyHtml += `<td class="file-both">Both files</td>`;
                 
@@ -2238,11 +2238,11 @@ async function createBasicFallbackTable(pairs, headers) {
                 bodyHtml += `</tr>`;
             }
         } else {
-            // Для других типов (IDENTICAL, ONLY_IN_TABLE1, ONLY_IN_TABLE2) используем старую логику
+            // For other types (IDENTICAL, ONLY_IN_TABLE1, ONLY_IN_TABLE2) use old logic
             const rowData = row1 || row2;
             let fileIndicator = '';
             
-            // Определяем индикатор источника в зависимости от типа совпадения
+            // Determine source indicator depending on match type
             if (pair.matchType === 'IDENTICAL') {
                 fileIndicator = 'Both files';
             } else if (pair.onlyIn === 'table1') {
@@ -2254,7 +2254,7 @@ async function createBasicFallbackTable(pairs, headers) {
             let rowClass = 'diff-row';
             let sourceClass = 'file-indicator';
             
-            // Устанавливаем стили в зависимости от типа совпадения
+            // Set styles depending on match type
             if (pair.matchType === 'IDENTICAL') {
                 rowClass += ' identical-row';
                 sourceClass += ' file-both';
@@ -2265,7 +2265,7 @@ async function createBasicFallbackTable(pairs, headers) {
                 rowClass += ' different-row';
                 sourceClass += ' new-cell2';
             } else {
-                // Fallback для других случаев
+                // Fallback for other cases
                 rowClass += ' identical-row';
                 sourceClass += ' file-both';
             }
@@ -2276,7 +2276,7 @@ async function createBasicFallbackTable(pairs, headers) {
             realHeaders.forEach((header, colIndex) => {
                 const value = rowData && rowData[colIndex] !== undefined ? rowData[colIndex] : '';
                 
-                // Улучшенная логика для определения стиля ячейки
+                // Enhanced logic for determining cell style
                 let cellClass = 'diff-cell';
                 if (pair.matchType === 'IDENTICAL') {
                     cellClass += ' identical';
@@ -2302,12 +2302,20 @@ async function createBasicFallbackTable(pairs, headers) {
         diffTableFinal.style.display = 'block';
         diffTableFinal.style.visibility = 'visible';
     }
-    
-    // Добавляем синхронизацию горизонтальной прокрутки
-    syncTableScroll();
-}
 
-window.MaxPilotDuckDB = {
+    // Add horizontal scroll synchronization
+    syncTableScroll();
+    
+    // Add refreshTableLayout call for proper filter functionality
+    if (typeof refreshTableLayout === 'function') {
+        refreshTableLayout();
+    }
+    
+    // Add syncColumnWidths call for column width synchronization
+    if (typeof syncColumnWidths === 'function') {
+        syncColumnWidths();
+    }
+}window.MaxPilotDuckDB = {
     FastTableComparator,
     fastComparator,
     initializeFastComparator,
@@ -2328,10 +2336,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (typeof window.compareTables === 'function') {
         window.compareTablesOriginal = window.compareTables;
     }
-    // Включаем обратно DuckDB WASM с улучшенной логикой
+    // Re-enable DuckDB WASM with enhanced logic
     window.compareTables = compareTablesEnhanced;
     
-    // Добавляем обработчики событий для фильтров чекбоксов
+    // Add event handlers for checkbox filters
     const hideSameRowsEl = document.getElementById('hideSameRows');
     if (hideSameRowsEl) {
         hideSameRowsEl.addEventListener('change', function() {
@@ -2369,7 +2377,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-// Функции синхронизации горизонтальной прокрутки
+// Horizontal scroll synchronization functions
 function syncTableScroll() {
     const headerTable = document.querySelector('.table-header-fixed');
     const bodyTable = document.querySelector('.table-body-scrollable');
@@ -2509,7 +2517,7 @@ async function prepareDataForExportFast(fastResult, useTolerance = false) {
     }
     
     let rowIndex = 1;
-    // Используем getFileDisplayName для отображения имени файла с листом
+    // Use getFileDisplayName to display filename with sheet
     const file1Name = window.getFileDisplayName 
         ? window.getFileDisplayName(window.fileName1 || 'File 1', window.sheetName1 || '')
         : (window.fileName1 || 'File 1');

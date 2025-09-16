@@ -1,4 +1,4 @@
-// Реальная интеграция DuckDB WASM через esm.sh
+// Real DuckDB WASM integration via esm.sh
 class DuckDBWASMLoader {
     constructor() {
         this.db = null;
@@ -6,7 +6,7 @@ class DuckDBWASMLoader {
     }
 
     async initialize() {
-        // Сохраняем оригинальные функции console перед try блоком
+        // Save original console functions before try block
         const originalConsoleLog = console.log;
         const originalConsoleWarn = console.warn;
         const originalConsoleInfo = console.info;
@@ -14,14 +14,14 @@ class DuckDBWASMLoader {
         try {
             //console.log('🔧 Loading DuckDB WASM from ESM CDN...');
             
-            // Перехватываем console.log для подавления DuckDB логов
+            // Intercept console.log to suppress DuckDB logs
             console.log = function(...args) {
-                // Фильтруем сообщения от DuckDB
+                // Filter messages from DuckDB
                 const message = args.join(' ');
                 if (message && typeof args[0] === 'object' && 
                     args[0].timestamp && args[0].level !== undefined && 
                     args[0].origin !== undefined && args[0].topic !== undefined) {
-                    return; // Подавляем DuckDB логи
+                    return; // Suppress DuckDB logs
                 }
                 originalConsoleLog.apply(console, args);
             };
@@ -44,12 +44,12 @@ class DuckDBWASMLoader {
                 originalConsoleInfo.apply(console, args);
             };
             
-            // Используем esm.sh который автоматически разрешает зависимости
+            // Use esm.sh which automatically resolves dependencies
             const duckdb = await import('https://esm.sh/@duckdb/duckdb-wasm@1.29.0');
             
             //console.log('📦 DuckDB module loaded, initializing...');
             
-            // Создаем кастомные бандлы с локальными файлами
+            // Create custom bundles with local files
             const MANUAL_BUNDLES = {
                 eh: {
                     mainModule: '/javascript/duckdb/duckdb-eh.wasm',
@@ -62,7 +62,7 @@ class DuckDBWASMLoader {
             
             const worker = new Worker(bundle.mainWorker);
             
-            // Создаем собственный тихий логгер
+            // Create our own silent logger
             const logger = {
                 log: () => {},
                 warn: () => {},
@@ -74,19 +74,19 @@ class DuckDBWASMLoader {
             this.db = new duckdb.AsyncDuckDB(logger, worker);
             await this.db.instantiate(bundle.mainModule);
             
-            // Отключаем все виды логирования
+            // Disable all types of logging
             try {
                 await this.db.query('SET log_query_path = \'\';');
                 await this.db.query('SET enable_progress_bar = false;');
                 await this.db.query('SET enable_print_progress = false;');
             } catch (e) {
-                // Игнорируем ошибки настройки логирования
+                // Ignore logging setup errors
             }
             
-            // Создаем соединение для выполнения запросов
+            // Create connection for executing queries
             this.connection = await this.db.connect();
             
-            // Восстанавливаем оригинальные функции console
+            // Restore original console functions
             console.log = originalConsoleLog;
             console.warn = originalConsoleWarn;
             console.info = originalConsoleInfo;
@@ -97,20 +97,20 @@ class DuckDBWASMLoader {
             return this.db;
             
         } catch (error) {
-            // Восстанавливаем оригинальные функции console в случае ошибки
+            // Restore original console functions in case of error
             console.log = originalConsoleLog;
             console.warn = originalConsoleWarn;
             console.info = originalConsoleInfo;
             
             console.error('❌ Failed to initialize DuckDB WASM:', error);
             
-            // Пробуем упрощенный подход
+            // Try simplified approach
             try {
                 //console.log('🔄 Trying simplified DuckDB initialization...');
                 
                 const duckdb = await import('https://cdn.skypack.dev/@duckdb/duckdb-wasm');
                 
-                // Создаем упрощенную инициализацию
+                // Create simplified initialization
                 this.db = await duckdb.default.DuckDBDataProtocol.initialize();
                 this.initialized = true;
                 
@@ -152,10 +152,10 @@ class DuckDBWASMLoader {
     }
 }
 
-// Экспортируем глобально
+// Export globally
 window.DuckDBWASMLoader = DuckDBWASMLoader;
 
-// Создаем инстанс для немедленного использования
+// Create instance for immediate use
 window.duckdbLoader = new DuckDBWASMLoader();
 
 //console.log('✅ DuckDB WASM loader ready');
