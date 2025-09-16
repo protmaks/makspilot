@@ -1125,7 +1125,7 @@ function convertExcelDate(value, isInDateColumn = false) {
                 const hasTime = timeFraction > 0 || hours !== 0 || minutes !== 0 || seconds !== 0;
                 return formatDate(year, month, day, hasTime ? hours : null, hasTime ? minutes : null, hasTime ? seconds : null);
             } else {
-                // Если год больше 2050, возвращаем исходное число
+                // If year is greater than 2050, return original number
                 return value;
             }
         }
@@ -2197,7 +2197,7 @@ function parseCSVValue(value) {
             return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         }
         
-        // Попытка обработать как число
+        // Attempt to process as a number
         let numValue = value.replace(',', '.'); 
         if (numValue !== '' && !isNaN(numValue) && !isNaN(parseFloat(numValue))) {
             const num = parseFloat(numValue);
