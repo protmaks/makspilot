@@ -2009,6 +2009,9 @@ async function generateDetailedComparisonTable(fastResult, useTolerance) {
     // Skip renderComparisonTable and go directly to createBasicFallbackTable
     // to avoid column duplication
     await createBasicFallbackTable(pairs, workingData1[0] || commonColumns);
+    
+    // Добавляем синхронизацию горизонтальной прокрутки
+    syncTableScroll();
 }
 
 async function createBasicFallbackTable(pairs, headers) {
@@ -2299,6 +2302,9 @@ async function createBasicFallbackTable(pairs, headers) {
         diffTableFinal.style.display = 'block';
         diffTableFinal.style.visibility = 'visible';
     }
+    
+    // Добавляем синхронизацию горизонтальной прокрутки
+    syncTableScroll();
 }
 
 window.MaxPilotDuckDB = {
@@ -2362,6 +2368,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
+
+// Функции синхронизации горизонтальной прокрутки
+function syncTableScroll() {
+    const headerTable = document.querySelector('.table-header-fixed');
+    const bodyTable = document.querySelector('.table-body-scrollable');
+    
+    if (headerTable && bodyTable) {
+        bodyTable.removeEventListener('scroll', syncScrollHandler);
+        bodyTable.addEventListener('scroll', syncScrollHandler);
+    }
+}
+
+function syncScrollHandler() {
+    const headerTable = document.querySelector('.table-header-fixed');
+    const bodyTable = document.querySelector('.table-body-scrollable');
+    
+    if (headerTable && bodyTable) {
+        headerTable.scrollLeft = bodyTable.scrollLeft;
+    }
+}
 
 function testDOMIntegration() {
     const elements = {
