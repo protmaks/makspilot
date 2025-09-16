@@ -678,6 +678,37 @@ class FastTableComparator {
             
             //console.log('🔑 Key columns detected:', keyColumns);
             console.log('🔑 Key column names:', keyColumns.map(idx => headers1[idx] || `Column ${idx}`));
+            console.log('🚀 DEBUG MARKER: Auto-detection code loaded - Version 2.0');
+            
+            // Debug the condition for setting auto-detected keys
+            console.log('🔍 Checking condition for auto-detection UI update:', {
+                customKeyColumns: customKeyColumns,
+                customKeyColumnsType: typeof customKeyColumns,
+                customKeyColumnsLength: customKeyColumns ? customKeyColumns.length : 'null/undefined',
+                condition1: !customKeyColumns,
+                condition2: customKeyColumns && customKeyColumns.length === 0,
+                finalCondition: !customKeyColumns || customKeyColumns.length === 0
+            });
+            
+            // If no custom key columns were provided, mark the auto-detected ones in UI
+            if (!customKeyColumns || customKeyColumns.length === 0) {
+                const autoDetectedColumnNames = keyColumns.map(idx => headers1[idx] || `Column ${idx}`);
+                console.log('🔧 Marking auto-detected key columns in UI:', autoDetectedColumnNames);
+                console.log('🔍 Debug: checking window.setSelectedKeyColumns availability:', typeof window.setSelectedKeyColumns);
+                
+                // Set the auto-detected columns as selected in the UI
+                setTimeout(() => {
+                    console.log('⏰ Timeout executed for setting selected columns');
+                    if (typeof window.setSelectedKeyColumns === 'function') {
+                        console.log('✅ Calling setSelectedKeyColumns with:', autoDetectedColumnNames);
+                        window.setSelectedKeyColumns(autoDetectedColumnNames);
+                    } else {
+                        console.error('❌ window.setSelectedKeyColumns is not available:', typeof window.setSelectedKeyColumns);
+                    }
+                }, 100);
+            } else {
+                console.log('🚫 Skipping auto-detection UI update because custom key columns are provided');
+            }
             
             const doubleColumns = comparisonColumns.filter(idx => 
                 finalColumnTypes1[idx] === 'DOUBLE' || finalColumnTypes2[idx] === 'DOUBLE'
@@ -1803,6 +1834,37 @@ async function compareTablesEnhanced(useTolerance = false) {
                     if (fastResult) {
                         //console.log('✅ DuckDB WASM comparison completed successfully');
                         await processFastComparisonResults(fastResult, useTolerance);
+                        
+                        // Mark auto-detected key columns in UI if no custom keys were selected
+                        console.log('🔧 Post-comparison: Checking if need to mark auto-detected keys');
+                        console.log('🔍 customKeyColumns state:', { 
+                            customKeyColumns: customKeyColumns, 
+                            type: typeof customKeyColumns, 
+                            length: customKeyColumns ? customKeyColumns.length : 'null/undefined' 
+                        });
+                        
+                        if (!customKeyColumns || customKeyColumns.length === 0) {
+                            console.log('🎯 No custom keys selected, will mark auto-detected keys');
+                            
+                            // Get the key columns that were actually used from the fast result
+                            // For now, we'll get them from current selection (if any) or try to extract from the comparison
+                            setTimeout(() => {
+                                console.log('⏰ Attempting to mark auto-detected keys in UI');
+                                if (typeof window.setSelectedKeyColumns === 'function') {
+                                    // For now, let's try to mark the first column as it's commonly the key
+                                    const headers = data1.length > 0 ? data1[0] : [];
+                                    const firstColumnName = headers[0];
+                                    if (firstColumnName) {
+                                        console.log('✅ Marking first column as auto-detected key:', firstColumnName);
+                                        window.setSelectedKeyColumns([firstColumnName]);
+                                    }
+                                } else {
+                                    console.error('❌ setSelectedKeyColumns not available');
+                                }
+                            }, 500);
+                        } else {
+                            console.log('🚫 Custom keys were provided, skipping auto-detection UI update');
+                        }
                     } else {
                         //console.log('⚠️ DuckDB WASM returned empty result, falling back');
                         await performComparison();

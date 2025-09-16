@@ -1448,8 +1448,7 @@ button.export-btn:disabled {
 }
 
 .key-columns-container {
-    display: block ruby;
-    flex-direction: column;
+    display: flex;
     margin-bottom: 20px;
     gap: 8px;
 }
@@ -1464,6 +1463,7 @@ button.export-btn:disabled {
 .key-columns-dropdown {
     position: relative;
     min-width: 280px;
+    width: 100%;
 }
 
 .key-columns-dropdown-button {

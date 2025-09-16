@@ -2328,7 +2328,7 @@ function handleFile(file, num) {
                                 setTimeout(() => {
                                     if (typeof updateKeyColumnsOptions === 'function') {
                                         //console.log('🔄 Updating key columns after table1 CSV load');
-                                        updateKeyColumnsOptions();
+                                        updateKeyColumnsOptions(true);
                                     }
                                 }, 100);
                             } else {
@@ -2339,7 +2339,7 @@ function handleFile(file, num) {
                                 setTimeout(() => {
                                     if (typeof updateKeyColumnsOptions === 'function') {
                                         //console.log('🔄 Updating key columns after table2 CSV load');
-                                        updateKeyColumnsOptions();
+                                        updateKeyColumnsOptions(true);
                                     }
                                 }, 100);
                             }
@@ -2446,7 +2446,7 @@ function handleFile(file, num) {
                                 // Update key columns dropdown when first file is loaded
                                 setTimeout(() => {
                                     if (typeof updateKeyColumnsOptions === 'function') {
-                                        updateKeyColumnsOptions();
+                                        updateKeyColumnsOptions(true);
                                     }
                                 }, 100);
                             } else {
@@ -2455,7 +2455,7 @@ function handleFile(file, num) {
                                 // Update key columns dropdown when second file is loaded
                                 setTimeout(() => {
                                     if (typeof updateKeyColumnsOptions === 'function') {
-                                        updateKeyColumnsOptions();
+                                        updateKeyColumnsOptions(true);
                                     }
                                 }, 100);
                             }
