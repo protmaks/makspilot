@@ -3,6 +3,23 @@ const MAX_COLS_LIMIT = 120;
 const DETAILED_TABLE_LIMIT = 10000;
 const DETAILED_COLS_LIMIT = 40;
 
+// Fallback functions for key-columns functionality when key-columns.js is not loaded
+if (typeof getSelectedKeyColumns === 'undefined') {
+    window.getSelectedKeyColumns = function() {
+        return [];
+    };
+}
+
+if (typeof getKeyColumnIndexes === 'undefined') {
+    window.getKeyColumnIndexes = function(headers, selectedKeyColumns) {
+        // Fallback to smartDetectKeyColumns if available
+        if (typeof smartDetectKeyColumns === 'function') {
+            return smartDetectKeyColumns(headers, []);
+        }
+        return [];
+    };
+}
+
 let data1 = [], data2 = [];
 let fileName1 = '', fileName2 = '';
 let sheetName1 = '', sheetName2 = ''; 
@@ -2327,8 +2344,7 @@ function handleFile(file, num) {
                                 // Update key columns dropdown immediately after table1 is loaded
                                 setTimeout(() => {
                                     if (typeof updateKeyColumnsOptions === 'function') {
-                                        //console.log('🔄 Updating key columns after table1 CSV load');
-                                        updateKeyColumnsOptions();
+                                        updateKeyColumnsOptions(true);
                                     }
                                 }, 100);
                             } else {
@@ -2338,8 +2354,7 @@ function handleFile(file, num) {
                                 // Update key columns dropdown immediately after table2 is loaded
                                 setTimeout(() => {
                                     if (typeof updateKeyColumnsOptions === 'function') {
-                                        //console.log('🔄 Updating key columns after table2 CSV load');
-                                        updateKeyColumnsOptions();
+                                        updateKeyColumnsOptions(true);
                                     }
                                 }, 100);
                             }
@@ -2446,7 +2461,7 @@ function handleFile(file, num) {
                                 // Update key columns dropdown when first file is loaded
                                 setTimeout(() => {
                                     if (typeof updateKeyColumnsOptions === 'function') {
-                                        updateKeyColumnsOptions();
+                                        updateKeyColumnsOptions(true);
                                     }
                                 }, 100);
                             } else {
@@ -2455,7 +2470,7 @@ function handleFile(file, num) {
                                 // Update key columns dropdown when second file is loaded
                                 setTimeout(() => {
                                     if (typeof updateKeyColumnsOptions === 'function') {
-                                        updateKeyColumnsOptions();
+                                        updateKeyColumnsOptions(true);
                                     }
                                 }, 100);
                             }
@@ -2879,8 +2894,6 @@ function getColumnsToHide(headers, columnTypes, hideDiff, hideNew) {
 }
 
 function compareTables(useTolerance = false) {
-    //console.log('🎯 ============ COMPARE TABLES STARTED ============');
-    //console.log('🎯 compareTables called with useTolerance:', useTolerance);
     
     toleranceMode = useTolerance;
     window.toleranceMode = useTolerance; // Make it globally accessible
@@ -2975,18 +2988,12 @@ function compareTables(useTolerance = false) {
 }
 
 async function performComparison() {
-    //console.log('🎯 ============ PERFORM COMPARISON STARTED ============');
     
     // DEBUG: Test key columns selection first
-    const testSelectedKeyColumns = getSelectedKeyColumns ? getSelectedKeyColumns() : [];
-    //console.log('🔍 DEBUG: Key columns at start of performComparison:', { getSelectedKeyColumnsExists: typeof getSelectedKeyColumns === 'function', testSelectedKeyColumns: testSelectedKeyColumns, testSelectedKeyColumnsLength: testSelectedKeyColumns ? testSelectedKeyColumns.length : 0 });
-    
-    // Check if fast comparator is available and try to use it first
-    //console.log('🔍 Checking for DuckDB WASM availability:', { MaxPilotDuckDB: !!window.MaxPilotDuckDB, fastComparator: !!window.MaxPilotDuckDB?.fastComparator, initialized: window.MaxPilotDuckDB?.fastComparator?.initialized, compareFunction: !!window.MaxPilotDuckDB?.compareTablesWithFastComparator, data1Length: data1?.length, data2Length: data2?.length });
-    
+    const testSelectedKeyColumns = (typeof getSelectedKeyColumns === 'function') ? getSelectedKeyColumns() : [];
+
     if (window.MaxPilotDuckDB && window.MaxPilotDuckDB.fastComparator && window.MaxPilotDuckDB.fastComparator.initialized) {
         try {
-            //console.log('🚀 Using DuckDB WASM for comparison...');
             // Set flag to prevent other table rendering functions from interfering
             window.fastComparisonActive = true;
             
@@ -2995,7 +3002,7 @@ async function performComparison() {
             const tolerance = window.currentTolerance || 1.5; // Default tolerance value
             
             // Get selected key columns from UI
-            const selectedKeyColumns = getSelectedKeyColumns ? getSelectedKeyColumns() : [];
+            const selectedKeyColumns = (typeof getSelectedKeyColumns === 'function') ? getSelectedKeyColumns() : [];
             let customKeyColumns = null;
             
             if (selectedKeyColumns && selectedKeyColumns.length > 0) {
@@ -3006,17 +3013,12 @@ async function performComparison() {
                     return index !== -1 ? index : null;
                 }).filter(index => index !== null);
                 
-                //console.log('🔑 Using custom key columns:', { selectedColumnNames: selectedKeyColumns, selectedColumnIndexes: customKeyColumns });
-            } //else { console.log('� No custom key columns selected, will use automatic detection'); }
-            
-            //console.log('�📊 Calling compareTablesWithFastComparator with:', { excludedColumns, useTolerance, tolerance, customKeyColumns });
-            
+            } 
             const fastResult = await window.MaxPilotDuckDB.compareTablesWithFastComparator(
                 data1, data2, excludedColumns, useTolerance, tolerance, customKeyColumns
             );
             
             if (fastResult) {
-                //console.log('✅ DuckDB WASM comparison completed successfully');
                 // Clear the loading message first
                 const resultDiv = document.getElementById('result');
                 if (resultDiv) {
@@ -3649,8 +3651,8 @@ function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols,
     const combinedData = [finalHeaders, ...body1, ...body2];
     
     // Get selected key columns or use auto-detection
-    const selectedKeyColumns = getSelectedKeyColumns ? getSelectedKeyColumns() : [];
-    const keyColumnIndexes = getKeyColumnIndexes ? getKeyColumnIndexes(finalHeaders, selectedKeyColumns) : smartDetectKeyColumns(finalHeaders, combinedData);
+    const selectedKeyColumns = (typeof getSelectedKeyColumns === 'function') ? getSelectedKeyColumns() : [];
+    const keyColumnIndexes = (typeof getKeyColumnIndexes === 'function') ? getKeyColumnIndexes(finalHeaders, selectedKeyColumns) : smartDetectKeyColumns(finalHeaders, combinedData);
     
     
     let used2 = new Array(body2.length).fill(false);
@@ -4021,7 +4023,44 @@ function renderComparisonTable() {
         }
         let headerText = currentFinalHeaders[c] !== undefined ? currentFinalHeaders[c] : '';
         let titleAttr = headerText ? ` title="${headerText.toString().replace(/"/g, '&quot;')}"` : '';
-        headerHtml += `<th class="${sortClass}" onclick="sortTable(${c})"${titleAttr}>${headerText}</th>`;
+        
+        // Get column type and icon
+        let columnTypeIcon = '';
+        // Only show type icons on test_wasm page
+        const isTestWasmPage = window.location.pathname.includes('/test_wasm');
+        
+        if (headerText && typeof getColumnType === 'function' && isTestWasmPage) {
+            // Get column data for type detection
+            let columnValues = [];
+            
+            // Collect data from both files for this column
+            if (window.data1 && window.data1.length > 1 && window.data1[0]) {
+                const headerIndex = window.data1[0].indexOf(headerText);
+                if (headerIndex !== -1) {
+                    for (let i = 1; i < window.data1.length; i++) {
+                        if (window.data1[i] && window.data1[i][headerIndex] !== undefined) {
+                            columnValues.push(window.data1[i][headerIndex]);
+                        }
+                    }
+                }
+            }
+            
+            if (window.data2 && window.data2.length > 1 && window.data2[0]) {
+                const headerIndex = window.data2[0].indexOf(headerText);
+                if (headerIndex !== -1) {
+                    for (let i = 1; i < window.data2.length; i++) {
+                        if (window.data2[i] && window.data2[i][headerIndex] !== undefined) {
+                            columnValues.push(window.data2[i][headerIndex]);
+                        }
+                    }
+                }
+            }
+            
+            const columnType = getColumnType(columnValues, headerText);
+            columnTypeIcon = `<span class="column-type-icon column-type-${columnType}" title="Column type: ${columnType}"></span>`;
+        }
+        
+        headerHtml += `<th class="${sortClass}" onclick="sortTable(${c})"${titleAttr}>${columnTypeIcon}${headerText}</th>`;
     }
     headerHtml += '</tr>';
     document.querySelector('.diff-table-header thead').innerHTML = headerHtml;

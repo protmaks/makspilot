@@ -118,14 +118,11 @@ class FastTableComparator {
 
     async initialize() {
         try {
-            //console.log('🔧 Initializing fast comparison engine...');
             
             if (typeof WebAssembly !== 'undefined') {
                 try {
-                    //console.log('🚀 Attempting real DuckDB WASM initialization...');
                     await this.initializeWASM();
                     this.mode = 'wasm';
-                    //console.log('✅ Real DuckDB WASM mode activated!');
                     this.initialized = true;
                     return true;
                 }
@@ -137,7 +134,6 @@ class FastTableComparator {
             this.mode = 'local';
             this.initialized = true;
             
-            //console.log('✅ Fast comparison engine ready - optimized local mode');
             return true;
             
         } catch (error) {
@@ -149,9 +145,6 @@ class FastTableComparator {
 
     async initializeWASM() {
         try {
-            //console.log('🔧 Attempting to initialize real DuckDB WASM...');
-            
-            // Загружаем настоящий DuckDB
             const script = document.createElement('script');
             script.src = '/javascript/duckdb/duckdb-real.js';
             script.type = 'text/javascript';
@@ -168,10 +161,8 @@ class FastTableComparator {
                 throw new Error('DuckDB loader not available');
             }
             
-            //console.log('🔧 Initializing DuckDB WASM engine...');
             this.db = await window.duckdbLoader.initialize();
             
-            //console.log('✅ Real DuckDB WASM initialized successfully');
             return true;
             
         } catch (error) {
@@ -247,7 +238,6 @@ class FastTableComparator {
 
     async compareTablesFast(data1, data2, excludeColumns = [], useTolerance = false, customKeyColumns = null) {
         if (this.mode === 'wasm') {
-            //console.log('--- Using DuckDB WASM with original matching logic');
             return await this.compareTablesWithOriginalLogic(data1, data2, excludeColumns, useTolerance, customKeyColumns);
         } else {
             return await this.compareTablesLocal(data1, data2, excludeColumns, useTolerance, customKeyColumns);
@@ -255,7 +245,6 @@ class FastTableComparator {
     }
 
     async compareTablesWithDuckDB(table1Name, table2Name, excludeColumns = []) {
-        //console.log('🚀 Using DuckDB WASM for table comparison...');
         const startTime = performance.now();
 
         try {
@@ -266,7 +255,6 @@ class FastTableComparator {
                 throw new Error('One or both tables not found');
             }
 
-            // Создаем временные таблицы в DuckDB
             await this.createDuckDBTable('temp_table1', table1);
             await this.createDuckDBTable('temp_table2', table2);
 
@@ -336,8 +324,6 @@ class FastTableComparator {
 
             const duration = performance.now() - startTime;
 
-            //console.log(`🚀 DuckDB WASM comparison completed in ${duration.toFixed(2)}ms`);
-
             return {
                 identical,
                 onlyInTable1,
@@ -356,21 +342,15 @@ class FastTableComparator {
     }
 
     async compareTablesWithOriginalLogic(data1, data2, excludeColumns = [], useTolerance = false, customKeyColumns = null) {
-        //console.log('🚀 Using DuckDB WASM with multi-stage comparison logic...');
         const startTime = performance.now();
 
         try {
-            // Проверка размера данных для выбора оптимальной стратегии
-            const table1Size = data1.length - 1; // исключаем заголовки
+            const table1Size = data1.length - 1;
             const table2Size = data2.length - 1;
             const totalSize = table1Size + table2Size;
             const columnCount = Math.max(data1[0]?.length || 0, data2[0]?.length || 0);
             
-            // console.log('📊 Data size analysis:', {  table1Rows: table1Size,  table2Rows: table2Size,  totalRows: totalSize, columns: columnCount  });
-
-            // Для очень больших таблиц используем упрощенную стратегию
             if (totalSize > 30000 || columnCount > 40) {
-                console.log('🚀 Using optimized strategy for large dataset');
                 return await this.compareTablesOptimizedForLargeData(data1, data2, excludeColumns, useTolerance);
             }
 
@@ -387,7 +367,6 @@ class FastTableComparator {
             const headers1 = data1[0] || [];
             const headers2 = data2[0] || [];
             
-            //console.log('📝 Step 1: Creating tables with SQL...');
             const sanitizeColumnName = (name, index) => {
                 if (!name || typeof name !== 'string') {
                     return `col_${index}`;
@@ -462,9 +441,6 @@ class FastTableComparator {
             const columnTypes1 = sanitizedHeaders1.map((_, i) => detectColumnType(data1, i));
             const columnTypes2 = sanitizedHeaders2.map((_, i) => detectColumnType(data2, i));
 
-            //console.log('🔍 Detected column types for table1:', sanitizedHeaders1.map((header, i) => `${header}: ${columnTypes1[i]}`));
-            //console.log('🔍 Detected column types for table2:', sanitizedHeaders2.map((header, i) => `${header}: ${columnTypes2[i]}`));
-
             const harmonizeColumnTypes = (types1, types2) => {
                 const harmonized1 = [...types1];
                 const harmonized2 = [...types2];
@@ -478,13 +454,11 @@ class FastTableComparator {
                             (type1 === 'DOUBLE' && type2 === 'BIGINT')) {
                             harmonized1[i] = 'DOUBLE';
                             harmonized2[i] = 'DOUBLE';
-                            //console.log(`🔄 Harmonized column ${i} (${sanitizedHeaders1[i]}): ${type1} + ${type2} → DOUBLE`);
                         }
                         else if ((type1 === 'INTEGER' && type2 === 'BIGINT') || 
                                  (type1 === 'BIGINT' && type2 === 'INTEGER')) {
                             harmonized1[i] = 'BIGINT';
                             harmonized2[i] = 'BIGINT';
-                            //console.log(`🔄 Harmonized column ${i} (${sanitizedHeaders1[i]}): ${type1} + ${type2} → BIGINT`);
                         }
                         else if ((type1 === 'INTEGER' && type2 === 'DOUBLE') || 
                                  (type1 === 'DOUBLE' && type2 === 'INTEGER') ||
@@ -492,10 +466,8 @@ class FastTableComparator {
                                  (type1 === 'DOUBLE' && type2 === 'FLOAT')) {
                             harmonized1[i] = 'DOUBLE';
                             harmonized2[i] = 'DOUBLE';
-                            //console.log(`🔄 Harmonized column ${i} (${sanitizedHeaders1[i]}): ${type1} + ${type2} → DOUBLE`);
                         }
                         else {
-                            //console.log(`⚠️ Type mismatch for column ${i} (${sanitizedHeaders1[i]}): ${type1} vs ${type2}, using VARCHAR`);
                             harmonized1[i] = 'VARCHAR';
                             harmonized2[i] = 'VARCHAR';
                         }
@@ -506,9 +478,6 @@ class FastTableComparator {
             };
 
             const { types1: finalColumnTypes1, types2: finalColumnTypes2 } = harmonizeColumnTypes(columnTypes1, columnTypes2);
-
-            //console.log('🔄 Harmonized column types for table1:', sanitizedHeaders1.map((header, i) => `${header}: ${finalColumnTypes1[i]}`));
-            //console.log('🔄 Harmonized column types for table2:', sanitizedHeaders2.map((header, i) => `${header}: ${finalColumnTypes2[i]}`));
 
             const createTable1SQL = `CREATE OR REPLACE TABLE table1 (
                 rowid INTEGER,
@@ -524,7 +493,6 @@ class FastTableComparator {
             await window.duckdbLoader.query(createTable2SQL);
             await window.duckdbLoader.query(createTable2SQL);
 
-            //console.log('📊 Step 2: Inserting data in batches...');
             const formatValue = (value, columnType) => {
                 if (value === null || value === undefined || value === '') {
                     return 'NULL';
@@ -586,8 +554,6 @@ class FastTableComparator {
 
             await insertBatch('table1', data1, headers1, finalColumnTypes1);
             await insertBatch('table2', data2, headers2, finalColumnTypes2);
-
-            //console.log('🔍 Step 3: Filtering columns and detecting key columns...');
             
             const createComparisonCondition = (colIdx, useTolerance = false) => {
                 const col1Type = finalColumnTypes1[colIdx];
@@ -653,8 +619,7 @@ class FastTableComparator {
                 }
             });
             
-            //console.log('🔍 Column filtering results:', { totalColumns: headers1.length, excludeColumns: excludeColumns, comparisonColumns: comparisonColumns, comparisonColumnNames: comparisonColumns.map(idx => headers1[idx]), excludedColumnNames: excludeColumns });
-            
+
             if (comparisonColumns.length === 0) {
                 throw new Error('All columns are excluded from comparison');
             }
@@ -662,40 +627,42 @@ class FastTableComparator {
             // Use custom key columns if provided, otherwise detect automatically
             let allKeyColumns;
             if (customKeyColumns && customKeyColumns.length > 0) {
-                console.log('🔑 Using custom key columns:', customKeyColumns);
                 allKeyColumns = customKeyColumns;
             } else {
-                console.log('🔑 No custom key columns provided, using automatic detection');
                 allKeyColumns = this.detectKeyColumnsSQL(headers1);
             }
             const keyColumns = allKeyColumns.filter(keyCol => comparisonColumns.includes(keyCol));
             
             // Ensure we have at least one key column
             if (keyColumns.length === 0) {
-                console.log('⚠️ No valid key columns found, using first column as fallback');
                 keyColumns.push(0);
             }
             
-            //console.log('🔑 Key columns detected:', keyColumns);
-            console.log('🔑 Key column names:', keyColumns.map(idx => headers1[idx] || `Column ${idx}`));
+            // If no custom key columns were provided, mark the auto-detected ones in UI
+            if (!customKeyColumns || customKeyColumns.length === 0) {
+                const autoDetectedColumnNames = keyColumns.map(idx => headers1[idx] || `Column ${idx}`);
+
+                // Set the auto-detected columns as selected in the UI
+                setTimeout(() => {
+                    if (typeof window.setSelectedKeyColumns === 'function') {
+                        window.setSelectedKeyColumns(autoDetectedColumnNames);
+                    } else {
+                        console.error('❌ window.setSelectedKeyColumns is not available:', typeof window.setSelectedKeyColumns);
+                    }
+                }, 100);
+            } else {
+                console.log('🚫 Skipping auto-detection UI update because custom key columns are provided');
+            }
             
             const doubleColumns = comparisonColumns.filter(idx => 
                 finalColumnTypes1[idx] === 'DOUBLE' || finalColumnTypes2[idx] === 'DOUBLE'
             );
-            if (doubleColumns.length > 0) {
-                //console.log('-- DOUBLE columns (will use ROUND(x, 2) for comparison):', doubleColumns.map(idx => `${headers1[idx]} (${finalColumnTypes1[idx]})`));
-            }
-            
-            //console.log('�🔑 Headers analysis:', { headers1: headers1, headers2: headers2, headers1Length: headers1.length, headers2Length: headers2.length, allKeyColumns: allKeyColumns, allKeyColumnNames: allKeyColumns.map(idx => headers1[idx] || `Column ${idx}`), filteredKeyColumns: keyColumns, filteredKeyColumnNames: keyColumns.map(idx => headers1[idx] || `Column ${idx}`), doubleColumnsCount: doubleColumns.length });
-
-            //console.log('🎯 Step 4: Finding identical rows...');
-            
+            if (doubleColumns.length > 0) { }
 
             const table1CountResult = await window.duckdbLoader.query('SELECT COUNT(*) as count FROM table1');
             const table2CountResult = await window.duckdbLoader.query('SELECT COUNT(*) as count FROM table2');
             const table1Count = Number(table1CountResult.toArray()[0]?.count || 0);
             const table2Count = Number(table2CountResult.toArray()[0]?.count || 0);
-            //console.log('📊 Table counts:', { table1Count, table2Count });
             
             const identicalSQL = `
                 CREATE OR REPLACE TABLE identical_pairs AS
@@ -709,26 +676,17 @@ class FastTableComparator {
                 )
             `;
             
-            //console.log('🔍 Identical SQL query sample conditions:', { useTolerance, comparisonColumns: comparisonColumns, firstCondition: createComparisonCondition(comparisonColumns[0], useTolerance), firstColumnName: headers1[comparisonColumns[0]], totalConditions: comparisonColumns.length, excludedColumns: excludeColumns });
-            
-            //console.log('🔍 Identical SQL query:', identicalSQL);
             await window.duckdbLoader.query(identicalSQL);
             
             const identicalCountResult = await window.duckdbLoader.query('SELECT COUNT(*) as count FROM identical_pairs');
             const identicalCount = Number(identicalCountResult.toArray()[0]?.count || 0);
-            //console.log('📊 Found identical pairs:', identicalCount);
 
-            //console.log('🔍 Step 5: Finding similar rows by key columns...');
             const keyColumnChecks = keyColumns.map(colIdx => createComparisonCondition(colIdx, useTolerance)).join(' AND ');
 
             const minKeyMatchesRequired = Math.max(1, Math.ceil(keyColumns.length * (useTolerance ? 0.8 : 0.8))); // Минимум 80% ключевых полей
             const minTotalMatchesRequired = Math.max(2, Math.ceil(comparisonColumns.length * (useTolerance ? 0.6 : 0.7))); // Минимум 60-70% колонок для сравнения
 
-            //console.log('🔑 Key column condition:', keyColumnChecks);
-            //console.log('🔑 Matching requirements updated:', { keyColumns: keyColumns.length, requiredKeyMatches: keyColumns.length, comparisonColumns: comparisonColumns.length, maxTotalMatches: comparisonColumns.length - 1,  strategy: 'all_keys_match_with_differences' });
-
             const similarLimit = Math.max(1000, Math.min(10000, table1Count + table2Count));
-            //console.log('🔧 SIMILAR pairs limit calculated:', similarLimit);
 
             const similarSQL = `
                 CREATE OR REPLACE TABLE similar_pairs AS
@@ -758,13 +716,10 @@ class FastTableComparator {
                 LIMIT ${similarLimit}  -- Динамический лимит на основе размера данных
             `;
             
-            //console.log('🔍 Similar SQL query (first part):', similarSQL.substring(0, 500) + '...');
-            //console.log('🔍 SIMILAR matching criteria:', { keyColumns: keyColumns.length, comparisonColumns: comparisonColumns.length, requiredKeyMatches: keyColumns.length,  maxTotalMatches: comparisonColumns.length - 1,  useTolerance: useTolerance, excludedColumns: excludeColumns, logic: 'All keys match AND at least one column differs' });
             await window.duckdbLoader.query(similarSQL);
             
             const similarCountResult = await window.duckdbLoader.query('SELECT COUNT(*) as count FROM similar_pairs');
             const similarCount = Number(similarCountResult.toArray()[0]?.count || 0);
-            //console.log('📊 Found similar pairs:', similarCount);
             
             const candidatesCountResult = await window.duckdbLoader.query(`
                 SELECT COUNT(*) as count FROM (
@@ -786,7 +741,6 @@ class FastTableComparator {
                 ) candidates
             `);
             const candidatesCount = Number(candidatesCountResult.toArray()[0]?.count || 0);
-            //console.log('🔍 Total SIMILAR candidates (before filtering):', candidatesCount);
             
             const filterStatsResult = await window.duckdbLoader.query(`
                 SELECT 
@@ -816,9 +770,6 @@ class FastTableComparator {
                 ) stats
             `);
             const filterStats = filterStatsResult.toArray()[0];
-            //console.log('🔍 SIMILAR filter statistics:', filterStats);
-
-            //console.log('📋 Step 6: Collecting final results...');
             const finalResultsSQL = `
                 SELECT 'IDENTICAL' as type, row1_id, row2_id, ${headers1.length} as matches
                 FROM identical_pairs
@@ -845,7 +796,6 @@ class FastTableComparator {
                 ORDER BY type, row1_id, row2_id
             `;
 
-            //console.log('⚡ Step 7: Executing final comparison query...');
             const result = await window.duckdbLoader.query(finalResultsSQL);
             const allResults = result.toArray();
 
@@ -876,8 +826,6 @@ class FastTableComparator {
             }));
 
             const duration = performance.now() - startTime;
-            //console.log(`🚀 Multi-stage DuckDB comparison completed in ${duration.toFixed(2)}ms`);
-            //console.log(`📊 Results: ${identical.length} identical, ${similar.length} similar, ${onlyInTable1.length} only in table1, ${onlyInTable2.length} only in table2`);
 
             return {
                 identical: identical,
@@ -903,18 +851,15 @@ class FastTableComparator {
     }
 
     async compareTablesOptimizedForLargeData(data1, data2, excludeColumns = [], useTolerance = false) {
-        console.log('🚀 Using optimized strategy for large dataset');
         const startTime = performance.now();
 
         try {
-            // Инициализируем прогресс с общим количеством строк
             const totalRows = Math.max(data1.length - 1, data2.length - 1);
             initializeProgress(totalRows, 'Preparing data structure');
             
             const headers1 = data1[0] || [];
             const headers2 = data2[0] || [];
             
-            // Упрощенная подготовка данных
             const sanitizeColumnName = (name, index) => {
                 if (!name || typeof name !== 'string') {
                     return `col_${index}`;
@@ -926,9 +871,6 @@ class FastTableComparator {
             const sanitizedHeaders2 = headers2.map((h, i) => sanitizeColumnName(h, i));
 
             updateStageProgress('Creating database tables', 5);
-            
-            // Простая типизация - только VARCHAR для больших данных
-            console.log('📝 Creating optimized tables with VARCHAR types for performance...');
             
             const createTable1SQL = `CREATE OR REPLACE TABLE table1 (
                 rowid INTEGER,
@@ -945,9 +887,7 @@ class FastTableComparator {
 
             updateStageProgress('Loading data into tables', 10);
             
-            // Оптимизированная вставка данных большими пакетами
-            console.log('📊 Inserting data in optimized batches...');
-            const LARGE_BATCH_SIZE = 2000; // Увеличиваем размер пакета для больших данных
+            const LARGE_BATCH_SIZE = 2000;
             
             const insertOptimizedBatch = async (tableName, data, headers) => {
                 const totalBatches = Math.ceil((data.length - 1) / LARGE_BATCH_SIZE);
@@ -977,7 +917,6 @@ class FastTableComparator {
                         const insertSQL = `INSERT INTO ${tableName} VALUES ${values}`;
                         await window.duckdbLoader.query(insertSQL);
                         
-                        // Обновляем реальный прогресс на основе обработанных строк
                         processedRows = batchEnd - 1;
                         updateRowProgress(processedRows, `Loading ${tableName} (batch ${currentBatch}/${totalBatches})`);
                     }
@@ -988,9 +927,6 @@ class FastTableComparator {
             await insertOptimizedBatch('table2', data2, headers2);
 
             updateStageProgress('Analyzing columns for comparison', 15);
-
-            // Упрощенная логика сравнения - только поиск точных совпадений
-            console.log('🔍 Finding exact matches with simplified logic...');
             
             const comparisonColumns = [];
             headers1.forEach((header, index) => {
@@ -1016,9 +952,6 @@ class FastTableComparator {
             const dataSize = (data1.length - 1) + (data2.length - 1);
             const maxColumns = dataSize > 40000 ? 5 : (dataSize > 20000 ? 8 : 10);
             
-            console.log(`📊 Using ${Math.min(maxColumns, comparisonColumns.length)} columns for comparison out of ${comparisonColumns.length} available`);
-
-            // Создаем простые условия сравнения для VARCHAR полей
             const simpleConditions = comparisonColumns.slice(0, Math.min(maxColumns, comparisonColumns.length)).map(colIdx => {
                 const col1Name = sanitizedHeaders1[colIdx];
                 const col2Name = sanitizedHeaders2[colIdx];
@@ -1039,13 +972,11 @@ class FastTableComparator {
                 LIMIT 50000
             `;
             
-            console.log('🔍 Executing simplified identical query...');
             await window.duckdbLoader.query(identicalSQL);
             
             // Поиск уникальных записей только в первой таблице
             updateStageProgress('Finding records only in first table', 90);
             
-            console.log('🔍 Finding records only in table1...');
             const onlyTable1SQL = `
                 CREATE OR REPLACE TABLE only_table1 AS
                 SELECT t1.rowid as row1_id, 'ONLY_IN_TABLE1' as type
@@ -1060,7 +991,6 @@ class FastTableComparator {
             // Поиск уникальных записей только во второй таблице
             updateStageProgress('Finding records only in second table', 95);
             
-            console.log('🔍 Finding records only in table2...');
             const onlyTable2SQL = `
                 CREATE OR REPLACE TABLE only_table2 AS
                 SELECT t2.rowid as row2_id, 'ONLY_IN_TABLE2' as type
@@ -1074,7 +1004,6 @@ class FastTableComparator {
 
             // Получение результатов
             updateStageProgress('Collecting final results', 100);
-            console.log('📊 Collecting results...');
             const identicalResult = await window.duckdbLoader.query('SELECT * FROM identical_pairs');
             const onlyTable1Result = await window.duckdbLoader.query('SELECT * FROM only_table1');
             const onlyTable2Result = await window.duckdbLoader.query('SELECT * FROM only_table2');
@@ -1099,8 +1028,6 @@ class FastTableComparator {
 
             const duration = performance.now() - startTime;
             updateProgressMessage('Comparison completed successfully!', 100);
-            console.log(`🚀 Optimized large data comparison completed in ${duration.toFixed(2)}ms`);
-            console.log(`📊 Results: ${identical.length} identical, ${onlyInTable1.length} only in table1, ${onlyInTable2.length} only in table2`);
 
             return {
                 identical: identical,
@@ -1129,7 +1056,6 @@ class FastTableComparator {
     }
 
     detectKeyColumnsSQL(headers, data = null) {
-        //console.log('🔍 Using original smartDetectKeyColumns algorithm from functions.js');
         
         if (!headers || headers.length === 0) {
             return [0]; 
@@ -1194,13 +1120,10 @@ class FastTableComparator {
         
         columnScores.sort((a, b) => b.score - a.score);
         
-        //console.log('🔍 Column scoring results:', columnScores);
-        
         let keyColumns = [];
         
         const aggregationFields = columnScores.filter(col => col.isAggregationField);
         if (aggregationFields.length > 0) {
-            //console.log('📅 Found aggregation fields:', aggregationFields);
             keyColumns.push(aggregationFields[0].index);
             
             for (let i = 1; i < Math.min(3, aggregationFields.length); i++) {
@@ -1231,8 +1154,6 @@ class FastTableComparator {
         }
         
         keyColumns.sort((a, b) => a - b);
-        
-        //console.log('🔑 Final key columns selection:', { selectedColumns: keyColumns, columnNames: keyColumns.map(idx => headers[idx] || `Column ${idx}`), strategy: 'original_smartDetectKeyColumns_algorithm' });
         
         return keyColumns;
     }
@@ -1326,8 +1247,6 @@ class FastTableComparator {
 
         const columnTypes = tableData.columns.map((_, i) => detectColumnType(tableData.rows, i));
         
-        //console.log(`🔍 Detected column types for ${tableName}:`, tableData.columns.map((col, i) => `${col}: ${columnTypes[i]}`));
-
         const columns = tableData.columns.map((col, i) => `"${col}" ${columnTypes[i]}`).join(', ');
         const createTableSQL = `CREATE OR REPLACE TABLE ${tableName} (rowid INTEGER, ${columns})`;
         
@@ -1538,36 +1457,28 @@ function showFastModeStatus(available, mode = 'local') {
 
 async function compareTablesWithFastComparator(data1, data2, excludeColumns = [], useTolerance = false, tolerance = 1.5, customKeyColumns = null) {
     try {
-        //console.log('🔧 compareTablesWithFastComparator called with parameters:', { excludeColumns: excludeColumns, excludeColumnsType: typeof excludeColumns, excludeColumnsLength: excludeColumns?.length || 0, excludeColumnsArray: Array.isArray(excludeColumns), useTolerance: useTolerance, tolerance: tolerance, customKeyColumns: customKeyColumns });
-        
+
         if (!fastComparator || !fastComparator.initialized) {
             console.log('❌ Fast comparator not initialized');
             return null;
         }
 
-        //console.log(`🔧 Starting comparison using ${fastComparator.mode} mode`);
-        
-        //console.log('🔍 FastComparator input debug:', { data1Type: typeof data1, data1IsArray: Array.isArray(data1), data1Length: data1?.length, data1FirstElement: data1?.[0], data2Type: typeof data2, data2IsArray: Array.isArray(data2), data2Length: data2?.length, data2FirstElement: data2?.[0], excludeColumns, useTolerance, customKeyColumns });
-        
         const startTime = performance.now();
 
         if (fastComparator.mode === 'wasm') {
-            //console.log('📊 Using DuckDB WASM mode - passing data directly');
-            
+
             const result = await fastComparator.compareTablesFast(data1, data2, excludeColumns, useTolerance, customKeyColumns);
             
             if (!result) {
-                //console.log('⚠️ DuckDB WASM returned empty result');
+                console.log('⚠️ DuckDB WASM returned empty result');
                 return null;
             }
             
             const duration = performance.now() - startTime;
-            //console.log(`✅ Fast comparison completed in ${duration.toFixed(2)}ms`);
             
             return result;
             
         } else {
-            //console.log('📊 Using local mode - preparing data alignment');
             
             const { data1: alignedData1, data2: alignedData2, columnInfo } = prepareDataForComparison(data1, data2);
             
@@ -1575,8 +1486,6 @@ async function compareTablesWithFastComparator(data1, data2, excludeColumns = []
             const headers2 = alignedData2[0] || [];
             const dataRows1 = alignedData1.slice(1);
             const dataRows2 = alignedData2.slice(1);
-            
-            //console.log(`📊 Table 1: ${dataRows1.length} rows, Table 2: ${dataRows2.length} rows`);
             
             await fastComparator.createTableFromData('table1', dataRows1, headers1);
             await fastComparator.createTableFromData('table2', dataRows2, headers2);
@@ -1586,8 +1495,7 @@ async function compareTablesWithFastComparator(data1, data2, excludeColumns = []
             );
 
             const totalTime = performance.now() - startTime;
-            //console.log(`⚡ Comparison completed in ${totalTime.toFixed(2)}ms using ${fastComparator.mode} mode`);
-            
+
             return comparisonResult;
         }
         
@@ -1661,8 +1569,6 @@ async function runFastComparatorTests() {
 }
 
 async function compareTablesEnhanced(useTolerance = false) {
-    //console.log('🎯 ============ COMPARE TABLES ENHANCED STARTED ============');
-    //console.log('🎯 compareTablesEnhanced called with useTolerance:', useTolerance);
     
     clearComparisonResults();
     
@@ -1677,17 +1583,13 @@ async function compareTablesEnhanced(useTolerance = false) {
         return;
     }
 
-    //console.log('✅ Data check passed:', { data1Length: data1.length, data2Length: data2.length });
-
     const totalRows = Math.max(data1.length, data2.length);
-    //console.log('📊 Total rows check:', { totalRows, limit: MAX_ROWS_LIMIT });
-    
+
     if (totalRows > MAX_ROWS_LIMIT) {
         console.log('❌ Row limit exceeded for standard mode, checking if fast comparator can handle it');
         
         // Если есть быстрый компаратор, попробуем его для больших данных
         if (fastComparator && fastComparator.initialized && totalRows <= 100000) {
-            console.log('🚀 Using fast comparator for large dataset within extended limits');
             resultDiv.innerHTML = '<div class="comparison-loading-enhanced">⚡ Processing large dataset with fast engine...</div>';
             summaryDiv.innerHTML = '<div style="text-align: center; padding: 10px;">Large dataset detected - using optimized processing...</div>';
             
@@ -1708,7 +1610,6 @@ async function compareTablesEnhanced(useTolerance = false) {
                             return index !== -1 ? index : null;
                         }).filter(index => index !== null);
                         
-                        //console.log('🔑 compareTablesEnhanced (large data): Using custom key columns:', { selectedColumnNames: selectedKeyColumns, selectedColumnIndexes: customKeyColumns, headers: headers });
                     } else {
                         console.log('❌ compareTablesEnhanced (large data): No custom key columns selected, will use automatic detection');
                     }
@@ -1748,19 +1649,14 @@ async function compareTablesEnhanced(useTolerance = false) {
         return;
     }
 
-    //console.log('✅ All checks passed, proceeding to comparison logic');
-
     try {
-        //console.log('🔍 Checking fastComparator status:', { fastComparator: !!fastComparator,initialized: fastComparator?.initialized, mode: fastComparator?.mode  });
-        
+
         if (fastComparator && fastComparator.initialized) {
-            //console.log('🚀 Using fast comparison engine with mode:', fastComparator.mode);
             resultDiv.innerHTML = '<div class="comparison-loading-enhanced">⚡ Using fast comparison engine...</div>';
             summaryDiv.innerHTML = '<div style="text-align: center; padding: 10px;">Processing large dataset with enhanced performance...</div>';
             
             setTimeout(async () => {
                 try {
-                    //console.log('📊 Starting DuckDB WASM comparison...');
                     const totalRows = Math.max(data1.length, data2.length);
                     const columnCount = Math.max(data1[0]?.length || 0, data2[0]?.length || 0);
                     
@@ -1787,24 +1683,31 @@ async function compareTablesEnhanced(useTolerance = false) {
                             return index !== -1 ? index : null;
                         }).filter(index => index !== null);
                         
-                        //console.log('� compareTablesEnhanced: Using custom key columns:', { selectedColumnNames: selectedKeyColumns, selectedColumnIndexes: customKeyColumns, headers: headers  });
-                    } else {
-                        console.log('❌ compareTablesEnhanced: No custom key columns selected, will use automatic detection');
-                    }
-                    
-                    //console.log('�🔧 Fast comparison parameters:', { excludedColumns: excludedColumns, excludedColumnsType: typeof excludedColumns, excludedColumnsLength: excludedColumns?.length || 0, useTolerance: useTolerance, tolerance: tolerance, getExcludedColumnsExists: typeof getExcludedColumns !== 'undefined' });
-                    
-                    //console.log('🔧 Calling compareTablesWithFastComparator...');
-                    
-                    //console.log(`📊 Starting comparison for ${totalRows.toLocaleString()} rows × ${columnCount} columns`);
+                    } else {  }
                     
                     const fastResult = await compareTablesWithFastComparator(data1, data2, excludedColumns, useTolerance, tolerance, customKeyColumns);
                     
                     if (fastResult) {
-                        //console.log('✅ DuckDB WASM comparison completed successfully');
                         await processFastComparisonResults(fastResult, useTolerance);
+                        
+                        if (!customKeyColumns || customKeyColumns.length === 0) {
+ 
+                            // Get the key columns that were actually used from the fast result
+                            // For now, we'll get them from current selection (if any) or try to extract from the comparison
+                            setTimeout(() => {
+                                if (typeof window.setSelectedKeyColumns === 'function') {
+                                    // For now, let's try to mark the first column as it's commonly the key
+                                    const headers = data1.length > 0 ? data1[0] : [];
+                                    const firstColumnName = headers[0];
+                                    if (firstColumnName) {
+                                        window.setSelectedKeyColumns([firstColumnName]);
+                                    }
+                                } else {
+                                    console.error('❌ setSelectedKeyColumns not available');
+                                }
+                            }, 500);
+                        } else { }
                     } else {
-                        //console.log('⚠️ DuckDB WASM returned empty result, falling back');
                         await performComparison();
                     }
                 } catch (error) {
@@ -1832,7 +1735,6 @@ async function compareTablesEnhanced(useTolerance = false) {
             return;
         }
 
-        //console.log('⚠️ Fast comparison not available, using standard mode');
         resultDiv.innerHTML = '<div style="text-align: center; padding: 20px; font-size: 16px;">🔄 Using standard comparison...</div>';
         
         setTimeout(async () => {
@@ -1856,11 +1758,7 @@ async function processFastComparisonResults(fastResult, useTolerance) {
     window.currentFastResult = fastResult;
     
     const perfData = performance || { duration: 0, rowsPerSecond: 0 };
-    //console.log('📊 Performance data:', perfData);
-    
-    //console.log('🔍 Detailed comparison results breakdown:', { identicalRows: identical?.length || 0, identicalSample: identical?.slice(0, 3), similarRows: similar?.length || 0, similarSample: similar?.slice(0, 3), onlyInTable1Rows: onlyInTable1?.length || 0, onlyInTable1Sample: onlyInTable1?.slice(0, 3), onlyInTable2Rows: onlyInTable2?.length || 0,  onlyInTable2Sample: onlyInTable2?.slice(0, 3), table1Count, table2Count });
-    
-    // Скрываем прогресс-бар и показываем результаты
+
     updateProgressMessage('Displaying results...', 100);
     
     setTimeout(() => {
@@ -1958,8 +1856,6 @@ async function processFastComparisonResults(fastResult, useTolerance) {
     const buttonsContainer = document.querySelector('.buttons-container');
     const exportButtonHalf = exportBtn ? exportBtn.closest('.button-half') : null;
     
-    //console.log('🔍 Export button debug:', { exportBtn: !!exportBtn, exportBtnDisplay: exportBtn?.style.display, exportBtnClasses: exportBtn?.className, buttonsContainer: !!buttonsContainer, buttonsContainerClasses: buttonsContainer?.className, exportButtonHalf: !!exportButtonHalf, exportButtonHalfClasses: exportButtonHalf?.className });
-    
     if (exportBtn && buttonsContainer) {
         exportBtn.style.display = 'inline-block';
         exportBtn.classList.remove('export-btn-hidden');
@@ -1969,8 +1865,7 @@ async function processFastComparisonResults(fastResult, useTolerance) {
         }
         buttonsContainer.classList.remove('export-hidden');
         
-        //console.log('✅ Export button should now be visible:', { exportBtnDisplay: exportBtn.style.display, exportBtnClasses: exportBtn.className, buttonsContainerClasses: buttonsContainer.className, exportButtonHalfClasses: exportButtonHalf?.className });
-    } else {
+        } else {
         console.log('❌ Export button elements not found:', { exportBtn: !!exportBtn, buttonsContainer: !!buttonsContainer });
     }
 }
@@ -1990,8 +1885,6 @@ async function generateDetailedComparisonTable(fastResult, useTolerance) {
     
     const pairs = [];
     
-    //console.log('🔍 Processing detailed table results:', { identicalCount: identical?.length || 0, similarCount: similar?.length || 0, onlyInTable1Count: onlyInTable1?.length || 0, onlyInTable2Count: onlyInTable2?.length || 0, workingData1Length: workingData1?.length, workingData2Length: workingData2?.length, workingData1Sample: workingData1?.slice(0, 3), workingData2Sample: workingData2?.slice(0, 3)  });
-    
     const maxIdenticalToShow = (onlyInTable1?.length || 0) === 0 && (onlyInTable2?.length || 0) === 0 ? 1000 : 100;
     (identical || []).slice(0, maxIdenticalToShow).forEach(identicalPair => {
         const row1Index = identicalPair.row1;
@@ -1999,8 +1892,6 @@ async function generateDetailedComparisonTable(fastResult, useTolerance) {
         
         const row1 = (row1Index >= 0 && row1Index + 1 < workingData1.length) ? workingData1[row1Index + 1] : null;
         const row2 = (row2Index >= 0 && row2Index + 1 < workingData2.length) ? workingData2[row2Index + 1] : null;
-        
-        //console.log('🔍 IDENTICAL pair debug:', { originalRow1: identicalPair.row1, originalRow2: identicalPair.row2, calculatedRow1Index: row1Index, calculatedRow2Index: row2Index, row1Data: row1, row2Data: row2, row1IsHeaders: row1 === workingData1[0], row2IsHeaders: row2 === workingData2[0], workingData1Length: workingData1?.length,  workingData2Length: workingData2?.length });
         
         if (!row1 || !row2 || row1 === workingData1[0] || row2 === workingData2[0]) {
             console.warn('⚠️ Skipping invalid IDENTICAL pair:', { row1Index, row2Index, row1, row2 });
@@ -2026,8 +1917,6 @@ async function generateDetailedComparisonTable(fastResult, useTolerance) {
         const row1 = (row1Index >= 0 && row1Index + 1 < workingData1.length) ? workingData1[row1Index + 1] : null;
         const row2 = (row2Index >= 0 && row2Index + 1 < workingData2.length) ? workingData2[row2Index + 1] : null;
         
-        //console.log('🔍 SIMILAR pair debug:', { originalRow1: similarPair.row1, originalRow2: similarPair.row2, calculatedRow1Index: row1Index, calculatedRow2Index: row2Index, row1Data: row1, row2Data: row2, row1IsHeaders: row1 === workingData1[0], row2IsHeaders: row2 === workingData2[0] });
-        
         if (!row1 || !row2 || row1 === workingData1[0] || row2 === workingData2[0]) {
             console.warn('⚠️ Skipping invalid SIMILAR pair:', { row1Index, row2Index, row1, row2 });
             return;
@@ -2050,8 +1939,6 @@ async function generateDetailedComparisonTable(fastResult, useTolerance) {
         
         const row1 = (rowIndex >= 0 && rowIndex + 1 < workingData1.length) ? workingData1[rowIndex + 1] : null;
         
-        //console.log('🔍 ONLY_IN_TABLE1 debug:', { originalRow1: diff.row1, calculatedRowIndex: rowIndex, row1Data: row1, row1IsHeaders: row1 === workingData1[0] });
-        
         if (!row1 || row1 === workingData1[0]) {
             console.warn('⚠️ Skipping invalid ONLY_IN_TABLE1:', { rowIndex, row1 });
             return;
@@ -2073,8 +1960,6 @@ async function generateDetailedComparisonTable(fastResult, useTolerance) {
         
         const row2 = (rowIndex >= 0 && rowIndex + 1 < workingData2.length) ? workingData2[rowIndex + 1] : null;
         
-        //console.log('🔍 ONLY_IN_TABLE2 debug:', { originalRow2: diff.row2, calculatedRowIndex: rowIndex, row2Data: row2, row2IsHeaders: row2 === workingData2[0] });
-        
         if (!row2 || row2 === workingData2[0]) {
             console.warn('⚠️ Skipping invalid ONLY_IN_TABLE2:', { rowIndex, row2 });
             return;
@@ -2090,8 +1975,6 @@ async function generateDetailedComparisonTable(fastResult, useTolerance) {
             matchType: 'ONLY_IN_TABLE2'
         });
     });
-    
-    //console.log('📊 Generated pairs for table:', { totalPairs: pairs.length, identicalPairs: pairs.filter(p => p.matchType === 'IDENTICAL').length, similarPairs: pairs.filter(p => p.matchType === 'SIMILAR').length, onlyTable1: pairs.filter(p => p.matchType === 'ONLY_IN_TABLE1').length, onlyTable2: pairs.filter(p => p.matchType === 'ONLY_IN_TABLE2').length });
     
     window.currentPairs = pairs;
     window.currentFinalHeaders = workingData1[0] || commonColumns;
@@ -2129,6 +2012,7 @@ async function generateDetailedComparisonTable(fastResult, useTolerance) {
 }
 
 async function createBasicFallbackTable(pairs, headers) {
+    
     // Clear any remaining loading messages at the start
     const resultDiv = document.getElementById('result');
     if (resultDiv) {
@@ -2173,7 +2057,37 @@ async function createBasicFallbackTable(pairs, headers) {
     let headerHtml = '<tr><th title="Source - shows which file the data comes from" class="source-column">Source</th>';
     realHeaders.forEach((header, index) => {
         const headerText = header || `Column ${index + 1}`;
-        headerHtml += `<th class="sortable" onclick="sortTable(${index})" title="${headerText}">${headerText}</th>`;
+        
+        // Add column type icon for test_wasm page
+        let columnTypeIcon = '';
+        const isTestWasmPage = window.location.pathname.includes('/test_wasm');
+        
+        if (headerText && typeof getColumnType === 'function' && isTestWasmPage) {
+            // Get column data for type detection from pairs parameter
+            let columnValues = [];
+            
+            // Find column index in headers
+            const columnIndex = headers.indexOf(headerText);
+            
+            if (columnIndex !== -1 && pairs && pairs.length > 0) {
+                
+                // Extract values from pairs data
+                pairs.forEach((pair, pairIndex) => {                    
+                    // Each pair has row1 and row2 properties (not data1/data2)
+                    if (pair.row1 && pair.row1[columnIndex] !== undefined) {
+                        columnValues.push(pair.row1[columnIndex]);
+                    }
+                    if (pair.row2 && pair.row2[columnIndex] !== undefined) {
+                        columnValues.push(pair.row2[columnIndex]);
+                    }
+                });
+            }
+            
+            const columnType = getColumnType(columnValues, headerText);
+            columnTypeIcon = `<span class="column-type-icon column-type-${columnType}" title="Column type: ${columnType}"></span>`;
+        }
+        
+        headerHtml += `<th class="sortable" onclick="sortTable(${index})" title="${headerText}">${columnTypeIcon}${headerText}</th>`;
     });
     headerHtml += '</tr>';
     headerTable.innerHTML = headerHtml;
@@ -2476,7 +2390,6 @@ function testDOMIntegration() {
 
 async function benchmarkExportPerformance() {
     if (!window.currentFastResult) {
-        //console.log('ℹ️ No fast comparison result available for benchmarking');
         return null;
     }
     
@@ -2491,14 +2404,6 @@ async function benchmarkExportPerformance() {
          '1.5-2x faster') : 
         'Standard speed';
     
-    //console.log('📊 Export Performance Analysis:', { totalInputRows: totalDataRows.toLocaleString(), rowsToExport: exportRows.toLocaleString(), breakdown: { identical: identical.length.toLocaleString(), onlyInFile1: onlyInTable1.length.toLocaleString(),   onlyInFile2: onlyInTable2.length.toLocaleString() }, fastModeActive: !!(fastComparator && fastComparator.initialized), processingMode: fastComparator?.mode || 'standard', expectedSpeedup: expectedSpeedup });
-    
-    if (exportRows > 20000) {
-        //console.log('💡 Large export detected - fast processing will show significant improvement');
-    } else if (exportRows > 5000) {
-        //onsole.log('💡 Medium export - expect moderate performance improvement');  
-    }
-    
     return {
         totalDataRows,
         exportRows,
@@ -2510,7 +2415,6 @@ async function benchmarkExportPerformance() {
 
 // Utility function to test export performance
 window.testExportPerformance = async function() {
-    //console.log('🧪 Starting export performance test...');
     
     if (!window.currentFastResult) {
         console.log('❌ No comparison result available. Please run a comparison first.');
@@ -2520,16 +2424,12 @@ window.testExportPerformance = async function() {
     const benchmark = await benchmarkExportPerformance();
     if (!benchmark) return;
     
-    console.log('⏱️ Testing data preparation performance...');
-    
     const startTime = performance.now();
     const testData = await prepareDataForExportFast(window.currentFastResult, false);
     const endTime = performance.now();
     
     const duration = endTime - startTime;
     const rowsPerSecond = Math.round(benchmark.exportRows / (duration / 1000));
-    
-    //console.log('✅ Performance Test Results:', { dataPreparationTime: `${duration.toFixed(2)}ms`, rowsPerSecond: rowsPerSecond.toLocaleString(), exportRows: benchmark.exportRows.toLocaleString(), efficiency: rowsPerSecond > 10000 ? 'Excellent' :  rowsPerSecond > 5000 ? 'Good' :  rowsPerSecond > 1000 ? 'Fair' : 'Needs improvement' });
     
     return {
         duration,
@@ -2543,11 +2443,8 @@ window.testExportPerformance = async function() {
 
 async function prepareDataForExportFast(fastResult, useTolerance = false) {
     if (!fastResult || !fastComparator || !fastComparator.initialized) {
-        //console.log('Fast export not available - falling back to standard method');
         return null;
     }
-
-    //console.log('⚡ Starting optimized fast export processing...', { identical: fastResult.identical.length, onlyInTable1: fastResult.onlyInTable1.length, onlyInTable2: fastResult.onlyInTable2.length, totalRows: fastResult.table1Count + fastResult.table2Count });
 
     const startTime = performance.now();
     const { identical, onlyInTable1, onlyInTable2, commonColumns, alignedData1, alignedData2 } = fastResult;
