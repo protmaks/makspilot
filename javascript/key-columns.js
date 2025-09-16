@@ -1,5 +1,88 @@
 // Key columns functionality for comparison
 
+// Get column type based on data analysis
+function getColumnType(columnValues, columnHeader = '') {
+    if (!columnValues || columnValues.length === 0) return 'text';
+    
+    const nonEmptyValues = columnValues.filter(val => 
+        val !== null && val !== undefined && val.toString().trim() !== ''
+    );
+    
+    if (nonEmptyValues.length === 0) return 'text';
+    
+    let numberCount = 0;
+    let dateCount = 0;
+    let booleanCount = 0;
+    let textCount = 0;
+    
+    const headerLower = columnHeader.toString().toLowerCase();
+    const dateKeywords = ['date', 'time', 'created', 'modified', 'updated', 'birth', 'дата', 'время', 'создан', 'изменен', 'обновлен'];
+    const booleanKeywords = ['active', 'enabled', 'disabled', 'visible', 'hidden', 'deleted', 'verified', 'confirmed', 'активен', 'включен', 'отключен', 'видимый', 'скрытый', 'удален', 'подтвержден'];
+    const numberKeywords = ['id', 'count', 'amount', 'price', 'cost', 'sum', 'total', 'number', 'номер', 'количество', 'сумма', 'цена', 'стоимость'];
+    
+    for (let value of nonEmptyValues) {
+        const strValue = value.toString().trim().toLowerCase();
+        
+        // Check for boolean values
+        if (['true', 'false', '1', '0', 'yes', 'no', 'да', 'нет', 'истина', 'ложь'].includes(strValue)) {
+            booleanCount++;
+            continue;
+        }
+        
+        // Check for numbers
+        if (!isNaN(value) && !isNaN(parseFloat(value)) && isFinite(value)) {
+            numberCount++;
+            continue;
+        }
+        
+        // Check for dates
+        if (typeof value === 'string') {
+            if (value.match(/^\d{4}-\d{1,2}-\d{1,2}$/) || 
+                value.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/) || 
+                value.match(/^\d{1,2}\.\d{1,2}\.\d{4}$/) ||
+                value.match(/^\d{1,2}-\d{1,2}-\d{4}$/) ||
+                value.includes('T') || value.includes('GMT') || value.includes('UTC')) {
+                dateCount++;
+                continue;
+            }
+        } else if (value instanceof Date) {
+            dateCount++;
+            continue;
+        } else if (typeof value === 'number' && value >= 29221 && value <= 219146) {
+            // Potential Excel serial date
+            dateCount++;
+            continue;
+        }
+        
+        textCount++;
+    }
+    
+    const total = nonEmptyValues.length;
+    const numberRatio = numberCount / total;
+    const dateRatio = dateCount / total;
+    const booleanRatio = booleanCount / total;
+    
+    // Header-based hints
+    const headerSuggestsDate = dateKeywords.some(keyword => headerLower.includes(keyword));
+    const headerSuggestsBoolean = booleanKeywords.some(keyword => headerLower.includes(keyword));
+    const headerSuggestsNumber = numberKeywords.some(keyword => headerLower.includes(keyword));
+    
+    // Determine type based on ratios and header hints
+    if (booleanRatio > 0.7 || (headerSuggestsBoolean && booleanRatio > 0.4)) {
+        return 'boolean';
+    }
+    
+    if (dateRatio > 0.6 || (headerSuggestsDate && dateRatio > 0.3)) {
+        return 'date';
+    }
+    
+    if (numberRatio > 0.7 || (headerSuggestsNumber && numberRatio > 0.5)) {
+        return 'number';
+    }
+    
+    return 'text';
+}
+
 // Helper function to extract data from table DOM element
 function extractDataFromTableElement(tableElement) {
     try {
@@ -151,6 +234,37 @@ function updateKeyColumnsOptions(forceUpdate = false) {
                 console.log('🔧 Restoring selection for column:', header);
             }
             
+            // Get column data for type detection
+            const headerIndex = dataTable1?.[0]?.indexOf(header) ?? 
+                               dataTable2?.[0]?.indexOf(header) ?? -1;
+            
+            let columnValues = [];
+            if (headerIndex !== -1) {
+                // Get values from both tables
+                if (dataTable1 && dataTable1.length > 1) {
+                    for (let i = 1; i < dataTable1.length; i++) {
+                        if (dataTable1[i] && dataTable1[i][headerIndex] !== undefined) {
+                            columnValues.push(dataTable1[i][headerIndex]);
+                        }
+                    }
+                }
+                if (dataTable2 && dataTable2.length > 1) {
+                    for (let i = 1; i < dataTable2.length; i++) {
+                        if (dataTable2[i] && dataTable2[i][headerIndex] !== undefined) {
+                            columnValues.push(dataTable2[i][headerIndex]);
+                        }
+                    }
+                }
+            }
+            
+            // Determine column type
+            const columnType = getColumnType(columnValues, header);
+            
+            // Create type icon
+            const typeIcon = document.createElement('span');
+            typeIcon.className = `column-type-icon column-type-${columnType}`;
+            typeIcon.title = `Column type: ${columnType}`;
+            
             const label = document.createElement('label');
             label.htmlFor = checkbox.id;
             label.textContent = header;
@@ -171,6 +285,7 @@ function updateKeyColumnsOptions(forceUpdate = false) {
             });
             
             checkboxWrapper.appendChild(checkbox);
+            checkboxWrapper.appendChild(typeIcon);
             checkboxWrapper.appendChild(label);
             dropdownContent.appendChild(checkboxWrapper);
             

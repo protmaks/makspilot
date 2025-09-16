@@ -1581,6 +1581,62 @@ button.export-btn:disabled {
     font-style: italic;
 }
 
+/* Column type icons */
+.column-type-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    margin-right: 6px;
+    font-size: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+.column-type-text {
+    background-color: #e3f2fd;
+    color: #1976d2;
+}
+
+.column-type-number {
+    background-color: #fff3e0;
+    color: #f57c00;
+}
+
+.column-type-date {
+    background-color: #f3e5f5;
+    color: #7b1fa2;
+}
+
+.column-type-boolean {
+    background-color: #e8f5e8;
+    color: #388e3c;
+}
+
+.column-type-text::before {
+    content: "Aa";
+    font-weight: 600;
+    font-size: 10px;
+}
+
+.column-type-number::before {
+    content: "123";
+    font-weight: 600;
+    font-size: 9px;
+}
+
+.column-type-date::before {
+    content: "📅";
+    font-size: 10px;
+}
+
+.column-type-boolean::before {
+    content: "✓✗";
+    font-weight: 600;
+    font-size: 9px;
+}
+
 .exclude-label, .key-columns-label {
     font-size: 14px;
     color: #495057;
