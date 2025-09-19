@@ -507,7 +507,6 @@ footer {
     background: #f7f8fa;
     padding-top: 0;
     color: #2d3a4a;
-    padding-bottom: 20px;
 }
 
 .main-content h1 {
@@ -695,6 +694,7 @@ footer {
 
 #table1, #table2 {
     margin-top: 10px;
+    padding-bottom: 15px;
 }
 
 #table1 h3, #table2 h3 {
@@ -839,7 +839,7 @@ button.compare-btn:hover {
 button.export-btn {
     padding: 8px 20px;
     font-size: 0.95rem;
-    background-color: #28a745;
+    background-color: #208778;
     color: #fff;
     border: none;
     border-radius: 5px;
@@ -850,7 +850,7 @@ button.export-btn {
 }
 
 button.export-btn:hover {
-    background-color: #218838;
+    background-color: #165950;
     box-shadow: 0 4px 12px rgba(40, 167, 69, 0.25);
 }
 
@@ -927,8 +927,8 @@ button.export-btn:disabled {
 }
 
 #diffTable {
-    margin: 20px auto;
-    padding: 0 20px;
+    margin: 0px auto;
+    padding: 10px 20px;
     width: 100%;
     overflow-x: auto;
 }
@@ -961,10 +961,10 @@ button.export-btn:disabled {
 }
 
 .table-header-fixed {
-    background: #fff;
+    /*background: #fff;
     border: 1px solid #e0e0e0;
     border-bottom: none;
-    border-radius: 8px 8px 0 0;
+    border-radius: 8px 8px 0 0;*/
     position: sticky;
     z-index: 10;
     overflow-x: auto;
@@ -989,8 +989,8 @@ button.export-btn:disabled {
 .table-container-sync {
     position: relative;
     overflow: hidden;
-    border-radius: 8px;
-    border: 1px solid #e0e0e0;
+    /*border-radius: 8px;
+    border: 1px solid #e0e0e0;*/
     width: 100%;
 }
 
@@ -1299,12 +1299,16 @@ button.export-btn:disabled {
 }
 
 .filter-controls {
-    max-width: 1200px;
-    padding: 0 20px;
-    background: #f8f9fa;
-    border-radius: 8px;
-    padding: 15px;
-    border: 1px solid #dee2e6;
+    max-width: 1160px;
+    background: #208778;
+    border-radius: 8px 8px 0px 0px;
+    border: 1px solid #196a5e;
+    gap: 40px;
+    justify-content: center;
+    align-items: flex-start;
+    margin: 5px auto 0px auto;
+    padding: 5px 20px;
+    color: white;
 }
 
 .filter-controls h3 {
@@ -1444,20 +1448,13 @@ button.export-btn:disabled {
 .exclude-columns-container {
     display: flex;
     justify-content: center;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
 }
 
 .key-columns-container {
     display: flex;
-    margin-bottom: 20px;
     gap: 8px;
-}
-
-.key-columns-label {
-    font-size: 14px;
-    color: #495057;
-    font-weight: 500;
-    white-space: nowrap;
+    padding-bottom: 15px;
 }
 
 .key-columns-dropdown {
@@ -1663,6 +1660,7 @@ button.export-btn:disabled {
     color: #495057;
     font-weight: 500;
     margin-bottom: 4px;
+    line-height: normal;
 }
 
 .exclude-input {
@@ -1948,7 +1946,8 @@ button.export-btn:disabled {
     overflow-x: auto;
     overflow-y: hidden;
     position: relative;
-    border-bottom: 1px solid #dee2e6;
+    /*border-bottom: 1px solid #dee2e6;*/
+    border-radius: 5px 5px 0px 0px;
 }
 
 .table-body-scrollable {
@@ -1956,6 +1955,7 @@ button.export-btn:disabled {
     overflow-y: auto;
     max-height: 70vh;
     position: relative;
+    border-radius: 0px 0px 5px 5px;
 }
 
 .diff-table-header,
@@ -2130,7 +2130,7 @@ button.export-btn:disabled {
 }
 
 .main-content-padded {
-    padding-top: 80px;
+    padding-top: 65px;
 }
 
 .help-text {
@@ -2164,7 +2164,6 @@ button.export-btn:disabled {
 .exclude-input {
     width: 100%;
     padding: 8px;
-    margin: 5px 0;
     border: 1px solid #ccc;
     border-radius: 4px;
     font-size: 14px;
@@ -2425,11 +2424,9 @@ button.export-btn:disabled {
 /* DuckDB Status Indicator */
 .duckdb-status {
     display: none;
-    padding: 6px 12px;
     border-radius: 12px;
     font-size: 12px;
     font-weight: 500;
-    margin: 10px 0;
     text-align: center;
     transition: all 0.3s ease;
 }

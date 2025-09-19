@@ -2727,9 +2727,7 @@ function renderPreview(data, elementId, title) {
         
         
         if (data.length > 4) {
-            html += `<tr><td colspan="${data[0].length}" style="text-align: center; font-style: italic; color: #666;">
-                ... and ${data.length - 1} more rows (showing first 3 for preview)
-            </td></tr>`;
+            html;
         }
         
         html += '</table>';

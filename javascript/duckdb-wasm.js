@@ -1790,9 +1790,6 @@ async function processFastComparisonResults(fastResult, useTolerance) {
     
     const summaryHTML = `
         <div style="overflow-x: auto; margin: 20px 0;">
-            <div style="text-align: center; margin-bottom: 15px; padding: 10px; background: rgba(40,167,69,0.1); border-radius: 6px;">
-                ⚡ Fast Mode: ${perfData.rowsPerSecond.toLocaleString()} rows/sec | ${perfData.duration.toFixed(2)}ms total
-            </div>
             <table class="summary-table">
                 <thead>
                     <tr>
