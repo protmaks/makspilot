@@ -1466,8 +1466,6 @@ async function compareTablesWithFastComparator(data1, data2, excludeColumns = []
         const startTime = performance.now();
 
         if (fastComparator.mode === 'wasm') {
-            console.log('🔍 Using WASM mode - preparing data for comparison');
-            console.log('🔍 Exclude columns:', excludeColumns);
             
             // Apply exclude columns filtering BEFORE preparing data for comparison
             let filteredData1 = data1;
@@ -1476,13 +1474,11 @@ async function compareTablesWithFastComparator(data1, data2, excludeColumns = []
             if (excludeColumns && excludeColumns.length > 0) {
                 filteredData1 = filterExcludeColumns(data1, excludeColumns);
                 filteredData2 = filterExcludeColumns(data2, excludeColumns);
-                console.log('🔍 Data filtered, excluded columns:', excludeColumns);
             }
             
             // Prepare data for comparison to get column information
             const { data1: alignedData1, data2: alignedData2, columnInfo } = prepareDataForComparison(filteredData1, filteredData2);
             
-            console.log('🔍 WASM mode - columnInfo prepared:', columnInfo);
 
             const result = await fastComparator.compareTablesFast(alignedData1, alignedData2, [], useTolerance, customKeyColumns);
             
@@ -1501,8 +1497,6 @@ async function compareTablesWithFastComparator(data1, data2, excludeColumns = []
             return result;
             
         } else {
-            console.log('🔍 Using local mode - preparing data for comparison');
-            console.log('🔍 Exclude columns:', excludeColumns);
             
             // Apply exclude columns filtering BEFORE preparing data for comparison
             let filteredData1 = data1;
@@ -1511,7 +1505,6 @@ async function compareTablesWithFastComparator(data1, data2, excludeColumns = []
             if (excludeColumns && excludeColumns.length > 0) {
                 filteredData1 = filterExcludeColumns(data1, excludeColumns);
                 filteredData2 = filterExcludeColumns(data2, excludeColumns);
-                console.log('🔍 Data filtered, excluded columns:', excludeColumns);
             }
             
             // Prepare data for comparison to get column information
@@ -1793,11 +1786,7 @@ async function processFastComparisonResults(fastResult, useTolerance) {
     // Show final processing stage
     updateProgressMessage('Processing results...', 95);
     
-    console.log('🔍 processFastComparisonResults received:', fastResult);
-    
     const { identical, similar, onlyInTable1, onlyInTable2, table1Count, table2Count, commonColumns, performance, columnInfo } = fastResult;
-    
-    console.log('🔍 Extracted columnInfo from fastResult:', columnInfo);
     
     window.currentFastResult = fastResult;
     
@@ -1870,8 +1859,6 @@ async function processFastComparisonResults(fastResult, useTolerance) {
     // Use the same diff columns logic as functions.js
     let onlyInFile1, onlyInFile2;
     
-    console.log('🔍 Processing diff columns - columnInfo:', columnInfo);
-    
     if (columnInfo && (columnInfo.hasCommonColumns || columnInfo.onlyInFile1 || columnInfo.onlyInFile2)) {
         onlyInFile1 = columnInfo.onlyInFile1 || [];
         onlyInFile2 = columnInfo.onlyInFile2 || [];
@@ -1880,16 +1867,12 @@ async function processFastComparisonResults(fastResult, useTolerance) {
         onlyInFile2 = [];
     }
     
-    console.log('🔍 Diff columns identified:', { onlyInFile1, onlyInFile2 });
-    
     let diffColumns1 = onlyInFile1.length > 0 ? onlyInFile1.join(', ') : '-';
     let diffColumns2 = onlyInFile2.length > 0 ? onlyInFile2.join(', ') : '-';
     
     // Store current diff columns globally for other functions to use
     window.currentDiffColumns1 = diffColumns1;
     window.currentDiffColumns2 = diffColumns2;
-    
-    console.log('🔍 Final diff columns:', { diffColumns1, diffColumns2 });
     
     // Create HTML for diff columns with red styling if there are differences
     let diffColumns1Html = onlyInFile1.length > 0 ? `<span style="color: red; font-weight: bold;">${diffColumns1}</span>` : diffColumns1;
@@ -2687,31 +2670,12 @@ async function prepareDataForExportFast(fastResult, useTolerance = false) {
     const startTime = performance.now();
     const { identical, similar, onlyInTable1, onlyInTable2, commonColumns, alignedData1, alignedData2 } = fastResult;
     
-    console.log('🔍 Export data check:', {
-        identical: identical ? identical.length : 0,
-        similar: similar ? similar.length : 0,
-        onlyInTable1: onlyInTable1 ? onlyInTable1.length : 0,
-        onlyInTable2: onlyInTable2 ? onlyInTable2.length : 0,
-        alignedData1Rows: alignedData1 ? alignedData1.length - 1 : 0,
-        alignedData2Rows: alignedData2 ? alignedData2.length - 1 : 0,
-        fastResult: Object.keys(fastResult)
-    });
-    
     const workingData1 = alignedData1 || data1;
     const workingData2 = alignedData2 || data2;
-    
-    console.log('🔍 Working data structure:', {
-        workingData1_length: workingData1.length,
-        workingData1_first_5_rows: workingData1.slice(0, 5),
-        workingData2_length: workingData2.length,
-        workingData2_first_5_rows: workingData2.slice(0, 5)
-    });
     
     const headers = ['Source'];
     const realHeaders = workingData1[0] || commonColumns;
     realHeaders.forEach(header => headers.push(String(header || '')));
-    
-    console.log('🔍 Headers for export:', { realHeaders, exportHeaders: headers });
     
     const data = [headers];
     const formatting = {};
@@ -2803,7 +2767,6 @@ async function prepareDataForExportFast(fastResult, useTolerance = false) {
     
     // Process ALL identical rows (remove artificial limit)
     const maxIdentical = identical.length;
-    console.log(`🔍 Processing ${maxIdentical} identical rows for export`);
     
     for (let batchStart = 0; batchStart < maxIdentical; batchStart += BATCH_SIZE) {
         const batchEnd = Math.min(batchStart + BATCH_SIZE, maxIdentical);
@@ -2813,14 +2776,6 @@ async function prepareDataForExportFast(fastResult, useTolerance = false) {
             // Fix index calculation - DuckDB returns data-relative indices, add 1 to skip header
             const row1Index = identicalPair.row1 + 1; // Add 1 to skip header row
             const row1 = workingData1[row1Index];
-            
-            console.log('🔍 Identical pair access:', { 
-                identicalPair, 
-                originalIndex: identicalPair.row1,
-                row1Index, 
-                row1: row1,
-                workingData1Length: workingData1.length 
-            });
             
             if (!row1) {
                 console.log('⚠️ Missing row1 for identical pair:', { row1Index, identicalPair, workingData1Length: workingData1.length });
@@ -2848,23 +2803,50 @@ async function prepareDataForExportFast(fastResult, useTolerance = false) {
     
     // Process similar/different rows (show both versions)
     if (similar && similar.length > 0) {
-        console.log(`🔍 Processing ${similar.length} similar/different rows for export`);
         
         // Pre-create formatting templates for different row types
         const differentFormatting = {
-            fill: { fgColor: { rgb: 'fff3cd' } }, // Light yellow
+            // White background for normal cells (no fill specified)
             font: { color: { rgb: '212529' } },
             border: {
-                top: { style: 'thin', color: { rgb: 'D4D4D4' } },
+                top: { style: 'thick', color: { rgb: '000000' } }, // 2pt top border for first row of pair
                 bottom: { style: 'thin', color: { rgb: 'D4D4D4' } },
                 left: { style: 'thin', color: { rgb: 'D4D4D4' } },
                 right: { style: 'thin', color: { rgb: 'D4D4D4' } }
             }
         };
         
+        const differentFormattingSecond = {
+            // White background for normal cells (no fill specified)
+            font: { color: { rgb: '212529' } },
+            border: {
+                top: { style: 'thin', color: { rgb: 'D4D4D4' } },
+                bottom: { style: 'thick', color: { rgb: '000000' } }, // 2pt bottom border for second row of pair
+                left: { style: 'thin', color: { rgb: 'D4D4D4' } },
+                right: { style: 'thin', color: { rgb: 'D4D4D4' } }
+            }
+        };
+        
         const sourceDifferentFormatting = {
-            ...differentFormatting,
-            font: { color: { rgb: '212529' }, bold: true }
+            fill: { fgColor: { rgb: 'f8d7da' } }, // Light red for source column
+            font: { color: { rgb: '212529' }, bold: true },
+            border: {
+                top: { style: 'thick', color: { rgb: '000000' } },
+                bottom: { style: 'thin', color: { rgb: 'D4D4D4' } },
+                left: { style: 'thin', color: { rgb: 'D4D4D4' } },
+                right: { style: 'thin', color: { rgb: 'D4D4D4' } }
+            }
+        };
+        
+        const sourceDifferentFormattingSecond = {
+            fill: { fgColor: { rgb: 'f8d7da' } }, // Light red for source column
+            font: { color: { rgb: '212529' }, bold: true },
+            border: {
+                top: { style: 'thin', color: { rgb: 'D4D4D4' } },
+                bottom: { style: 'thick', color: { rgb: '000000' } },
+                left: { style: 'thin', color: { rgb: 'D4D4D4' } },
+                right: { style: 'thin', color: { rgb: 'D4D4D4' } }
+            }
         };
         
         for (let batchStart = 0; batchStart < similar.length; batchStart += BATCH_SIZE) {
@@ -2879,19 +2861,8 @@ async function prepareDataForExportFast(fastResult, useTolerance = false) {
                 const row2Index = similarPair.row2 + 1; // Add 1 to skip header row  
                 const row2 = workingData2[row2Index];
                 
-                console.log('🔍 Similar pair access:', { 
-                    similarPair, 
-                    originalIndex1: similarPair.row1,
-                    originalIndex2: similarPair.row2,
-                    row1Index, row2Index,
-                    row1: row1,
-                    row2: row2,
-                    workingData1Length: workingData1.length,
-                    workingData2Length: workingData2.length
-                });
-                
                 if (row1 && row2) {
-                    // Add row from file 1
+                    // Add row from file 1 (first row of pair - thick top border)
                     const dataRow1 = [file1Name];
                     for (let c = 0; c < realHeaders.length; c++) {
                         const value1 = row1[c] !== undefined ? String(row1[c]) : '';
@@ -2903,19 +2874,19 @@ async function prepareDataForExportFast(fastResult, useTolerance = false) {
                         const isDifferent = value1.toLowerCase().trim() !== value2.toLowerCase().trim();
                         
                         if (isDifferent) {
-                            // Red formatting for different cells
+                            // Red formatting for different cells (with thick top border)
                             formatting[XLSX.utils.encode_cell({ r: rowIndex, c: c + 1 })] = {
                                 fill: { fgColor: { rgb: 'f8d7da' } }, // Light red background
-                                font: { color: { rgb: 'dc3545' }, bold: true }, // Red text, bold
+                                font: { color: { rgb: '212529' } },
                                 border: {
-                                    top: { style: 'thin', color: { rgb: 'D4D4D4' } },
+                                    top: { style: 'thick', color: { rgb: '000000' } },
                                     bottom: { style: 'thin', color: { rgb: 'D4D4D4' } },
                                     left: { style: 'thin', color: { rgb: 'D4D4D4' } },
                                     right: { style: 'thin', color: { rgb: 'D4D4D4' } }
                                 }
                             };
                         } else {
-                            // Normal formatting for same cells
+                            // White background for same cells (with thick top border)
                             formatting[XLSX.utils.encode_cell({ r: rowIndex, c: c + 1 })] = { ...differentFormatting };
                         }
                     }
@@ -2924,7 +2895,7 @@ async function prepareDataForExportFast(fastResult, useTolerance = false) {
                     formatting[XLSX.utils.encode_cell({ r: rowIndex, c: 0 })] = { ...sourceDifferentFormatting };
                     rowIndex++;
                     
-                    // Add row from file 2
+                    // Add row from file 2 (second row of pair - thick bottom border)
                     const dataRow2 = [file2Name];
                     for (let c = 0; c < realHeaders.length; c++) {
                         const value1 = row1[c] !== undefined ? String(row1[c]) : '';
@@ -2936,25 +2907,25 @@ async function prepareDataForExportFast(fastResult, useTolerance = false) {
                         const isDifferent = value1.toLowerCase().trim() !== value2.toLowerCase().trim();
                         
                         if (isDifferent) {
-                            // Red formatting for different cells
+                            // Red formatting for different cells (with thick bottom border)
                             formatting[XLSX.utils.encode_cell({ r: rowIndex, c: c + 1 })] = {
                                 fill: { fgColor: { rgb: 'f8d7da' } }, // Light red background
-                                font: { color: { rgb: 'dc3545' }, bold: true }, // Red text, bold
+                                font: { color: { rgb: '212529' } },
                                 border: {
                                     top: { style: 'thin', color: { rgb: 'D4D4D4' } },
-                                    bottom: { style: 'thin', color: { rgb: 'D4D4D4' } },
+                                    bottom: { style: 'thick', color: { rgb: '000000' } },
                                     left: { style: 'thin', color: { rgb: 'D4D4D4' } },
                                     right: { style: 'thin', color: { rgb: 'D4D4D4' } }
                                 }
                             };
                         } else {
-                            // Normal formatting for same cells
-                            formatting[XLSX.utils.encode_cell({ r: rowIndex, c: c + 1 })] = { ...differentFormatting };
+                            // White background for same cells (with thick bottom border)
+                            formatting[XLSX.utils.encode_cell({ r: rowIndex, c: c + 1 })] = { ...differentFormattingSecond };
                         }
                     }
                     
                     data.push(dataRow2);
-                    formatting[XLSX.utils.encode_cell({ r: rowIndex, c: 0 })] = { ...sourceDifferentFormatting };
+                    formatting[XLSX.utils.encode_cell({ r: rowIndex, c: 0 })] = { ...sourceDifferentFormattingSecond };
                     rowIndex++;
                 } else {
                     if (!row1) {
@@ -2972,8 +2943,6 @@ async function prepareDataForExportFast(fastResult, useTolerance = false) {
             }
         }
     }
-    
-    console.log(`🔍 Processing ${onlyInTable1.length} rows only in table 1 for export`);
     
     // Process table1-only rows efficiently
     for (let batchStart = 0; batchStart < onlyInTable1.length; batchStart += BATCH_SIZE) {
@@ -3006,8 +2975,6 @@ async function prepareDataForExportFast(fastResult, useTolerance = false) {
             await new Promise(resolve => setTimeout(resolve, 1));
         }
     }
-    
-    console.log(`🔍 Processing ${onlyInTable2.length} rows only in table 2 for export`);
     
     // Process table2-only rows efficiently
     for (let batchStart = 0; batchStart < onlyInTable2.length; batchStart += BATCH_SIZE) {
@@ -3043,8 +3010,6 @@ async function prepareDataForExportFast(fastResult, useTolerance = false) {
     
     const duration = performance.now() - startTime;
     console.log(`⚡ Fast export completed in ${duration.toFixed(2)}ms - prepared ${data.length - 1} rows for export (1 header + ${rowIndex - 1} data rows)`);
-    console.log(`📊 Export breakdown: ${maxIdentical} identical, ${similar ? similar.length : 0} similar/different (exported as ${similar ? similar.length * 2 : 0} rows), ${onlyInTable1.length} only in file 1, ${onlyInTable2.length} only in file 2`);
-    
     return { data, formatting, colWidths };
 }
 

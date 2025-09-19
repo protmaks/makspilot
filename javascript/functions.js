@@ -2682,11 +2682,7 @@ function prepareDataForComparison(data1, data2) {
     
     const header1 = data1[0] || [];
     const header2 = data2[0] || [];
-    
-    console.log('🔍 Headers comparison:', { header1, header2 });
-    
     const mapping = createColumnMapping(header1, header2);
-    console.log('🔍 Column mapping result:', mapping);
     
     if (mapping.commonColumns.length === 0) {
         console.log('⚠️ No common columns found');
@@ -2708,8 +2704,6 @@ function prepareDataForComparison(data1, data2) {
         sourceIndex: col.index1 
     }));
     
-    console.log('🔍 Common columns for comparison:', commonColumnsOrder);
-    
     // Reorder data to include only common columns for comparison
     const reorderedData1 = reorderDataByColumns(data1, header1, mapping.commonColumns, commonColumnsOrder);
     
@@ -2719,13 +2713,6 @@ function prepareDataForComparison(data1, data2) {
     }));
     
     const reorderedData2 = reorderDataByColumns(data2, header2, mapping.commonColumns, commonColumnsOrderForData2);
-    
-    console.log('🔍 Reordered data headers:', { 
-        data1Header: reorderedData1[0], 
-        data2Header: reorderedData2[0],
-        onlyInFile1: mapping.onlyInFile1,
-        onlyInFile2: mapping.onlyInFile2
-    });
     
     return {
         data1: reorderedData1,
