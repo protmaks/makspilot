@@ -411,6 +411,18 @@ function setSelectedKeyColumns(columnNames) {
         return;
     }
     
+    // Check if dropdown has checkboxes
+    const existingCheckboxes = dropdownContent.querySelectorAll('input[name="keyColumns"]');
+    if (existingCheckboxes.length === 0) {
+        console.warn('⚠️ No checkboxes found in dropdown, updating dropdown first...');
+        // Try to update dropdown and retry after delay
+        if (typeof debouncedUpdateKeyColumnsOptions === 'function') {
+            debouncedUpdateKeyColumnsOptions(true);
+        }
+        setTimeout(() => setSelectedKeyColumns(columnNames), 300);
+        return;
+    }
+    
     // Convert indexes to column names if needed
     let columnsToSelect = columnNames;
     if (typeof columnNames[0] === 'number') {
@@ -419,6 +431,8 @@ function setSelectedKeyColumns(columnNames) {
                        (typeof data1 !== 'undefined' && data1.length > 0) ? data1[0] : [];
         columnsToSelect = columnNames.map(index => headers[index]).filter(name => name);
     }
+    
+    console.log('🔑 Setting selected key columns:', columnsToSelect);
     
     // Find and check the corresponding checkboxes
     let checkedCount = 0;
@@ -434,10 +448,13 @@ function setSelectedKeyColumns(columnNames) {
                 updateCheckboxStyle(wrapper, true);
             }
             
+            console.log(`✅ Selected column: ${columnName}`);
         } else {
             console.warn('⚠️ Checkbox not found for column:', columnName);
         }
     });
+    
+    console.log(`🎯 Successfully selected ${checkedCount} out of ${columnsToSelect.length} key columns`);
     
     // Update dropdown button text
     updateDropdownButtonText();
