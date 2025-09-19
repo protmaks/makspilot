@@ -2808,6 +2808,11 @@ function renderPreview(data, elementId, title) {
         html += '</div>';
     }
     document.getElementById(elementId).innerHTML = html;
+    
+    // Update key columns dropdown when table is rendered
+    if (typeof window.debouncedUpdateKeyColumnsOptions === 'function') {
+        window.debouncedUpdateKeyColumnsOptions(false);
+    }
 }
 
 function rowToKey(row) {
@@ -3061,8 +3066,48 @@ function compareTables(useTolerance = false) {
 
 async function performComparison() {
     
-    // DEBUG: Test key columns selection first
-    const testSelectedKeyColumns = (typeof getSelectedKeyColumns === 'function') ? getSelectedKeyColumns() : [];
+    // Check if key columns are selected, if not - auto-detect and set them
+    const selectedKeyColumns = (typeof getSelectedKeyColumns === 'function') ? getSelectedKeyColumns() : [];
+    
+    if (selectedKeyColumns.length === 0) {
+        // Auto-detect key columns and set them in UI
+        const headers = data1.length > 0 ? data1[0] : (data2.length > 0 ? data2[0] : []);
+        if (headers.length > 0) {
+            const combinedData = [headers, ...data1.slice(1), ...data2.slice(1)];
+            const autoDetectedIndexes = smartDetectKeyColumns(headers, combinedData);
+            
+            // Convert indexes to column names
+            const autoDetectedColumnNames = autoDetectedIndexes.map(index => headers[index]).filter(name => name);
+            
+            // Set these columns as selected in the UI with a small delay to ensure dropdown is ready
+            if (autoDetectedColumnNames.length > 0 && typeof setSelectedKeyColumns === 'function') {
+                // Ensure dropdown is populated first
+                if (typeof debouncedUpdateKeyColumnsOptions === 'function') {
+                    debouncedUpdateKeyColumnsOptions(true);
+                }
+                
+                // Set selected columns after a brief delay
+                setTimeout(() => {
+                    setSelectedKeyColumns(autoDetectedColumnNames);
+                    console.log('🔑 Auto-selected key columns:', autoDetectedColumnNames);
+                    
+                    // Show brief notification to user about auto-selection
+                    const keyColumnsLabel = document.querySelector('.key-columns-label');
+                    if (keyColumnsLabel) {
+                        const originalText = keyColumnsLabel.textContent;
+                        keyColumnsLabel.style.color = '#28a745';
+                        keyColumnsLabel.textContent = `Key columns (auto-selected): `;
+                        
+                        // Restore original text after 3 seconds
+                        setTimeout(() => {
+                            keyColumnsLabel.style.color = '';
+                            keyColumnsLabel.textContent = originalText;
+                        }, 3000);
+                    }
+                }, 200);
+            }
+        }
+    }
 
     if (window.MaxPilotDuckDB && window.MaxPilotDuckDB.fastComparator && window.MaxPilotDuckDB.fastComparator.initialized) {
         try {

@@ -129,18 +129,31 @@
                         <label for="excludeColumns" class="exclude-label">Exclude columns:</label>
                         <input type="text" id="excludeColumns" placeholder="e.g., ID, Timestamp, CreatedDate" class="exclude-input">
                     </div>
-                </div>
-                <div class="filter-controls filter-controls-hidden">
-                    <div class="filter-options">
-                        <label><input type="checkbox" id="hideSameRows"> Hide COMMA rows</label>
-                        <label><input type="checkbox" id="hideDiffColumns"> Hide DIFF rows</label>
-                        <label><input type="checkbox" id="hideNewRows1"> Hide rows only in file 1</label>
-                        <label><input type="checkbox" id="hideNewRows2"> Hide rows only in file 2</label>
+                    <div class="key-columns-container">
+                        <label class="key-columns-label">Key columns:</label>
+                        <div class="key-columns-dropdown">
+                            <div class="key-columns-dropdown-button" id="keyColumnsDropdownButton">
+                                <span class="dropdown-text">Select key columns...</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </div>
+                            <div class="key-columns-dropdown-content" id="keyColumnsDropdownContent">
+                                <div class="key-columns-placeholder">Load files to see available columns</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+        <div class="filter-controls filter-controls-hidden">
+            <div class="filter-options">
+                <label><input type="checkbox" id="hideSameRows"> Hide COMMA rows</label>
+                <label><input type="checkbox" id="hideDiffColumns"> Hide DIFF rows</label>
+                <label><input type="checkbox" id="hideNewRows1"> Hide rows only in file 1</label>
+                <label><input type="checkbox" id="hideNewRows2"> Hide rows only in file 2</label>
+            </div>
+        </div>
     </div>
+    
     <div id="result"></div>
     <div id="diffTable">
         <div class="table-header-fixed">
@@ -161,6 +174,9 @@
     
     <!-- Load the export functions -->
     <script src="../javascript/export.js"></script>
+    
+    <!-- Load the key columns functionality -->
+    <script src="../javascript/key-columns.js"></script>
     
     <!-- Load the shared header -->
     <script src="../javascript/script.js"></script>

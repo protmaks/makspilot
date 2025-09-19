@@ -81,7 +81,7 @@ header {
 }
 
 .logo img {
-    height: 40px;
+    height: 55px;
     width: auto;
     transition: transform 0.3s ease;
 }
@@ -507,6 +507,7 @@ footer {
     background: #f7f8fa;
     padding-top: 0;
     color: #2d3a4a;
+    padding-top: 65px;
 }
 
 .main-content h1 {
@@ -2175,10 +2176,6 @@ button.export-btn:disabled {
 
 .buttons-container{
     margin-bottom: 15px;
-}
-
-.main-content-padded {
-    padding-top: 65px;
 }
 
 .help-text {
