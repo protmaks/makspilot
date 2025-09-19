@@ -2539,6 +2539,37 @@ function generateLimitErrorMessage(type, current, limit, additionalInfo = '', se
     `;
 }
 
+function filterExcludeColumns(data, excludeColumns) {
+    if (!data || data.length === 0 || !excludeColumns || excludeColumns.length === 0) {
+        return data;
+    }
+    
+    const headers = data[0] || [];
+    const columnsToKeep = [];
+    
+    headers.forEach((header, index) => {
+        const shouldExclude = excludeColumns.some(excCol => {
+            if (typeof excCol === 'string') {
+                return header.toLowerCase().includes(excCol.toLowerCase());
+            } else if (typeof excCol === 'number') {
+                return index === excCol;
+            }
+            return false;
+        });
+        
+        if (!shouldExclude) {
+            columnsToKeep.push(index);
+        }
+    });
+    
+    // Filter data to keep only non-excluded columns
+    const filteredData = data.map(row => {
+        return columnsToKeep.map(colIndex => row[colIndex] || '');
+    });
+    
+    return filteredData;
+}
+
 
 function createColumnMapping(header1, header2) {
     const mapping = [];
@@ -2598,6 +2629,51 @@ function reorderDataByColumns(data, originalHeader, commonColumns, targetOrder) 
     return reorderedData;
 }
 
+function reorderDataByAllColumns(data, allColumns, fileNumber) {
+    if (!data || data.length === 0) return data;
+    
+    // Create new header with all column names
+    const newHeader = allColumns.map(col => col.name);
+    
+    // Reorder data rows
+    const reorderedData = [newHeader];
+    
+    for (let i = 1; i < data.length; i++) {
+        const newRow = allColumns.map(colInfo => {
+            const sourceIndex = fileNumber === 1 ? colInfo.sourceIndex1 : colInfo.sourceIndex2;
+            if (sourceIndex === -1) {
+                return ''; // Column doesn't exist in this file
+            }
+            return sourceIndex < data[i].length ? data[i][sourceIndex] : '';
+        });
+        reorderedData.push(newRow);
+    }
+    
+    return reorderedData;
+}
+
+function reorderDataByColumns(data, originalHeader, commonColumns, columnOrder) {
+    if (!data || data.length === 0) return data;
+    
+    // Create new header with only common column names
+    const newHeader = columnOrder.map(col => col.name);
+    
+    // Reorder data rows to include only common columns
+    const reorderedData = [newHeader];
+    
+    for (let i = 1; i < data.length; i++) {
+        const newRow = columnOrder.map(colInfo => {
+            if (colInfo.sourceIndex < data[i].length) {
+                return data[i][colInfo.sourceIndex];
+            }
+            return '';
+        });
+        reorderedData.push(newRow);
+    }
+    
+    return reorderedData;
+}
+
 
 function prepareDataForComparison(data1, data2) {
     if (!data1.length || !data2.length) {
@@ -2606,12 +2682,10 @@ function prepareDataForComparison(data1, data2) {
     
     const header1 = data1[0] || [];
     const header2 = data2[0] || [];
-    
-    
     const mapping = createColumnMapping(header1, header2);
     
     if (mapping.commonColumns.length === 0) {
-        
+        console.log('⚠️ No common columns found');
         return { 
             data1, 
             data2, 
@@ -2624,22 +2698,21 @@ function prepareDataForComparison(data1, data2) {
         };
     }
     
-    
-    const unifiedOrder = mapping.commonColumns.map(col => ({
+    // For comparison, use ONLY common columns (not all columns)
+    const commonColumnsOrder = mapping.commonColumns.map(col => ({
         name: col.name,
         sourceIndex: col.index1 
     }));
     
+    // Reorder data to include only common columns for comparison
+    const reorderedData1 = reorderDataByColumns(data1, header1, mapping.commonColumns, commonColumnsOrder);
     
-    const reorderedData1 = reorderDataByColumns(data1, header1, mapping.commonColumns, unifiedOrder);
-    
-    
-    const unifiedOrderForData2 = mapping.commonColumns.map(col => ({
+    const commonColumnsOrderForData2 = mapping.commonColumns.map(col => ({
         name: col.name,
         sourceIndex: col.index2 
     }));
     
-    const reorderedData2 = reorderDataByColumns(data2, header2, mapping.commonColumns, unifiedOrderForData2);
+    const reorderedData2 = reorderDataByColumns(data2, header2, mapping.commonColumns, commonColumnsOrderForData2);
     
     return {
         data1: reorderedData1,
@@ -2649,6 +2722,7 @@ function prepareDataForComparison(data1, data2) {
             commonCount: mapping.commonColumns.length,
             onlyInFile1: mapping.onlyInFile1,
             onlyInFile2: mapping.onlyInFile2,
+            commonColumns: mapping.commonColumns.map(col => col.name),
             reordered: header1.join(',').toLowerCase() !== header2.join(',').toLowerCase()
         }
     };
@@ -2727,9 +2801,7 @@ function renderPreview(data, elementId, title) {
         
         
         if (data.length > 4) {
-            html += `<tr><td colspan="${data[0].length}" style="text-align: center; font-style: italic; color: #666;">
-                ... and ${data.length - 1} more rows (showing first 3 for preview)
-            </td></tr>`;
+            html;
         }
         
         html += '</table>';
