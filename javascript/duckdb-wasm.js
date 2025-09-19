@@ -561,10 +561,10 @@ class FastTableComparator {
                 const col1Name = sanitizedHeaders1[colIdx];
                 const col2Name = sanitizedHeaders2[colIdx];
                 
-                // Safety check: ensure both column names exist
-                if (!col1Name || !col2Name) {
-                    console.warn(`⚠️ Missing column name at index ${colIdx}: col1Name="${col1Name}", col2Name="${col2Name}"`);
-                    return 'FALSE'; // Skip this comparison if column is missing
+                // Safety check: ensure both column names exist and are within bounds
+                if (!col1Name || !col2Name || colIdx >= sanitizedHeaders1.length || colIdx >= sanitizedHeaders2.length) {
+                    // Skip this comparison if column is missing or out of bounds
+                    return 'FALSE'; 
                 }
                 
                 if (col1Type === 'DOUBLE' || col2Type === 'DOUBLE') {
@@ -1466,8 +1466,14 @@ async function compareTablesWithFastComparator(data1, data2, excludeColumns = []
         const startTime = performance.now();
 
         if (fastComparator.mode === 'wasm') {
+            console.log('🔍 Using WASM mode - preparing data for comparison');
+            
+            // Prepare data for comparison to get column information
+            const { data1: alignedData1, data2: alignedData2, columnInfo } = prepareDataForComparison(data1, data2);
+            
+            console.log('🔍 WASM mode - columnInfo prepared:', columnInfo);
 
-            const result = await fastComparator.compareTablesFast(data1, data2, excludeColumns, useTolerance, customKeyColumns);
+            const result = await fastComparator.compareTablesFast(alignedData1, alignedData2, excludeColumns, useTolerance, customKeyColumns);
             
             if (!result) {
                 console.log('⚠️ DuckDB WASM returned empty result');
@@ -1475,6 +1481,11 @@ async function compareTablesWithFastComparator(data1, data2, excludeColumns = []
             }
             
             const duration = performance.now() - startTime;
+            
+            // Add column information to the result
+            result.columnInfo = columnInfo;
+            result.alignedData1 = alignedData1;
+            result.alignedData2 = alignedData2;
             
             return result;
             
@@ -1495,6 +1506,11 @@ async function compareTablesWithFastComparator(data1, data2, excludeColumns = []
             );
 
             const totalTime = performance.now() - startTime;
+
+            // Add column information to the result
+            comparisonResult.columnInfo = columnInfo;
+            comparisonResult.alignedData1 = alignedData1;
+            comparisonResult.alignedData2 = alignedData2;
 
             return comparisonResult;
         }
@@ -1753,7 +1769,11 @@ async function processFastComparisonResults(fastResult, useTolerance) {
     // Show final processing stage
     updateProgressMessage('Processing results...', 95);
     
-    const { identical, similar, onlyInTable1, onlyInTable2, table1Count, table2Count, commonColumns, performance } = fastResult;
+    console.log('🔍 processFastComparisonResults received:', fastResult);
+    
+    const { identical, similar, onlyInTable1, onlyInTable2, table1Count, table2Count, commonColumns, performance, columnInfo } = fastResult;
+    
+    console.log('🔍 Extracted columnInfo from fastResult:', columnInfo);
     
     window.currentFastResult = fastResult;
     
@@ -1788,6 +1808,69 @@ async function processFastComparisonResults(fastResult, useTolerance) {
 
     const tableHeaders = getSummaryTableHeaders();
     
+    // Display column alignment info if available (using the same logic as functions.js)
+    if (columnInfo && columnInfo.hasCommonColumns && columnInfo.reordered) {
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'column-alignment-info';
+        infoDiv.style.cssText = 'background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; padding: 12px; margin: 15px 0; border-radius: 6px; font-size: 14px;';
+        infoDiv.innerHTML = `
+            <strong>📊 Column Alignment:</strong> Columns have been automatically aligned by name for accurate comparison. 
+            ${columnInfo.commonCount} common columns found.
+            ${columnInfo.onlyInFile1.length > 0 ? `<br><strong>Only in File 1:</strong> ${columnInfo.onlyInFile1.join(', ')}` : ''}
+            ${columnInfo.onlyInFile2.length > 0 ? `<br><strong>Only in File 2:</strong> ${columnInfo.onlyInFile2.join(', ')}` : ''}
+        `;
+        
+        const summaryEl = document.getElementById('summary');
+        if (summaryEl.firstChild) {
+            summaryEl.insertBefore(infoDiv, summaryEl.firstChild);
+        } else {
+            summaryEl.appendChild(infoDiv);
+        }
+    } else if (columnInfo && !columnInfo.hasCommonColumns) {
+        const warningDiv = document.createElement('div');
+        warningDiv.className = 'column-warning-info';
+        warningDiv.style.cssText = 'background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 12px; margin: 15px 0; border-radius: 6px; font-size: 14px;';
+        warningDiv.innerHTML = `
+            <strong>⚠️ Warning:</strong> No common column names found between files. 
+            Comparison will be done by column position. For more accurate results, ensure both files have matching column headers.
+        `;
+        
+        const summaryEl = document.getElementById('summary');
+        if (summaryEl.firstChild) {
+            summaryEl.insertBefore(warningDiv, summaryEl.firstChild);
+        } else {
+            summaryEl.appendChild(warningDiv);
+        }
+    }
+    
+    // Use the same diff columns logic as functions.js
+    let onlyInFile1, onlyInFile2;
+    
+    console.log('🔍 Processing diff columns - columnInfo:', columnInfo);
+    
+    if (columnInfo && (columnInfo.hasCommonColumns || columnInfo.onlyInFile1 || columnInfo.onlyInFile2)) {
+        onlyInFile1 = columnInfo.onlyInFile1 || [];
+        onlyInFile2 = columnInfo.onlyInFile2 || [];
+    } else {
+        onlyInFile1 = [];
+        onlyInFile2 = [];
+    }
+    
+    console.log('🔍 Diff columns identified:', { onlyInFile1, onlyInFile2 });
+    
+    let diffColumns1 = onlyInFile1.length > 0 ? onlyInFile1.join(', ') : '-';
+    let diffColumns2 = onlyInFile2.length > 0 ? onlyInFile2.join(', ') : '-';
+    
+    // Store current diff columns globally for other functions to use
+    window.currentDiffColumns1 = diffColumns1;
+    window.currentDiffColumns2 = diffColumns2;
+    
+    console.log('🔍 Final diff columns:', { diffColumns1, diffColumns2 });
+    
+    // Create HTML for diff columns with red styling if there are differences
+    let diffColumns1Html = onlyInFile1.length > 0 ? `<span style="color: red; font-weight: bold;">${diffColumns1}</span>` : diffColumns1;
+    let diffColumns2Html = onlyInFile2.length > 0 ? `<span style="color: red; font-weight: bold;">${diffColumns2}</span>` : diffColumns2;
+    
     const summaryHTML = `
         <div style="overflow-x: auto; margin: 20px 0;">
             <table class="summary-table">
@@ -1797,6 +1880,7 @@ async function processFastComparisonResults(fastResult, useTolerance) {
                         <th>${tableHeaders.rowCount}</th>
                         <th>Identical Rows</th>
                         <th>${tableHeaders.rowsOnlyInFile}</th>
+                        <th>${tableHeaders.diffColumns}</th>
                         <th>${tableHeaders.similarity}</th>
                     </tr>
                 </thead>
@@ -1806,12 +1890,14 @@ async function processFastComparisonResults(fastResult, useTolerance) {
                         <td>${table1Count.toLocaleString()}</td>
                         <td rowspan="2" style="vertical-align: middle; font-weight: bold; font-size: 16px; color: #28a745;">${identicalCount.toLocaleString()}</td>
                         <td>${onlyInTable1.length.toLocaleString()}</td>
+                        <td>${diffColumns1Html}</td>
                         <td rowspan="2" style="vertical-align: middle; font-weight: bold; font-size: 18px;" class="percent-cell ${percentClass}">${similarity}%</td>
                     </tr>
                     <tr>
                         <td><strong>${file2Name}</strong></td>
                         <td>${table2Count.toLocaleString()}</td>
                         <td>${onlyInTable2.length.toLocaleString()}</td>
+                        <td>${diffColumns2Html}</td>
                     </tr>
                 </tbody>
             </table>
@@ -2054,9 +2140,32 @@ async function createBasicFallbackTable(pairs, headers) {
     // Use the passed headers parameter instead of data1[0]
     const realHeaders = headers || [];
     
+    // Get column info to identify diff columns (use global variables from the summary)
+    const onlyInFile1 = [];
+    const onlyInFile2 = [];
+    
+    // Parse diff columns from global variables if they exist
+    if (window.currentDiffColumns1 && window.currentDiffColumns1 !== '-') {
+        onlyInFile1.push(...window.currentDiffColumns1.split(', ').filter(col => col.trim() !== ''));
+    }
+    if (window.currentDiffColumns2 && window.currentDiffColumns2 !== '-') {
+        onlyInFile2.push(...window.currentDiffColumns2.split(', ').filter(col => col.trim() !== ''));
+    }
+    
     let headerHtml = '<tr><th title="Source - shows which file the data comes from" class="source-column">Source</th>';
     realHeaders.forEach((header, index) => {
         const headerText = header || `Column ${index + 1}`;
+        
+        // Check if this column is a diff column
+        let isDiffColumn = false;
+        let diffColumnType = '';
+        if (onlyInFile1.includes(headerText)) {
+            isDiffColumn = true;
+            diffColumnType = 'only-in-file1';
+        } else if (onlyInFile2.includes(headerText)) {
+            isDiffColumn = true;
+            diffColumnType = 'only-in-file2';
+        }
         
         // Add column type icon for test_wasm page
         let columnTypeIcon = '';
@@ -2087,7 +2196,23 @@ async function createBasicFallbackTable(pairs, headers) {
             columnTypeIcon = `<span class="column-type-icon column-type-${columnType}" title="Column type: ${columnType}"></span>`;
         }
         
-        headerHtml += `<th class="sortable" onclick="sortTable(${index})" title="${headerText}">${columnTypeIcon}${headerText}</th>`;
+        // Add diff column indicator
+        let diffColumnIcon = '';
+        let headerClass = 'sortable';
+        let headerTitle = headerText;
+        
+        if (isDiffColumn) {
+            headerClass += ` diff-column ${diffColumnType}`;
+            if (diffColumnType === 'only-in-file1') {
+                diffColumnIcon = '<span class="diff-column-indicator file1-only" title="Column only in File 1">📍</span>';
+                headerTitle += ' (Only in File 1)';
+            } else if (diffColumnType === 'only-in-file2') {
+                diffColumnIcon = '<span class="diff-column-indicator file2-only" title="Column only in File 2">📍</span>';
+                headerTitle += ' (Only in File 2)';
+            }
+        }
+        
+        headerHtml += `<th class="${headerClass}" onclick="sortTable(${index})" title="${headerTitle}">${columnTypeIcon}${diffColumnIcon}${headerText}</th>`;
     });
     headerHtml += '</tr>';
     headerTable.innerHTML = headerHtml;
@@ -2198,12 +2323,26 @@ async function createBasicFallbackTable(pairs, headers) {
                     const v1 = row1[colIndex] !== undefined ? row1[colIndex] : '';
                     const compResult = columnComparisons[colIndex];
                     
+                    // Add diff column styling
+                    let cellClass = compResult === 'identical' ? 'identical' : 'warn-cell';
+                    if (onlyInFile1.includes(header)) {
+                        cellClass += ' diff-column-cell only-in-file1';
+                        if (!v1 || v1 === '') {
+                            cellClass += ' empty-diff-column';
+                        }
+                    } else if (onlyInFile2.includes(header)) {
+                        cellClass += ' diff-column-cell only-in-file2';
+                        if (!v1 || v1 === '') {
+                            cellClass += ' empty-diff-column';
+                        }
+                    }
+                    
                     if (compResult === 'identical') {
                         // Merge identical columns
-                        bodyHtml += `<td class="identical" rowspan="2" style="vertical-align: middle; text-align: center;">${v1}</td>`;
+                        bodyHtml += `<td class="${cellClass}" rowspan="2" style="vertical-align: middle; text-align: center;">${v1}</td>`;
                     } else {
                         // Show different columns separately
-                        bodyHtml += `<td class="warn-cell">${v1}</td>`;
+                        bodyHtml += `<td class="${cellClass}">${v1}</td>`;
                     }
                 });
                 bodyHtml += '</tr>';
@@ -2217,8 +2356,22 @@ async function createBasicFallbackTable(pairs, headers) {
                     const compResult = columnComparisons[colIndex];
                     
                     if (compResult === 'different') {
+                        // Add diff column styling for file 2 rows
+                        let cellClass = 'warn-cell';
+                        if (onlyInFile1.includes(header)) {
+                            cellClass += ' diff-column-cell only-in-file1';
+                            if (!v2 || v2 === '') {
+                                cellClass += ' empty-diff-column';
+                            }
+                        } else if (onlyInFile2.includes(header)) {
+                            cellClass += ' diff-column-cell only-in-file2';
+                            if (!v2 || v2 === '') {
+                                cellClass += ' empty-diff-column';
+                            }
+                        }
+                        
                         // Show only different columns (identical already shown with rowspan)
-                        bodyHtml += `<td class="warn-cell">${v2}</td>`;
+                        bodyHtml += `<td class="${cellClass}">${v2}</td>`;
                     }
                     // Skip identical columns as they are already displayed with rowspan="2"
                 });
@@ -2230,7 +2383,22 @@ async function createBasicFallbackTable(pairs, headers) {
                 
                 realHeaders.forEach((header, colIndex) => {
                     const value = row1[colIndex] !== undefined ? row1[colIndex] : '';
-                    bodyHtml += `<td class="identical" title="${value}">${value}</td>`;
+                    
+                    // Add diff column styling
+                    let cellClass = 'identical';
+                    if (onlyInFile1.includes(header)) {
+                        cellClass += ' diff-column-cell only-in-file1';
+                        if (!value || value === '') {
+                            cellClass += ' empty-diff-column';
+                        }
+                    } else if (onlyInFile2.includes(header)) {
+                        cellClass += ' diff-column-cell only-in-file2';
+                        if (!value || value === '') {
+                            cellClass += ' empty-diff-column';
+                        }
+                    }
+                    
+                    bodyHtml += `<td class="${cellClass}" title="${value}">${value}</td>`;
                 });
                 bodyHtml += `</tr>`;
             }
@@ -2281,6 +2449,19 @@ async function createBasicFallbackTable(pairs, headers) {
                     cellClass += ' different';
                 }
                 
+                // Add diff column styling
+                if (onlyInFile1.includes(header)) {
+                    cellClass += ' diff-column-cell only-in-file1';
+                    if (!value || value === '') {
+                        cellClass += ' empty-diff-column';
+                    }
+                } else if (onlyInFile2.includes(header)) {
+                    cellClass += ' diff-column-cell only-in-file2';
+                    if (!value || value === '') {
+                        cellClass += ' empty-diff-column';
+                    }
+                }
+                
                 bodyHtml += `<td class="${cellClass}" title="${value}">${value}</td>`;
             });
             
@@ -2312,7 +2493,9 @@ async function createBasicFallbackTable(pairs, headers) {
     if (typeof syncColumnWidths === 'function') {
         syncColumnWidths();
     }
-}window.MaxPilotDuckDB = {
+}
+
+window.MaxPilotDuckDB = {
     FastTableComparator,
     fastComparator,
     initializeFastComparator,

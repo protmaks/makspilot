@@ -1199,6 +1199,54 @@ button.export-btn:disabled {
     border-right: 1px solid #c1c1c1;
 }
 
+/* Diff column styling */
+.diff-table-header th.diff-column {
+    position: relative;
+}
+
+.diff-table-header th.diff-column.only-in-file1 {
+    background: linear-gradient(135deg, #65add7 0%, #4a90e2 100%);
+    color: #ffffff;
+}
+
+.diff-table-header th.diff-column.only-in-file2 {
+    background: linear-gradient(135deg, #63cfbf 0%, #4aaaa5 100%);
+    color: #ffffff;
+}
+
+.diff-column-indicator {
+    font-size: 12px;
+    margin-right: 4px;
+    display: inline-block;
+}
+
+.diff-column-indicator.file1-only {
+    color: #ffffff;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+}
+
+.diff-column-indicator.file2-only {
+    color: #ffffff;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+}
+
+/* Diff column cells styling */
+.diff-table-body td.diff-column-cell.only-in-file1 {
+    background-color: rgba(101, 173, 215, 0.1);
+    border-left: 3px solid #65add7;
+}
+
+.diff-table-body td.diff-column-cell.only-in-file2 {
+    background-color: rgba(99, 207, 191, 0.1);
+    border-left: 3px solid #63cfbf;
+}
+
+.diff-table-body td.diff-column-cell.empty-diff-column {
+    background-color: #f8f9fa;
+    color: #6c757d;
+    font-style: italic;
+}
+
 .diff-table-body tr:hover {
     background-color: #f8f9fa;
 }

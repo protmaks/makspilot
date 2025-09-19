@@ -129,8 +129,6 @@ function debouncedUpdateKeyColumnsOptions(forceUpdate = false, delay = 150) {
 
 // Update key columns dropdown when files are loaded
 function updateKeyColumnsOptionsInternal(forceUpdate = false) {
-    // Only log when force update is requested
-    
     const dropdownContent = document.getElementById('keyColumnsDropdownContent');
     const dropdownButton = document.getElementById('keyColumnsDropdownButton');
     

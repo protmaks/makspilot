@@ -2598,6 +2598,51 @@ function reorderDataByColumns(data, originalHeader, commonColumns, targetOrder) 
     return reorderedData;
 }
 
+function reorderDataByAllColumns(data, allColumns, fileNumber) {
+    if (!data || data.length === 0) return data;
+    
+    // Create new header with all column names
+    const newHeader = allColumns.map(col => col.name);
+    
+    // Reorder data rows
+    const reorderedData = [newHeader];
+    
+    for (let i = 1; i < data.length; i++) {
+        const newRow = allColumns.map(colInfo => {
+            const sourceIndex = fileNumber === 1 ? colInfo.sourceIndex1 : colInfo.sourceIndex2;
+            if (sourceIndex === -1) {
+                return ''; // Column doesn't exist in this file
+            }
+            return sourceIndex < data[i].length ? data[i][sourceIndex] : '';
+        });
+        reorderedData.push(newRow);
+    }
+    
+    return reorderedData;
+}
+
+function reorderDataByColumns(data, originalHeader, commonColumns, columnOrder) {
+    if (!data || data.length === 0) return data;
+    
+    // Create new header with only common column names
+    const newHeader = columnOrder.map(col => col.name);
+    
+    // Reorder data rows to include only common columns
+    const reorderedData = [newHeader];
+    
+    for (let i = 1; i < data.length; i++) {
+        const newRow = columnOrder.map(colInfo => {
+            if (colInfo.sourceIndex < data[i].length) {
+                return data[i][colInfo.sourceIndex];
+            }
+            return '';
+        });
+        reorderedData.push(newRow);
+    }
+    
+    return reorderedData;
+}
+
 
 function prepareDataForComparison(data1, data2) {
     if (!data1.length || !data2.length) {
@@ -2607,11 +2652,13 @@ function prepareDataForComparison(data1, data2) {
     const header1 = data1[0] || [];
     const header2 = data2[0] || [];
     
+    console.log('🔍 Headers comparison:', { header1, header2 });
     
     const mapping = createColumnMapping(header1, header2);
+    console.log('🔍 Column mapping result:', mapping);
     
     if (mapping.commonColumns.length === 0) {
-        
+        console.log('⚠️ No common columns found');
         return { 
             data1, 
             data2, 
@@ -2624,22 +2671,30 @@ function prepareDataForComparison(data1, data2) {
         };
     }
     
-    
-    const unifiedOrder = mapping.commonColumns.map(col => ({
+    // For comparison, use ONLY common columns (not all columns)
+    const commonColumnsOrder = mapping.commonColumns.map(col => ({
         name: col.name,
         sourceIndex: col.index1 
     }));
     
+    console.log('🔍 Common columns for comparison:', commonColumnsOrder);
     
-    const reorderedData1 = reorderDataByColumns(data1, header1, mapping.commonColumns, unifiedOrder);
+    // Reorder data to include only common columns for comparison
+    const reorderedData1 = reorderDataByColumns(data1, header1, mapping.commonColumns, commonColumnsOrder);
     
-    
-    const unifiedOrderForData2 = mapping.commonColumns.map(col => ({
+    const commonColumnsOrderForData2 = mapping.commonColumns.map(col => ({
         name: col.name,
         sourceIndex: col.index2 
     }));
     
-    const reorderedData2 = reorderDataByColumns(data2, header2, mapping.commonColumns, unifiedOrderForData2);
+    const reorderedData2 = reorderDataByColumns(data2, header2, mapping.commonColumns, commonColumnsOrderForData2);
+    
+    console.log('🔍 Reordered data headers:', { 
+        data1Header: reorderedData1[0], 
+        data2Header: reorderedData2[0],
+        onlyInFile1: mapping.onlyInFile1,
+        onlyInFile2: mapping.onlyInFile2
+    });
     
     return {
         data1: reorderedData1,
@@ -2649,6 +2704,7 @@ function prepareDataForComparison(data1, data2) {
             commonCount: mapping.commonColumns.length,
             onlyInFile1: mapping.onlyInFile1,
             onlyInFile2: mapping.onlyInFile2,
+            commonColumns: mapping.commonColumns.map(col => col.name),
             reordered: header1.join(',').toLowerCase() !== header2.join(',').toLowerCase()
         }
     };
