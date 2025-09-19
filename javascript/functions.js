@@ -2539,6 +2539,37 @@ function generateLimitErrorMessage(type, current, limit, additionalInfo = '', se
     `;
 }
 
+function filterExcludeColumns(data, excludeColumns) {
+    if (!data || data.length === 0 || !excludeColumns || excludeColumns.length === 0) {
+        return data;
+    }
+    
+    const headers = data[0] || [];
+    const columnsToKeep = [];
+    
+    headers.forEach((header, index) => {
+        const shouldExclude = excludeColumns.some(excCol => {
+            if (typeof excCol === 'string') {
+                return header.toLowerCase().includes(excCol.toLowerCase());
+            } else if (typeof excCol === 'number') {
+                return index === excCol;
+            }
+            return false;
+        });
+        
+        if (!shouldExclude) {
+            columnsToKeep.push(index);
+        }
+    });
+    
+    // Filter data to keep only non-excluded columns
+    const filteredData = data.map(row => {
+        return columnsToKeep.map(colIndex => row[colIndex] || '');
+    });
+    
+    return filteredData;
+}
+
 
 function createColumnMapping(header1, header2) {
     const mapping = [];

@@ -1467,13 +1467,24 @@ async function compareTablesWithFastComparator(data1, data2, excludeColumns = []
 
         if (fastComparator.mode === 'wasm') {
             console.log('🔍 Using WASM mode - preparing data for comparison');
+            console.log('🔍 Exclude columns:', excludeColumns);
+            
+            // Apply exclude columns filtering BEFORE preparing data for comparison
+            let filteredData1 = data1;
+            let filteredData2 = data2;
+            
+            if (excludeColumns && excludeColumns.length > 0) {
+                filteredData1 = filterExcludeColumns(data1, excludeColumns);
+                filteredData2 = filterExcludeColumns(data2, excludeColumns);
+                console.log('🔍 Data filtered, excluded columns:', excludeColumns);
+            }
             
             // Prepare data for comparison to get column information
-            const { data1: alignedData1, data2: alignedData2, columnInfo } = prepareDataForComparison(data1, data2);
+            const { data1: alignedData1, data2: alignedData2, columnInfo } = prepareDataForComparison(filteredData1, filteredData2);
             
             console.log('🔍 WASM mode - columnInfo prepared:', columnInfo);
 
-            const result = await fastComparator.compareTablesFast(alignedData1, alignedData2, excludeColumns, useTolerance, customKeyColumns);
+            const result = await fastComparator.compareTablesFast(alignedData1, alignedData2, [], useTolerance, customKeyColumns);
             
             if (!result) {
                 console.log('⚠️ DuckDB WASM returned empty result');
@@ -1490,8 +1501,21 @@ async function compareTablesWithFastComparator(data1, data2, excludeColumns = []
             return result;
             
         } else {
+            console.log('🔍 Using local mode - preparing data for comparison');
+            console.log('🔍 Exclude columns:', excludeColumns);
             
-            const { data1: alignedData1, data2: alignedData2, columnInfo } = prepareDataForComparison(data1, data2);
+            // Apply exclude columns filtering BEFORE preparing data for comparison
+            let filteredData1 = data1;
+            let filteredData2 = data2;
+            
+            if (excludeColumns && excludeColumns.length > 0) {
+                filteredData1 = filterExcludeColumns(data1, excludeColumns);
+                filteredData2 = filterExcludeColumns(data2, excludeColumns);
+                console.log('🔍 Data filtered, excluded columns:', excludeColumns);
+            }
+            
+            // Prepare data for comparison to get column information
+            const { data1: alignedData1, data2: alignedData2, columnInfo } = prepareDataForComparison(filteredData1, filteredData2);
             
             const headers1 = alignedData1[0] || [];
             const headers2 = alignedData2[0] || [];
@@ -1502,7 +1526,7 @@ async function compareTablesWithFastComparator(data1, data2, excludeColumns = []
             await fastComparator.createTableFromData('table2', dataRows2, headers2);
             
             const comparisonResult = await fastComparator.compareTablesFast(
-                'table1', 'table2', excludeColumns
+                'table1', 'table2', []
             );
 
             const totalTime = performance.now() - startTime;
@@ -2661,13 +2685,33 @@ async function prepareDataForExportFast(fastResult, useTolerance = false) {
     }
 
     const startTime = performance.now();
-    const { identical, onlyInTable1, onlyInTable2, commonColumns, alignedData1, alignedData2 } = fastResult;
+    const { identical, similar, onlyInTable1, onlyInTable2, commonColumns, alignedData1, alignedData2 } = fastResult;
+    
+    console.log('🔍 Export data check:', {
+        identical: identical ? identical.length : 0,
+        similar: similar ? similar.length : 0,
+        onlyInTable1: onlyInTable1 ? onlyInTable1.length : 0,
+        onlyInTable2: onlyInTable2 ? onlyInTable2.length : 0,
+        alignedData1Rows: alignedData1 ? alignedData1.length - 1 : 0,
+        alignedData2Rows: alignedData2 ? alignedData2.length - 1 : 0,
+        fastResult: Object.keys(fastResult)
+    });
+    
     const workingData1 = alignedData1 || data1;
     const workingData2 = alignedData2 || data2;
+    
+    console.log('🔍 Working data structure:', {
+        workingData1_length: workingData1.length,
+        workingData1_first_5_rows: workingData1.slice(0, 5),
+        workingData2_length: workingData2.length,
+        workingData2_first_5_rows: workingData2.slice(0, 5)
+    });
     
     const headers = ['Source'];
     const realHeaders = workingData1[0] || commonColumns;
     realHeaders.forEach(header => headers.push(String(header || '')));
+    
+    console.log('🔍 Headers for export:', { realHeaders, exportHeaders: headers });
     
     const data = [headers];
     const formatting = {};
@@ -2757,18 +2801,31 @@ async function prepareDataForExportFast(fastResult, useTolerance = false) {
     // Batch processing for better performance
     const BATCH_SIZE = 1000;
     
-    // Process identical rows (limit to prevent huge files)
-    const maxIdentical = Math.min(identical.length, identical.length > 10000 ? 500 : 2000);
+    // Process ALL identical rows (remove artificial limit)
+    const maxIdentical = identical.length;
+    console.log(`🔍 Processing ${maxIdentical} identical rows for export`);
     
     for (let batchStart = 0; batchStart < maxIdentical; batchStart += BATCH_SIZE) {
         const batchEnd = Math.min(batchStart + BATCH_SIZE, maxIdentical);
         const batch = identical.slice(batchStart, batchEnd);
         
         batch.forEach(identicalPair => {
-            const row1Index = identicalPair.row1 - 1;
-            const row1 = workingData1[row1Index + 1];
+            // Fix index calculation - DuckDB returns data-relative indices, add 1 to skip header
+            const row1Index = identicalPair.row1 + 1; // Add 1 to skip header row
+            const row1 = workingData1[row1Index];
             
-            if (!row1) return;
+            console.log('🔍 Identical pair access:', { 
+                identicalPair, 
+                originalIndex: identicalPair.row1,
+                row1Index, 
+                row1: row1,
+                workingData1Length: workingData1.length 
+            });
+            
+            if (!row1) {
+                console.log('⚠️ Missing row1 for identical pair:', { row1Index, identicalPair, workingData1Length: workingData1.length });
+                return;
+            }
             
             const dataRow = ['Both files'];
             for (let c = 0; c < realHeaders.length; c++) {
@@ -2789,16 +2846,148 @@ async function prepareDataForExportFast(fastResult, useTolerance = false) {
         }
     }
     
+    // Process similar/different rows (show both versions)
+    if (similar && similar.length > 0) {
+        console.log(`🔍 Processing ${similar.length} similar/different rows for export`);
+        
+        // Pre-create formatting templates for different row types
+        const differentFormatting = {
+            fill: { fgColor: { rgb: 'fff3cd' } }, // Light yellow
+            font: { color: { rgb: '212529' } },
+            border: {
+                top: { style: 'thin', color: { rgb: 'D4D4D4' } },
+                bottom: { style: 'thin', color: { rgb: 'D4D4D4' } },
+                left: { style: 'thin', color: { rgb: 'D4D4D4' } },
+                right: { style: 'thin', color: { rgb: 'D4D4D4' } }
+            }
+        };
+        
+        const sourceDifferentFormatting = {
+            ...differentFormatting,
+            font: { color: { rgb: '212529' }, bold: true }
+        };
+        
+        for (let batchStart = 0; batchStart < similar.length; batchStart += BATCH_SIZE) {
+            const batchEnd = Math.min(batchStart + BATCH_SIZE, similar.length);
+            const batch = similar.slice(batchStart, batchEnd);
+            
+            batch.forEach(similarPair => {
+                // Fix index calculation - DuckDB returns data-relative indices, add 1 to skip header
+                const row1Index = similarPair.row1 + 1; // Add 1 to skip header row
+                const row1 = workingData1[row1Index];
+                
+                const row2Index = similarPair.row2 + 1; // Add 1 to skip header row  
+                const row2 = workingData2[row2Index];
+                
+                console.log('🔍 Similar pair access:', { 
+                    similarPair, 
+                    originalIndex1: similarPair.row1,
+                    originalIndex2: similarPair.row2,
+                    row1Index, row2Index,
+                    row1: row1,
+                    row2: row2,
+                    workingData1Length: workingData1.length,
+                    workingData2Length: workingData2.length
+                });
+                
+                if (row1 && row2) {
+                    // Add row from file 1
+                    const dataRow1 = [file1Name];
+                    for (let c = 0; c < realHeaders.length; c++) {
+                        const value1 = row1[c] !== undefined ? String(row1[c]) : '';
+                        const value2 = row2[c] !== undefined ? String(row2[c]) : '';
+                        
+                        dataRow1.push(value1);
+                        
+                        // Check if this cell differs from corresponding cell in file 2
+                        const isDifferent = value1.toLowerCase().trim() !== value2.toLowerCase().trim();
+                        
+                        if (isDifferent) {
+                            // Red formatting for different cells
+                            formatting[XLSX.utils.encode_cell({ r: rowIndex, c: c + 1 })] = {
+                                fill: { fgColor: { rgb: 'f8d7da' } }, // Light red background
+                                font: { color: { rgb: 'dc3545' }, bold: true }, // Red text, bold
+                                border: {
+                                    top: { style: 'thin', color: { rgb: 'D4D4D4' } },
+                                    bottom: { style: 'thin', color: { rgb: 'D4D4D4' } },
+                                    left: { style: 'thin', color: { rgb: 'D4D4D4' } },
+                                    right: { style: 'thin', color: { rgb: 'D4D4D4' } }
+                                }
+                            };
+                        } else {
+                            // Normal formatting for same cells
+                            formatting[XLSX.utils.encode_cell({ r: rowIndex, c: c + 1 })] = { ...differentFormatting };
+                        }
+                    }
+                    
+                    data.push(dataRow1);
+                    formatting[XLSX.utils.encode_cell({ r: rowIndex, c: 0 })] = { ...sourceDifferentFormatting };
+                    rowIndex++;
+                    
+                    // Add row from file 2
+                    const dataRow2 = [file2Name];
+                    for (let c = 0; c < realHeaders.length; c++) {
+                        const value1 = row1[c] !== undefined ? String(row1[c]) : '';
+                        const value2 = row2[c] !== undefined ? String(row2[c]) : '';
+                        
+                        dataRow2.push(value2);
+                        
+                        // Check if this cell differs from corresponding cell in file 1
+                        const isDifferent = value1.toLowerCase().trim() !== value2.toLowerCase().trim();
+                        
+                        if (isDifferent) {
+                            // Red formatting for different cells
+                            formatting[XLSX.utils.encode_cell({ r: rowIndex, c: c + 1 })] = {
+                                fill: { fgColor: { rgb: 'f8d7da' } }, // Light red background
+                                font: { color: { rgb: 'dc3545' }, bold: true }, // Red text, bold
+                                border: {
+                                    top: { style: 'thin', color: { rgb: 'D4D4D4' } },
+                                    bottom: { style: 'thin', color: { rgb: 'D4D4D4' } },
+                                    left: { style: 'thin', color: { rgb: 'D4D4D4' } },
+                                    right: { style: 'thin', color: { rgb: 'D4D4D4' } }
+                                }
+                            };
+                        } else {
+                            // Normal formatting for same cells
+                            formatting[XLSX.utils.encode_cell({ r: rowIndex, c: c + 1 })] = { ...differentFormatting };
+                        }
+                    }
+                    
+                    data.push(dataRow2);
+                    formatting[XLSX.utils.encode_cell({ r: rowIndex, c: 0 })] = { ...sourceDifferentFormatting };
+                    rowIndex++;
+                } else {
+                    if (!row1) {
+                        console.log('⚠️ Missing row1 for similar pair:', { row1Index, similarPair, workingData1Length: workingData1.length });
+                    }
+                    if (!row2) {
+                        console.log('⚠️ Missing row2 for similar pair:', { row2Index, similarPair, workingData2Length: workingData2.length });
+                    }
+                }
+            });
+            
+            // Allow UI breathing room for large datasets
+            if (batchEnd < similar.length && (batchEnd % (BATCH_SIZE * 5)) === 0) {
+                await new Promise(resolve => setTimeout(resolve, 1));
+            }
+        }
+    }
+    
+    console.log(`🔍 Processing ${onlyInTable1.length} rows only in table 1 for export`);
+    
     // Process table1-only rows efficiently
     for (let batchStart = 0; batchStart < onlyInTable1.length; batchStart += BATCH_SIZE) {
         const batchEnd = Math.min(batchStart + BATCH_SIZE, onlyInTable1.length);
         const batch = onlyInTable1.slice(batchStart, batchEnd);
         
         batch.forEach(diff => {
-            const row1Index = diff.row1 - 1;
-            const row1 = workingData1[row1Index + 1];
+            const row1Index = diff.row1 + 1; // Add 1 to skip header row
+            const row1 = workingData1[row1Index];
             
-            if (!row1) return;
+            if (!row1) {
+                console.log('⚠️ Missing row1 for table1-only:', { row1Index, diff, workingData1Length: workingData1.length });
+                return;
+            }
             
             const dataRow = [file1Name];
             for (let c = 0; c < realHeaders.length; c++) {
@@ -2818,16 +3007,21 @@ async function prepareDataForExportFast(fastResult, useTolerance = false) {
         }
     }
     
+    console.log(`🔍 Processing ${onlyInTable2.length} rows only in table 2 for export`);
+    
     // Process table2-only rows efficiently
     for (let batchStart = 0; batchStart < onlyInTable2.length; batchStart += BATCH_SIZE) {
         const batchEnd = Math.min(batchStart + BATCH_SIZE, onlyInTable2.length);
         const batch = onlyInTable2.slice(batchStart, batchEnd);
         
         batch.forEach(diff => {
-            const row2Index = diff.row2 - 1;
-            const row2 = workingData2[row2Index + 1];
+            const row2Index = diff.row2 + 1; // Add 1 to skip header row
+            const row2 = workingData2[row2Index];
             
-            if (!row2) return;
+            if (!row2) {
+                console.log('⚠️ Missing row2 for table2-only:', { row2Index, diff, workingData2Length: workingData2.length });
+                return;
+            }
             
             const dataRow = [file2Name];
             for (let c = 0; c < realHeaders.length; c++) {
@@ -2848,7 +3042,8 @@ async function prepareDataForExportFast(fastResult, useTolerance = false) {
     }
     
     const duration = performance.now() - startTime;
-    //(`⚡ Fast export completed in ${duration.toFixed(2)}ms - prepared ${data.length - 1} rows for export`);
+    console.log(`⚡ Fast export completed in ${duration.toFixed(2)}ms - prepared ${data.length - 1} rows for export (1 header + ${rowIndex - 1} data rows)`);
+    console.log(`📊 Export breakdown: ${maxIdentical} identical, ${similar ? similar.length : 0} similar/different (exported as ${similar ? similar.length * 2 : 0} rows), ${onlyInTable1.length} only in file 1, ${onlyInTable2.length} only in file 2`);
     
     return { data, formatting, colWidths };
 }

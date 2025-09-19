@@ -1,4 +1,4 @@
-const CACHE_NAME = 'maxpilot-v1.3.42';
+const CACHE_NAME = 'maxpilot-v1.3.52';
 
 const urlsToCache = [
   '/style.css',
@@ -73,7 +73,8 @@ const getCacheStrategy = (request) => {
   // Allow external libraries (DuckDB, etc.) to bypass cache
   if (url.hostname.includes('jsdelivr.net') || 
       url.hostname.includes('unpkg.com') ||
-      url.pathname.includes('duckdb')) {
+      url.pathname.includes('duckdb') ||
+      url.pathname.includes('duckdb-wasm.js')) {
     return networkFirstStrategy;
   }
   
