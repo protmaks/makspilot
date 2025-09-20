@@ -1,8 +1,14 @@
 {
-  "version": "v 5.3 Beta",
-  "releaseDate": "2025-08-30",
+  "version": "v 6.0",
+  "releaseDate": "2025-09-20",
   "description": "Application version configuration",
   "changelog": {
+    "v 6.0": [
+      "🔑 Added ability to manually select key columns for comparison",
+      "🎯 Users can now specify which columns should be used as primary keys",
+      "⚡ Enhanced comparison accuracy with custom key column selection",
+      "🔧 Improved matching algorithm based on user-defined key fields"
+    ],
     "v 5.3 Beta": [
       "📱 Added responsive images for mobile devices",
       "🔄 Replaced main.webp with main_mobile.webp for mobile users",
