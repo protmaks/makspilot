@@ -27,8 +27,10 @@
     <link rel="alternate" hreflang="ru" href="https://makspilot.com/ru/compare/">
     <link rel="alternate" hreflang="pl" href="https://makspilot.com/pl/compare/">
     <link rel="alternate" hreflang="es" href="https://makspilot.com/es/compare/">
-    <link rel="alternate" hreflang="zh-CN" href="https://makspilot.com/zh/compare/">
+    <link rel="alternate" hreflang="zh" href="https://makspilot.com/zh/compare/">
     <link rel="alternate" hreflang="ar" href="https://makspilot.com/ar/compare/">
+    <link rel="alternate" hreflang="pt" href="https://makspilot.com/pt/compare/">
+    <link rel="alternate" hreflang="ja" href="https://makspilot.com/ja/compare/">
     <link rel="alternate" hreflang="de" href="https://makspilot.com/de/compare/">
     <title>MaksPilot - Excel- und CSV-Dateivergleich</title>
     <link rel="icon" type="image/x-icon" href="../../favicon.ico">
@@ -91,7 +93,7 @@
 </header>
     
     <div class="main-content" class="main-content-padded">
-        <h1>Datenvergleich zwischen Excel- und CSV-Dateien - v 5.0 Beta</h1>
+        <h1>Datenvergleich zwischen Excel- und CSV-Dateien</h1>
         <div id="summary"></div>
         <div class="comparison-container">
             <div class="table-container">
@@ -129,15 +131,27 @@
                         <label for="excludeColumns" class="exclude-label">Spalten ausschließen:</label>
                         <input type="text" id="excludeColumns" placeholder="z.B. ID, Zeitstempel, Erstellungsdatum" class="exclude-input">
                     </div>
-                </div>
-                <div class="filter-controls" class="sheet-selector-hidden">
-                    <div class="filter-options">
-                        <label><input type="checkbox" id="hideSameRows"> Gleiche Zeilen ausblenden</label>
-                        <label><input type="checkbox" id="hideDiffColumns"> Unterschiedliche Zeilen ausblenden</label>
-                        <label><input type="checkbox" id="hideNewRows1"> Zeilen nur in Datei 1 ausblenden</label>
-                        <label><input type="checkbox" id="hideNewRows2"> Zeilen nur in Datei 2 ausblenden</label>
+                    <div class="key-columns-container">
+                        <label class="key-columns-label">Schlüsselspalten:</label>
+                        <div class="key-columns-dropdown">
+                            <div class="key-columns-dropdown-button" id="keyColumnsDropdownButton">
+                                <span class="dropdown-text">Schlüsselspalten auswählen...</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </div>
+                            <div class="key-columns-dropdown-content" id="keyColumnsDropdownContent">
+                                <div class="key-columns-placeholder">Dateien laden, um verfügbare Spalten zu sehen</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
+            </div>
+        </div>
+        <div class="filter-controls filter-controls-hidden">
+            <div class="filter-options">
+                <label><input type="checkbox" id="hideSameRows"> Gleiche Zeilen ausblenden</label>
+                <label><input type="checkbox" id="hideDiffColumns"> Unterschiedliche Zeilen ausblenden</label>
+                <label><input type="checkbox" id="hideNewRows1"> Zeilen nur in Datei 1 ausblenden</label>
+                <label><input type="checkbox" id="hideNewRows2"> Zeilen nur in Datei 2 ausblenden</label>
             </div>
         </div>
     </div>
@@ -161,6 +175,9 @@
     
     <!-- Load the export functions -->
     <script src="../../javascript/export.js"></script>
+    
+    <!-- Load the key columns functionality -->
+    <script src="../../javascript/key-columns.js"></script>
     
     <!-- Load the shared header -->
     <script src="../../javascript/script.js"></script>

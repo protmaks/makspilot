@@ -3086,10 +3086,18 @@ async function performComparison() {
                     debouncedUpdateKeyColumnsOptions(true);
                 }
                 
-                // Set selected columns after a brief delay
+                // Set selected columns after a brief delay with retry logic
                 setTimeout(() => {
                     setSelectedKeyColumns(autoDetectedColumnNames);
-                    console.log('🔑 Auto-selected key columns:', autoDetectedColumnNames);
+                    
+                    // Verify if selection was successful and retry if needed
+                    setTimeout(() => {
+                        const currentlySelected = (typeof getSelectedKeyColumns === 'function') ? getSelectedKeyColumns() : [];
+                        if (currentlySelected.length === 0) {
+                            console.warn('⚠️ Auto-selection failed, retrying...');
+                            setSelectedKeyColumns(autoDetectedColumnNames);
+                        }
+                    }, 100);
                     
                     // Show brief notification to user about auto-selection
                     const keyColumnsLabel = document.querySelector('.key-columns-label');
@@ -3104,7 +3112,7 @@ async function performComparison() {
                             keyColumnsLabel.textContent = originalText;
                         }, 3000);
                     }
-                }, 200);
+                }, 500); // Increased delay
             }
         }
     }
@@ -3282,13 +3290,115 @@ async function performComparison() {
         loadingDiv.remove();
     }
 
+    // Get selected key columns for row key generation
+    let keyColumnIndexes = [];
+    
+    if (selectedKeyColumns.length > 0) {
+        // Convert selected column names to indexes in the filtered headers
+        keyColumnIndexes = selectedKeyColumns.map(columnName => {
+            const index = filteredHeader1.indexOf(columnName);
+            return index !== -1 ? index : null;
+        }).filter(index => index !== null);
+        
+        // If too many columns are selected as keys, show info to user
+        if (selectedKeyColumns.length > filteredHeader1.length * 0.8) {
+            
+            // Get current language
+            const currentLang = window.location.pathname.includes('/ru/') ? 'ru' : 
+                               window.location.pathname.includes('/pl/') ? 'pl' :
+                               window.location.pathname.includes('/es/') ? 'es' :
+                               window.location.pathname.includes('/de/') ? 'de' :
+                               window.location.pathname.includes('/ja/') ? 'ja' :
+                               window.location.pathname.includes('/pt/') ? 'pt' :
+                               window.location.pathname.includes('/zh/') ? 'zh' :
+                               window.location.pathname.includes('/ar/') ? 'ar' : 'en';
+            
+            const messages = {
+                'ru': {
+                    title: 'Строгое сравнение по ключам',
+                    text: `Вы выбрали ${selectedKeyColumns.length} из ${filteredHeader1.length} колонок как ключевые. Это найдет только строки, идентичные во всех выбранных колонках.`,
+                    tip: 'Совет: Для более гибкого сравнения выберите меньше ключевых колонок (обычно 1-3 самых важных).'
+                },
+                'pl': {
+                    title: 'Ścisłe porównanie kluczy',
+                    text: `Wybrano ${selectedKeyColumns.length} z ${filteredHeader1.length} kolumn jako kluczowe. To znajdzie tylko wiersze identyczne we wszystkich wybranych kolumnach.`,
+                    tip: 'Wskazówka: Dla bardziej elastycznego dopasowania wybierz mniej kolumn kluczowych (zwykle 1-3 najważniejsze).'
+                },
+                'es': {
+                    title: 'Comparación estricta de claves',
+                    text: `Has seleccionado ${selectedKeyColumns.length} de ${filteredHeader1.length} columnas como claves. Esto solo coincidirá con filas idénticas en todas las columnas seleccionadas.`,
+                    tip: 'Consejo: Para una coincidencia más flexible, selecciona menos columnas clave (típicamente 1-3 más importantes).'
+                },
+                'de': {
+                    title: 'Strenger Schlüsselvergleich',
+                    text: `Sie haben ${selectedKeyColumns.length} von ${filteredHeader1.length} Spalten als Schlüssel ausgewählt. Dies wird nur Zeilen finden, die in allen ausgewählten Spalten identisch sind.`,
+                    tip: 'Tipp: Für flexiblere Übereinstimmung wählen Sie weniger Schlüsselspalten (normalerweise 1-3 wichtigste).'
+                },
+                'ja': {
+                    title: '厳密なキー比較',
+                    text: `${filteredHeader1.length}列のうち${selectedKeyColumns.length}列をキーとして選択しました。選択したすべての列で同一の行のみが一致します。`,
+                    tip: 'ヒント: より柔軟なマッチングには、より少ないキー列を選択してください（通常1-3の最も重要なもの）。'
+                },
+                'pt': {
+                    title: 'Comparação rigorosa de chaves',
+                    text: `Você selecionou ${selectedKeyColumns.length} de ${filteredHeader1.length} colunas como chaves. Isso só encontrará linhas idênticas em todas as colunas selecionadas.`,
+                    tip: 'Dica: Para correspondência mais flexível, selecione menos colunas-chave (tipicamente 1-3 mais importantes).'
+                },
+                'zh': {
+                    title: '严格的键比较',
+                    text: `您已选择 ${selectedKeyColumns.length} 个列（共 ${filteredHeader1.length} 个）作为键。这将只匹配在所有选定列中完全相同的行。`,
+                    tip: '提示：为了更灵活的匹配，请选择较少的键列（通常是1-3个最重要的）。'
+                },
+                'ar': {
+                    title: 'مقارنة المفاتيح الصارمة',
+                    text: `لقد اخترت ${selectedKeyColumns.length} من أصل ${filteredHeader1.length} أعمدة كمفاتيح. هذا سيطابق فقط الصفوف المتطابقة في جميع الأعمدة المحددة.`,
+                    tip: 'نصيحة: للمطابقة المرنة، اختر أعمدة مفاتيح أقل (عادة 1-3 الأهم).'
+                },
+                'en': {
+                    title: 'Strict Key Comparison',
+                    text: `You have selected ${selectedKeyColumns.length} out of ${filteredHeader1.length} columns as keys. This will only match rows that are identical in all selected columns.`,
+                    tip: 'Tip: For more flexible matching, select fewer key columns (typically 1-3 most important ones).'
+                }
+            };
+            
+            const msg = messages[currentLang];
+            
+            // Show user notification about strict comparison
+            const resultDiv = document.getElementById('result');
+            if (resultDiv) {
+                resultDiv.innerHTML = `
+                    <div style="background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 12px; margin: 15px 0; border-radius: 6px; font-size: 14px;">
+                        <strong>ℹ️ ${msg.title}:</strong> ${msg.text}
+                        <br><small>${msg.tip}</small>
+                    </div>
+                `;
+                resultDiv.style.display = 'block';
+                
+                // Hide the notification after comparison starts
+                setTimeout(() => {
+                    if (resultDiv.innerHTML.includes(msg.title)) {
+                        resultDiv.innerHTML = '';
+                        resultDiv.style.display = 'none';
+                    }
+                }, 4000);
+            }
+        }
+    }
+    
     function rowKey(row) { 
-        if (toleranceMode) {
-            
-            
-            return JSON.stringify(row.map(x => (x !== undefined ? x.toString() : ''))); 
+        let keyValues;
+        
+        // Use selected key columns if available, otherwise use all columns
+        if (keyColumnIndexes.length > 0) {
+            keyValues = keyColumnIndexes.map(index => row[index] !== undefined ? row[index] : '');
         } else {
-            return JSON.stringify(row.map(x => (x !== undefined ? x.toString().toUpperCase() : ''))); 
+            keyValues = row;
+        }
+        
+        if (toleranceMode) {
+            return JSON.stringify(keyValues.map(x => (x !== undefined ? x.toString() : ''))); 
+        } else {
+            return JSON.stringify(keyValues.map(x => (x !== undefined ? x.toString().toUpperCase() : ''))); 
         }
     }
     
@@ -3759,6 +3869,21 @@ function smartDetectKeyColumns(headers, data) {
     
     
     return keyColumns;
+}
+
+// Helper function to get key column indexes from selected columns or auto-detection
+function getKeyColumnIndexes(headers, selectedKeyColumns) {
+    if (selectedKeyColumns && selectedKeyColumns.length > 0) {
+        // Convert selected column names to indexes
+        return selectedKeyColumns.map(columnName => {
+            const index = headers.indexOf(columnName);
+            return index !== -1 ? index : null;
+        }).filter(index => index !== null);
+    } else {
+        // Use auto-detection
+        const combinedData = [headers]; // Simplified for this function
+        return smartDetectKeyColumns(headers, combinedData);
+    }
 }
 
 

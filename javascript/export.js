@@ -46,14 +46,6 @@ async function exportToExcel() {
         }
     }
     
-    console.log('📊 Export to Excel started', {
-        currentPairsLength: currentPairs ? currentPairs.length : 0,
-        fullComparisonPairsLength: window.fullComparisonPairs ? window.fullComparisonPairs.length : 0,
-        hasFastResult: !!(window.currentFastResult),
-        hasFastComparator: !!(window.MaxPilotDuckDB && window.MaxPilotDuckDB.prepareDataForExportFast),
-        fastComparatorMode: window.MaxPilotDuckDB?.fastComparator?.mode
-    });
-    
     // Run performance benchmark
     if (window.MaxPilotDuckDB && window.MaxPilotDuckDB.benchmarkExportPerformance) {
         await window.MaxPilotDuckDB.benchmarkExportPerformance();
@@ -169,10 +161,7 @@ function showFastExportSuccess(rowCount, totalTime = null) {
 
 async function createStyledHTMLTable(exportData) {
     const startTime = performance.now();
-    console.log('⚡ Generating HTML for Excel export...', {
-        rows: exportData.data.length,
-        columns: exportData.data[0]?.length || 0
-    });
+    console.log('⚡ Generating HTML for Excel export...', { rows: exportData.data.length, columns: exportData.data[0]?.length || 0 });
     
     // Pre-build HTML parts for better performance
     const htmlParts = [];

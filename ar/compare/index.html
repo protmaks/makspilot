@@ -24,8 +24,11 @@
     <link rel="alternate" hreflang="ru" href="https://makspilot.com/ru/compare/">
     <link rel="alternate" hreflang="pl" href="https://makspilot.com/pl/compare/">
     <link rel="alternate" hreflang="es" href="https://makspilot.com/es/compare/">
-    <link rel="alternate" hreflang="zh-CN" href="https://makspilot.com/zh/compare/">
+    <link rel="alternate" hreflang="zh" href="https://makspilot.com/zh/compare/">
     <link rel="alternate" hreflang="ar" href="https://makspilot.com/ar/compare/">
+    <link rel="alternate" hreflang="pt" href="https://makspilot.com/pt/compare/">
+    <link rel="alternate" hreflang="ja" href="https://makspilot.com/ja/compare/">
+    <link rel="alternate" hreflang="de" href="https://makspilot.com/de/compare/">
     <title>MaksPilot - مقارنة ملفات Excel و CSV</title>
     <link rel="icon" type="image/x-icon" href="../../favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -87,7 +90,7 @@
 </header>
     
     <div class="main-content" class="main-content-padded">
-        <h1>قارن البيانات بين ملفات Excel و CSV - v 5.0 Beta</h1>
+        <h1>قارن البيانات بين ملفات Excel و CSV</h1>
         <div id="summary"></div>
         <div class="comparison-container">
             <div class="table-container">
@@ -125,15 +128,27 @@
                         <label for="excludeColumns" class="exclude-label">استبعد الأعمدة:</label>
                         <input type="text" id="excludeColumns" placeholder="مثل: المعرف، الطابع الزمني، تاريخ الإنشاء" class="exclude-input">
                     </div>
+                    <div class="key-columns-container">
+                        <label class="key-columns-label">الأعمدة الرئيسية:</label>
+                        <div class="key-columns-dropdown">
+                            <div class="key-columns-dropdown-button" id="keyColumnsDropdownButton">
+                                <span class="dropdown-text">اختر الأعمدة الرئيسية...</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </div>
+                            <div class="key-columns-dropdown-content" id="keyColumnsDropdownContent">
+                                <div class="key-columns-placeholder">قم بتحميل الملفات لرؤية الأعمدة المتاحة</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="filter-controls" class="sheet-selector-hidden">
-                    <div class="filter-options">
-                        <label><input type="checkbox" id="hideSameRows"> إخفاء الصفوف المتشابهة</label>
-                        <label><input type="checkbox" id="hideDiffColumns"> إخفاء الصفوف المختلفة</label>
-                        <label><input type="checkbox" id="hideNewRows1"> إخفاء الصفوف في الملف 1 فقط</label>
-                        <label><input type="checkbox" id="hideNewRows2"> إخفاء الصفوف في الملف 2 فقط</label>
-                    </div>
-                    </div>
+            </div>
+        </div>
+        <div class="filter-controls filter-controls-hidden">
+            <div class="filter-options">
+                <label><input type="checkbox" id="hideSameRows"> إخفاء الصفوف المتشابهة</label>
+                <label><input type="checkbox" id="hideDiffColumns"> إخفاء الصفوف المختلفة</label>
+                <label><input type="checkbox" id="hideNewRows1"> إخفاء الصفوف في الملف 1 فقط</label>
+                <label><input type="checkbox" id="hideNewRows2"> إخفاء الصفوف في الملف 2 فقط</label>
             </div>
         </div>
     </div>
@@ -154,6 +169,7 @@
 
     <script src="../../javascript/functions.js"></script>
     <script src="../../javascript/export.js"></script>
+    <script src="../../javascript/key-columns.js"></script>
     <script src="../../javascript/script.js"></script>
     
     <script>

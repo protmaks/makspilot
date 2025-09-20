@@ -26,9 +26,12 @@
     <link rel="alternate" hreflang="ru" href="https://makspilot.com/ru/compare/">
     <link rel="alternate" hreflang="pl" href="https://makspilot.com/pl/compare/">
     <link rel="alternate" hreflang="es" href="https://makspilot.com/es/compare/">
-    <link rel="alternate" hreflang="zh-CN" href="https://makspilot.com/zh/compare/">
+    <link rel="alternate" hreflang="zh" href="https://makspilot.com/zh/compare/">
     <link rel="alternate" hreflang="ar" href="https://makspilot.com/ar/compare/">
-    <title>MaksPilot - Comparación de Archivos Excel y CSV</title>
+    <link rel="alternate" hreflang="pt" href="https://makspilot.com/pt/compare/">
+    <link rel="alternate" hreflang="ja" href="https://makspilot.com/ja/compare/">
+    <link rel="alternate" hreflang="de" href="https://makspilot.com/de/compare/">
+    <title>Comparación de Archivos Excel y CSV - MaksPilot</title>
     <link rel="icon" type="image/x-icon" href="../../favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -90,7 +93,7 @@
 </header>
     
     <div class="main-content" class="main-content-padded"><!-- Account for fixed header -->
-        <h1>Compara Datos Entre Archivos Excel y CSV - v 5.0 Beta</h1>
+        <h1>Compara Datos Entre Archivos Excel y CSV</h1>
         <div id="summary"></div>
         <div class="comparison-container">
             <div class="table-container">
@@ -128,15 +131,27 @@
                         <label for="excludeColumns" class="exclude-label">Excluir columnas:</label>
                         <input type="text" id="excludeColumns" placeholder="ej., ID, Marca de tiempo, Fecha de creación" class="exclude-input">
                     </div>
-                </div>
-                <div class="filter-controls" class="sheet-selector-hidden">
-                    <div class="filter-options">
-                        <label><input type="checkbox" id="hideSameRows"> Ocultar filas IGUALES</label>
-                        <label><input type="checkbox" id="hideDiffColumns"> Ocultar filas DIFERENTES</label>
-                        <label><input type="checkbox" id="hideNewRows1"> Ocultar filas solo en archivo 1</label>
-                        <label><input type="checkbox" id="hideNewRows2"> Ocultar filas solo en archivo 2</label>
+                    <div class="key-columns-container">
+                        <label class="key-columns-label">Columnas clave:</label>
+                        <div class="key-columns-dropdown">
+                            <div class="key-columns-dropdown-button" id="keyColumnsDropdownButton">
+                                <span class="dropdown-text">Seleccionar columnas clave...</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </div>
+                            <div class="key-columns-dropdown-content" id="keyColumnsDropdownContent">
+                                <div class="key-columns-placeholder">Carga archivos para ver las columnas disponibles</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
+            </div>
+        </div>
+        <div class="filter-controls filter-controls-hidden">
+            <div class="filter-options">
+                <label><input type="checkbox" id="hideSameRows"> Ocultar filas IGUALES</label>
+                <label><input type="checkbox" id="hideDiffColumns"> Ocultar filas DIFERENTES</label>
+                <label><input type="checkbox" id="hideNewRows1"> Ocultar filas solo en archivo 1</label>
+                <label><input type="checkbox" id="hideNewRows2"> Ocultar filas solo en archivo 2</label>
             </div>
         </div>
     </div>
@@ -157,7 +172,12 @@
 
     <!-- Load the comparison functions -->
     <script src="../../javascript/functions.js"></script>
+    
+    <!-- Load the export functions -->
     <script src="../../javascript/export.js"></script>
+    
+    <!-- Load the key columns functionality -->
+    <script src="../../javascript/key-columns.js"></script>
     
     <!-- Load the shared header -->
     <script src="../../javascript/script.js"></script>

@@ -216,6 +216,75 @@ function updateKeyColumnsOptionsInternal(forceUpdate = false) {
     
     // Create checkboxes for each header
     if (allHeaders.size > 0) {
+        // Add control buttons
+        const controlsWrapper = document.createElement('div');
+        controlsWrapper.className = 'key-columns-controls';
+        controlsWrapper.style.cssText = 'padding: 8px; border-bottom: 1px solid #eee; display: flex; gap: 8px; justify-content: space-between;';
+        
+        // Get current language for button text
+        const currentLang = window.location.pathname.includes('/ru/') ? 'ru' : 
+                           window.location.pathname.includes('/pl/') ? 'pl' :
+                           window.location.pathname.includes('/es/') ? 'es' :
+                           window.location.pathname.includes('/de/') ? 'de' :
+                           window.location.pathname.includes('/ja/') ? 'ja' :
+                           window.location.pathname.includes('/pt/') ? 'pt' :
+                           window.location.pathname.includes('/zh/') ? 'zh' :
+                           window.location.pathname.includes('/ar/') ? 'ar' : 'en';
+        
+        const selectAllTexts = {
+            'ru': 'Выбрать все',
+            'pl': 'Zaznacz wszystkie',
+            'es': 'Seleccionar todo',
+            'de': 'Alle auswählen',
+            'ja': 'すべて選択',
+            'pt': 'Selecionar tudo',
+            'zh': '全选',
+            'ar': 'تحديد الكل',
+            'en': 'Select All'
+        };
+        
+        const clearAllTexts = {
+            'ru': 'Очистить все',
+            'pl': 'Wyczyść wszystkie',
+            'es': 'Limpiar todo',
+            'de': 'Alle löschen',
+            'ja': 'すべてクリア',
+            'pt': 'Limpar tudo',
+            'zh': '清除全部',
+            'ar': 'مسح الكل',
+            'en': 'Clear All'
+        };
+        
+        const selectAllBtn = document.createElement('button');
+        selectAllBtn.textContent = selectAllTexts[currentLang];
+        selectAllBtn.style.cssText = 'padding: 4px 8px; border: 1px solid #007bff; border-radius: 3px; background: #007bff; color: white; cursor: pointer; font-size: 12px;';
+        selectAllBtn.onclick = () => {
+            const checkboxes = dropdownContent.querySelectorAll('input[name="keyColumns"]');
+            checkboxes.forEach(cb => {
+                cb.checked = true;
+                const wrapper = cb.closest('.key-column-checkbox');
+                if (wrapper) updateCheckboxStyle(wrapper, true);
+            });
+            updateDropdownButtonText();
+        };
+        
+        const clearAllBtn = document.createElement('button');
+        clearAllBtn.textContent = clearAllTexts[currentLang];
+        clearAllBtn.style.cssText = 'padding: 4px 8px; border: 1px solid #6c757d; border-radius: 3px; background: #6c757d; color: white; cursor: pointer; font-size: 12px;';
+        clearAllBtn.onclick = () => {
+            const checkboxes = dropdownContent.querySelectorAll('input[name="keyColumns"]');
+            checkboxes.forEach(cb => {
+                cb.checked = false;
+                const wrapper = cb.closest('.key-column-checkbox');
+                if (wrapper) updateCheckboxStyle(wrapper, false);
+            });
+            updateDropdownButtonText();
+        };
+        
+        controlsWrapper.appendChild(selectAllBtn);
+        controlsWrapper.appendChild(clearAllBtn);
+        dropdownContent.appendChild(controlsWrapper);
+        
         Array.from(allHeaders).sort().forEach(header => {
             const checkboxWrapper = document.createElement('div');
             checkboxWrapper.className = 'key-column-checkbox';
@@ -368,14 +437,48 @@ function updateDropdownButtonText() {
     
     if (!dropdownText) return;
     
+    // Get current language for text
+    const currentLang = window.location.pathname.includes('/ru/') ? 'ru' : 
+                       window.location.pathname.includes('/pl/') ? 'pl' :
+                       window.location.pathname.includes('/es/') ? 'es' :
+                       window.location.pathname.includes('/de/') ? 'de' :
+                       window.location.pathname.includes('/ja/') ? 'ja' :
+                       window.location.pathname.includes('/pt/') ? 'pt' :
+                       window.location.pathname.includes('/zh/') ? 'zh' :
+                       window.location.pathname.includes('/ar/') ? 'ar' : 'en';
+    
+    const selectTexts = {
+        'ru': 'Выберите ключевые колонки...',
+        'pl': 'Wybierz kolumny kluczowe...',
+        'es': 'Seleccionar columnas clave...',
+        'de': 'Schlüsselspalten auswählen...',
+        'ja': 'キー列を選択...',
+        'pt': 'Selecionar colunas-chave...',
+        'zh': '选择关键列...',
+        'ar': 'اختر الأعمدة الرئيسية...',
+        'en': 'Select key columns...'
+    };
+    
+    const columnsSelectedTexts = {
+        'ru': 'колонок выбрано',
+        'pl': 'kolumn wybrane',
+        'es': 'columnas seleccionadas',
+        'de': 'Spalten ausgewählt',
+        'ja': '列が選択されました',
+        'pt': 'colunas selecionadas',
+        'zh': '列已选择',
+        'ar': 'أعمدة محددة',
+        'en': 'columns selected'
+    };
+    
     if (selectedColumns.length === 0) {
-        dropdownText.textContent = 'Select key columns...';
+        dropdownText.textContent = selectTexts[currentLang];
         dropdownText.style.color = '#6c757d';
     } else if (selectedColumns.length === 1) {
         dropdownText.textContent = selectedColumns[0];
         dropdownText.style.color = '#495057';
     } else {
-        dropdownText.textContent = `${selectedColumns.length} columns selected`;
+        dropdownText.textContent = `${selectedColumns.length} ${columnsSelectedTexts[currentLang]}`;
         dropdownText.style.color = '#495057';
     }
 }
@@ -419,7 +522,7 @@ function setSelectedKeyColumns(columnNames) {
         if (typeof debouncedUpdateKeyColumnsOptions === 'function') {
             debouncedUpdateKeyColumnsOptions(true);
         }
-        setTimeout(() => setSelectedKeyColumns(columnNames), 300);
+        setTimeout(() => setSelectedKeyColumns(columnNames), 500); // Increased delay
         return;
     }
     
@@ -432,7 +535,7 @@ function setSelectedKeyColumns(columnNames) {
         columnsToSelect = columnNames.map(index => headers[index]).filter(name => name);
     }
     
-    console.log('🔑 Setting selected key columns:', columnsToSelect);
+    //console.log('🔑 Setting selected key columns:', columnsToSelect);
     
     // Find and check the corresponding checkboxes
     let checkedCount = 0;
@@ -448,13 +551,13 @@ function setSelectedKeyColumns(columnNames) {
                 updateCheckboxStyle(wrapper, true);
             }
             
-            console.log(`✅ Selected column: ${columnName}`);
+            //console.log(`✅ Selected column: ${columnName}`);
         } else {
             console.warn('⚠️ Checkbox not found for column:', columnName);
         }
     });
     
-    console.log(`🎯 Successfully selected ${checkedCount} out of ${columnsToSelect.length} key columns`);
+    //console.log(`🎯 Successfully selected ${checkedCount} out of ${columnsToSelect.length} key columns`);
     
     // Update dropdown button text
     updateDropdownButtonText();

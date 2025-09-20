@@ -25,8 +25,11 @@
     <link rel="alternate" hreflang="ru" href="https://makspilot.com/ru/compare/">
     <link rel="alternate" hreflang="pl" href="https://makspilot.com/pl/compare/">
     <link rel="alternate" hreflang="es" href="https://makspilot.com/es/compare/">
-    <link rel="alternate" hreflang="zh-CN" href="https://makspilot.com/zh/compare/">
+    <link rel="alternate" hreflang="zh" href="https://makspilot.com/zh/compare/">
     <link rel="alternate" hreflang="ar" href="https://makspilot.com/ar/compare/">
+    <link rel="alternate" hreflang="pt" href="https://makspilot.com/pt/compare/">
+    <link rel="alternate" hreflang="ja" href="https://makspilot.com/ja/compare/">
+    <link rel="alternate" hreflang="de" href="https://makspilot.com/de/compare/">
     <title>MaksPilot - Porównanie plików Excel i CSV</title>
     <link rel="icon" type="image/x-icon" href="../../favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -89,7 +92,7 @@
 </header>
     
     <div class="main-content main-content-padded"><!-- Account for fixed header -->
-        <h1>Porównaj Dane Między Plikami Excel i CSV - v 5.0 Beta</h1>
+        <h1>Porównaj Dane Między Plikami Excel i CSV</h1>
         <div id="summary"></div>
         <div class="comparison-container">
             <div class="table-container">
@@ -127,15 +130,27 @@
                         <label for="excludeColumns" class="exclude-label">Wyklucz kolumny:</label>
                         <input type="text" id="excludeColumns" placeholder="np. ID, Czas, DataUtworzenia" class="exclude-input">
                     </div>
+                    <div class="key-columns-container">
+                        <label class="key-columns-label">Kolumny kluczowe:</label>
+                        <div class="key-columns-dropdown">
+                            <div class="key-columns-dropdown-button" id="keyColumnsDropdownButton">
+                                <span class="dropdown-text">Wybierz kolumny kluczowe...</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </div>
+                            <div class="key-columns-dropdown-content" id="keyColumnsDropdownContent">
+                                <div class="key-columns-placeholder">Załaduj pliki, aby zobaczyć dostępne kolumny</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="filter-controls filter-controls-hidden">
-                    <div class="filter-options">
-                        <label><input type="checkbox" id="hideSameRows"> Ukryj IDENTYCZNE wiersze</label>
-                        <label><input type="checkbox" id="hideDiffColumns"> Ukryj RÓŻNE wiersze</label>
-                        <label><input type="checkbox" id="hideNewRows1"> Ukryj wiersze tylko w pliku 1</label>
-                        <label><input type="checkbox" id="hideNewRows2"> Ukryj wiersze tylko w pliku 2</label>
-                    </div>
-                    </div>
+            </div>
+        </div>
+        <div class="filter-controls filter-controls-hidden">
+            <div class="filter-options">
+                <label><input type="checkbox" id="hideSameRows"> Ukryj IDENTYCZNE wiersze</label>
+                <label><input type="checkbox" id="hideDiffColumns"> Ukryj RÓŻNE wiersze</label>
+                <label><input type="checkbox" id="hideNewRows1"> Ukryj wiersze tylko w pliku 1</label>
+                <label><input type="checkbox" id="hideNewRows2"> Ukryj wiersze tylko w pliku 2</label>
             </div>
         </div>
     </div>
@@ -159,6 +174,9 @@
     
     <!-- Load the export functions -->
     <script src="../../javascript/export.js"></script>
+    
+    <!-- Load the key columns functionality -->
+    <script src="../../javascript/key-columns.js"></script>
     
     <!-- Load the shared header -->
     <script src="../../javascript/script.js"></script>

@@ -10,6 +10,25 @@
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="2つのExcelファイルを比較する方法。無料、安全、登録不要 - ファイルをアップロードして、数秒で違いを取得。">
+    <meta name="keywords" content="Excel比較, CSV比較, ファイル差分, オンラインツール, 無料, 安全">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="MaxPilot">
+    <meta property="og:title" content="2つのExcelファイルを比較する方法 | MaksPilot">
+    <meta property="og:description" content="2つのExcelファイルを比較する方法。無料、安全、登録不要 - ファイルをアップロードして、数秒で違いを取得。">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://makspilot.com/ja/compare/">
+    <meta property="og:image" content="https://makspilot.com/img/main.webp">
+    <link rel="canonical" href="https://makspilot.com/ja/compare/">
+    <link rel="alternate" hreflang="en" href="https://makspilot.com/compare/">
+    <link rel="alternate" hreflang="ru" href="https://makspilot.com/ru/compare/">
+    <link rel="alternate" hreflang="pl" href="https://makspilot.com/pl/compare/">
+    <link rel="alternate" hreflang="es" href="https://makspilot.com/es/compare/">
+    <link rel="alternate" hreflang="zh" href="https://makspilot.com/zh/compare/">
+    <link rel="alternate" hreflang="ar" href="https://makspilot.com/ar/compare/">
+    <link rel="alternate" hreflang="pt" href="https://makspilot.com/pt/compare/">
+    <link rel="alternate" hreflang="ja" href="https://makspilot.com/ja/compare/">
+    <link rel="alternate" hreflang="de" href="https://makspilot.com/de/compare/">
     <title>MaksPilot - ExcelとCSVファイル比較</title>
     <link rel="icon" type="image/x-icon" href="../../favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -70,7 +89,7 @@
 </header>
     
     <div class="main-content" class="main-content-padded">
-        <h1>ExcelとCSVファイル間のデータ比較 - v 5.0 Beta</h1>
+        <h1>ExcelとCSVファイル間のデータ比較</h1>
         <div id="summary"></div>
         <div class="comparison-container">
             <div class="table-container">
@@ -108,15 +127,27 @@
                         <label for="excludeColumns" class="exclude-label">除外列:</label>
                         <input type="text" id="excludeColumns" placeholder="例: ID, タイムスタンプ, 作成日" class="exclude-input">
                     </div>
+                    <div class="key-columns-container">
+                        <label class="key-columns-label">キー列:</label>
+                        <div class="key-columns-dropdown">
+                            <div class="key-columns-dropdown-button" id="keyColumnsDropdownButton">
+                                <span class="dropdown-text">キー列を選択...</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </div>
+                            <div class="key-columns-dropdown-content" id="keyColumnsDropdownContent">
+                                <div class="key-columns-placeholder">ファイルを読み込んで利用可能な列を表示</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="filter-controls" class="sheet-selector-hidden">
-                    <div class="filter-options">
-                        <label><input type="checkbox" id="hideSameRows"> 同じ行を非表示</label>
-                        <label><input type="checkbox" id="hideDiffColumns"> 異なる行を非表示</label>
-                        <label><input type="checkbox" id="hideNewRows1"> ファイル1のみの行を非表示</label>
-                        <label><input type="checkbox" id="hideNewRows2"> ファイル2のみの行を非表示</label>
-                    </div>
-                    </div>
+            </div>
+        </div>
+        <div class="filter-controls filter-controls-hidden">
+            <div class="filter-options">
+                <label><input type="checkbox" id="hideSameRows"> 同じ行を非表示</label>
+                <label><input type="checkbox" id="hideDiffColumns"> 異なる行を非表示</label>
+                <label><input type="checkbox" id="hideNewRows1"> ファイル1のみの行を非表示</label>
+                <label><input type="checkbox" id="hideNewRows2"> ファイル2のみの行を非表示</label>
             </div>
         </div>
     </div>
@@ -137,6 +168,7 @@
 
     <script src="../../javascript/functions.js"></script>
     <script src="../../javascript/export.js"></script>
+    <script src="../../javascript/key-columns.js"></script>
     <script src="../../javascript/script.js"></script>
     
     <script>
