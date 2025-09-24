@@ -3069,6 +3069,9 @@ async function performComparison() {
     // Check if key columns are selected, if not - auto-detect and set them
     const selectedKeyColumns = (typeof getSelectedKeyColumns === 'function') ? getSelectedKeyColumns() : [];
     
+    // Early calculation of key column indexes - will be updated later after filtering
+    let keyColumnIndexes = [];
+    
     if (selectedKeyColumns.length === 0) {
         // Auto-detect key columns and set them in UI
         const headers = data1.length > 0 ? data1[0] : (data2.length > 0 ? data2[0] : []);
@@ -3126,18 +3129,16 @@ async function performComparison() {
             const useTolerance = toleranceMode || false;
             const tolerance = window.currentTolerance || 1.5; // Default tolerance value
             
-            // Get selected key columns from UI
-            const selectedKeyColumns = (typeof getSelectedKeyColumns === 'function') ? getSelectedKeyColumns() : [];
+            // For DuckDB, we need to use original headers (not filtered) since it gets original data
             let customKeyColumns = null;
             
             if (selectedKeyColumns && selectedKeyColumns.length > 0) {
-                // Convert selected column names to indexes
-                const headers = data1.length > 0 ? data1[0] : [];
+                // Convert selected column names to indexes in the original headers
+                const originalHeaders = data1.length > 0 ? data1[0] : [];
                 customKeyColumns = selectedKeyColumns.map(columnName => {
-                    const index = headers.indexOf(columnName);
+                    const index = originalHeaders.indexOf(columnName);
                     return index !== -1 ? index : null;
                 }).filter(index => index !== null);
-                
             } 
             const fastResult = await window.MaxPilotDuckDB.compareTablesWithFastComparator(
                 data1, data2, excludedColumns, useTolerance, tolerance, customKeyColumns
@@ -3290,18 +3291,23 @@ async function performComparison() {
         loadingDiv.remove();
     }
 
-    // Get selected key columns for row key generation
-    let keyColumnIndexes = [];
-    
+    // Update key column indexes based on filtered headers
     if (selectedKeyColumns.length > 0) {
         // Convert selected column names to indexes in the filtered headers
         keyColumnIndexes = selectedKeyColumns.map(columnName => {
             const index = filteredHeader1.indexOf(columnName);
             return index !== -1 ? index : null;
         }).filter(index => index !== null);
-        
-        // If too many columns are selected as keys, show info to user
-        if (selectedKeyColumns.length > filteredHeader1.length * 0.8) {
+    } else {
+        // Auto-detect key columns if none selected
+        const combinedData = [filteredHeader1, ...body1, ...body2];
+        keyColumnIndexes = smartDetectKeyColumns(filteredHeader1, combinedData);
+    }
+    
+
+    
+    // If too many columns are selected as keys, show info to user (only for manually selected columns)
+    if (selectedKeyColumns.length > 0 && selectedKeyColumns.length > filteredHeader1.length * 0.8) {
             
             // Get current language
             const currentLang = window.location.pathname.includes('/ru/') ? 'ru' : 
@@ -3383,7 +3389,6 @@ async function performComparison() {
                 }, 4000);
             }
         }
-    }
     
     function rowKey(row) { 
         let keyValues;
@@ -3395,11 +3400,9 @@ async function performComparison() {
             keyValues = row;
         }
         
-        if (toleranceMode) {
-            return JSON.stringify(keyValues.map(x => (x !== undefined ? x.toString() : ''))); 
-        } else {
-            return JSON.stringify(keyValues.map(x => (x !== undefined ? x.toString().toUpperCase() : ''))); 
-        }
+        // For row keys, always use exact values (case-insensitive for text)
+        // Tolerance mode should only apply to detailed comparison, not to row key generation
+        return JSON.stringify(keyValues.map(x => (x !== undefined ? x.toString().toUpperCase() : ''))); 
     }
     
     let set1, set2, only1, only2, both;
@@ -3523,13 +3526,15 @@ async function performComparison() {
     const totalColsForCheck = finalAllCols;
     const isLargeFile = totalRowsForCheck > DETAILED_TABLE_LIMIT || totalColsForCheck > DETAILED_COLS_LIMIT;
     
+    const userSelectedKeys = selectedKeyColumns.length > 0; // Track if user manually selected key columns
+    
     if (isLargeFile) {
         // For large files, do quick comparison first (only first 100 different rows)
-        performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols, true, tableHeaders, true);
+        performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols, true, tableHeaders, true, keyColumnIndexes, userSelectedKeys);
         return;
     } else {
         // For smaller files, render detailed table
-        performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols, false, tableHeaders, false);
+        performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols, false, tableHeaders, false, keyColumnIndexes, userSelectedKeys);
     }
 }
 
@@ -3887,14 +3892,18 @@ function getKeyColumnIndexes(headers, selectedKeyColumns) {
 }
 
 
-function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols, isLargeFile, tableHeaders, quickModeOnly = false) {
+function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols, isLargeFile, tableHeaders, quickModeOnly = false, keyColumnIndexes = [], userSelectedKeys = false) {
     
     
     const combinedData = [finalHeaders, ...body1, ...body2];
     
-    // Get selected key columns or use auto-detection
-    const selectedKeyColumns = (typeof getSelectedKeyColumns === 'function') ? getSelectedKeyColumns() : [];
-    const keyColumnIndexes = (typeof getKeyColumnIndexes === 'function') ? getKeyColumnIndexes(finalHeaders, selectedKeyColumns) : smartDetectKeyColumns(finalHeaders, combinedData);
+    // Use passed keyColumnIndexes (should always be provided now)
+    let actualKeyColumnIndexes = keyColumnIndexes || [];
+    
+
+    
+    // Debug: Log key columns being used in detailed comparison
+
     
     
     let used2 = new Array(body2.length).fill(false);
@@ -3910,7 +3919,7 @@ function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols,
         let keyToleranceMatches = 0; 
         
         
-        const keyColumnsIndexes = keyColumnIndexes;
+        const keyColumnsIndexes = actualKeyColumnIndexes;
         
         for (let i = 0; i < finalAllCols; i++) {
             let valueA = (rowA[i] || '').toString();
@@ -3975,17 +3984,56 @@ function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols,
                 }
             }
             
-            const keyColumnsCount = keyColumnIndexes.length;
-            let minKeyMatches = Math.ceil(keyColumnsCount * 0.6) * 3; 
-            let minTotalMatches = Math.ceil(finalAllCols * 0.5); 
+            const keyColumnsCount = actualKeyColumnIndexes.length;
+            let minKeyMatches, minTotalMatches;
             
-            
-            if (toleranceMode) {
-                minKeyMatches = Math.ceil(keyColumnsCount * 0.8) * 3; 
-                minTotalMatches = Math.ceil(finalAllCols * 0.7); 
+            // If user manually selected key columns, require strict matching
+            if (userSelectedKeys && keyColumnsCount > 0) {
+                // Strict mode: all key columns must match exactly
+                minKeyMatches = keyColumnsCount * 3; // Multiply by 3 because countMatches returns matches * 3
+                minTotalMatches = keyColumnsCount * 3; // All key columns must match (not all columns)
+            } else {
+                // Normal fuzzy matching
+                minKeyMatches = Math.ceil(keyColumnsCount * 0.6) * 3; 
+                minTotalMatches = Math.ceil(finalAllCols * 0.5); 
+                
+                if (toleranceMode) {
+                    minKeyMatches = Math.ceil(keyColumnsCount * 0.8) * 3; 
+                    minTotalMatches = Math.ceil(finalAllCols * 0.7); 
+                }
             }
             
-            if (bestScore >= minKeyMatches || bestScore >= minTotalMatches) {
+            // Special handling when user selected key columns
+            let shouldMatch = false;
+            if (userSelectedKeys && keyColumnsCount > 0) {
+
+                // Strict key matching: check if ALL key columns match exactly
+                let allKeyColumnsMatch = true;
+                for (let colIdx of actualKeyColumnIndexes) {
+                    const valueA = (body1[i][colIdx] || '').toString();
+                    const valueB = (body2[bestIdx][colIdx] || '').toString();
+                    
+                    // In strict key matching mode, always require exact match regardless of tolerance mode
+                    if (toleranceMode) {
+                        const compResult = compareValuesWithTolerance(valueA, valueB);
+                        if (compResult !== 'identical') {  // Only accept identical, not tolerance
+                            allKeyColumnsMatch = false;
+                            break;
+                        }
+                    } else {
+                        if (valueA.toUpperCase() !== valueB.toUpperCase()) {
+                            allKeyColumnsMatch = false;
+                            break;
+                        }
+                    }
+                }
+                shouldMatch = allKeyColumnsMatch;
+            } else {
+                // Normal fuzzy matching based on score thresholds
+                shouldMatch = (bestScore >= minKeyMatches || bestScore >= minTotalMatches);
+            }
+            
+            if (shouldMatch) {
                 const pair = {row1: body1[i], row2: body2[bestIdx]};
                 pairs.push(pair);
                 used2[bestIdx] = true;
