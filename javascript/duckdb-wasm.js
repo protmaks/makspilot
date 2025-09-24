@@ -271,7 +271,17 @@ class FastTableComparator {
 
             // Create SELECT for common columns
             const columnList = commonColumns.map(col => `"${col}"`).join(', ');
-            const whereClause = commonColumns.map(col => `t1."${col}" = t2."${col}"`).join(' AND ');
+            
+            // Create WHERE clause for all common columns using proper comparison logic
+            const whereConditions = [];
+            for (let i = 0; i < commonColumns.length; i++) {
+                const col = commonColumns[i];
+                const colIndex = columnInfo1.findIndex(c => c.name === col);
+                const isKeyCol = keyColumns.includes(colIndex);
+                const condition = createComparisonCondition(col, columnInfo1[colIndex].type, isKeyCol);
+                whereConditions.push(condition);
+            }
+            const whereClause = whereConditions.join(' AND ');
 
             // SQL for finding identical rows
             const identicalQuery = `
@@ -388,6 +398,7 @@ class FastTableComparator {
                 let numericCount = 0;
                 let integerCount = 0;
                 let dateCount = 0;
+                let timestampCount = 0;
                 let totalNonEmpty = 0;
                 let hasDecimals = false;
 
@@ -412,7 +423,12 @@ class FastTableComparator {
                         
                         const dateValue = new Date(strValue);
                         if (!isNaN(dateValue.getTime()) && strValue.match(/\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4}|\d{2}\.\d{2}\.\d{4}/)) {
-                            dateCount++;
+                            // Check if the string contains time information
+                            if (strValue.match(/\d{2}:\d{2}(:\d{2})?/) || strValue.includes('T')) {
+                                timestampCount++;
+                            } else {
+                                dateCount++;
+                            }
                         }
                     }
                 }
@@ -421,7 +437,9 @@ class FastTableComparator {
                 
                 const numericRatio = numericCount / totalNonEmpty;
                 const dateRatio = dateCount / totalNonEmpty;
+                const timestampRatio = timestampCount / totalNonEmpty;
 
+                if (timestampRatio >= 0.8) return 'TIMESTAMP';
                 if (dateRatio >= 0.8) { return 'DATE'; }
                 
                 if (numericRatio >= 0.9) {
@@ -466,6 +484,12 @@ class FastTableComparator {
                                  (type1 === 'DOUBLE' && type2 === 'FLOAT')) {
                             harmonized1[i] = 'DOUBLE';
                             harmonized2[i] = 'DOUBLE';
+                        }
+                        else if ((type1 === 'DATE' && type2 === 'TIMESTAMP') || 
+                                 (type1 === 'TIMESTAMP' && type2 === 'DATE')) {
+                            // If one is DATE and other is TIMESTAMP, use TIMESTAMP to preserve time info
+                            harmonized1[i] = 'TIMESTAMP';
+                            harmonized2[i] = 'TIMESTAMP';
                         }
                         else {
                             harmonized1[i] = 'VARCHAR';
@@ -524,6 +548,13 @@ class FastTableComparator {
                         }
                         return `'${dateValue.toISOString().split('T')[0]}'`;
                     
+                    case 'TIMESTAMP':
+                        const timestampValue = new Date(strValue);
+                        if (isNaN(timestampValue.getTime())) {
+                            return `'${strValue.replace(/'/g, "''")}'`;
+                        }
+                        return `'${timestampValue.toISOString()}'`;
+                    
                     case 'VARCHAR':
                     default:
                         return `'${strValue.replace(/'/g, "''")}'`;
@@ -555,7 +586,7 @@ class FastTableComparator {
             await insertBatch('table1', data1, headers1, finalColumnTypes1);
             await insertBatch('table2', data2, headers2, finalColumnTypes2);
             
-            const createComparisonCondition = (colIdx, useTolerance = false) => {
+            const createComparisonCondition = (colIdx, useTolerance = false, isKeyColumn = false) => {
                 const col1Type = finalColumnTypes1[colIdx];
                 const col2Type = finalColumnTypes2[colIdx];
                 const col1Name = sanitizedHeaders1[colIdx];
@@ -592,8 +623,30 @@ class FastTableComparator {
                     )`;
                 }
                 
+                // Handle DATE and TIMESTAMP types in tolerance mode
+                if (useTolerance && (col1Type === 'DATE' || col2Type === 'DATE' || col1Type === 'TIMESTAMP' || col2Type === 'TIMESTAMP')) {
+                    if (isKeyColumn) {
+                        // For key columns, compare full datetime even in tolerance mode
+                        return `t1."${col1Name}" = t2."${col2Name}"`;
+                    } else {
+                        // For regular columns, compare only date part
+                        return `strftime(t1."${col1Name}", '%Y-%m-%d') = strftime(t2."${col2Name}", '%Y-%m-%d')`;
+                    }
+                }
+                
                 if (col1Type === 'BIGINT' || col1Type === 'INTEGER' || col1Type === 'FLOAT') {
                     return `t1."${col1Name}" = t2."${col2Name}"`;
+                }
+                
+                // Handle DATE and TIMESTAMP types - for key columns compare with time, for regular columns compare date only
+                if (col1Type === 'DATE' || col2Type === 'DATE' || col1Type === 'TIMESTAMP' || col2Type === 'TIMESTAMP') {
+                    if (isKeyColumn) {
+                        // For key columns, compare full datetime (including time)
+                        return `t1."${col1Name}" = t2."${col2Name}"`;
+                    } else {
+                        // For regular columns, compare only date part (ignoring time)
+                        return `strftime(t1."${col1Name}", '%Y-%m-%d') = strftime(t2."${col2Name}", '%Y-%m-%d')`;
+                    }
                 }
                 
                 if (col1Type === 'VARCHAR' && col2Type === 'VARCHAR') {
@@ -672,7 +725,7 @@ class FastTableComparator {
                     'IDENTICAL' as match_type
                 FROM table1 t1
                 INNER JOIN table2 t2 ON (
-                    ${comparisonColumns.map(colIdx => createComparisonCondition(colIdx, useTolerance)).join(' AND ')}
+                    ${comparisonColumns.map(colIdx => createComparisonCondition(colIdx, useTolerance, keyColumns.includes(colIdx))).join(' AND ')}
                 )
             `;
             
@@ -681,7 +734,7 @@ class FastTableComparator {
             const identicalCountResult = await window.duckdbLoader.query('SELECT COUNT(*) as count FROM identical_pairs');
             const identicalCount = Number(identicalCountResult.toArray()[0]?.count || 0);
 
-            const keyColumnChecks = keyColumns.map(colIdx => createComparisonCondition(colIdx, useTolerance)).join(' AND ');
+            const keyColumnChecks = keyColumns.map(colIdx => createComparisonCondition(colIdx, useTolerance, true)).join(' AND ');
 
             const minKeyMatchesRequired = Math.max(1, Math.ceil(keyColumns.length * (useTolerance ? 0.8 : 0.8))); // Minimum 80% of key fields
             const minTotalMatchesRequired = Math.max(2, Math.ceil(comparisonColumns.length * (useTolerance ? 0.6 : 0.7))); // Minimum 60-70% of columns for comparison
@@ -695,10 +748,10 @@ class FastTableComparator {
                         t1.rowid as row1_id,
                         t2.rowid as row2_id,
                         ${comparisonColumns.map(colIdx => 
-                            `CASE WHEN ${createComparisonCondition(colIdx, useTolerance)} THEN 1 ELSE 0 END`
+                            `CASE WHEN ${createComparisonCondition(colIdx, useTolerance, keyColumns.includes(colIdx))} THEN 1 ELSE 0 END`
                         ).join(' + ')} as total_matches,
                         ${keyColumns.map(colIdx => 
-                            `CASE WHEN ${createComparisonCondition(colIdx, useTolerance)} THEN 1 ELSE 0 END`
+                            `CASE WHEN ${createComparisonCondition(colIdx, useTolerance, true)} THEN 1 ELSE 0 END`
                         ).join(' + ')} as key_matches
                     FROM table1 t1
                     CROSS JOIN table2 t2
@@ -727,10 +780,10 @@ class FastTableComparator {
                         t1.rowid as row1_id,
                         t2.rowid as row2_id,
                         ${comparisonColumns.map(colIdx => 
-                            `CASE WHEN ${createComparisonCondition(colIdx, useTolerance)} THEN 1 ELSE 0 END`
+                            `CASE WHEN ${createComparisonCondition(colIdx, useTolerance, keyColumns.includes(colIdx))} THEN 1 ELSE 0 END`
                         ).join(' + ')} as total_matches,
                         ${keyColumns.map(colIdx => 
-                            `CASE WHEN ${createComparisonCondition(colIdx, useTolerance)} THEN 1 ELSE 0 END`
+                            `CASE WHEN ${createComparisonCondition(colIdx, useTolerance, true)} THEN 1 ELSE 0 END`
                         ).join(' + ')} as key_matches
                     FROM table1 t1
                     CROSS JOIN table2 t2
@@ -756,10 +809,10 @@ class FastTableComparator {
                 FROM (
                     SELECT 
                         ${comparisonColumns.map(colIdx => 
-                            `CASE WHEN ${createComparisonCondition(colIdx, useTolerance)} THEN 1 ELSE 0 END`
+                            `CASE WHEN ${createComparisonCondition(colIdx, useTolerance, keyColumns.includes(colIdx))} THEN 1 ELSE 0 END`
                         ).join(' + ')} as total_matches,
                         ${keyColumns.map(colIdx => 
-                            `CASE WHEN ${createComparisonCondition(colIdx, useTolerance)} THEN 1 ELSE 0 END`
+                            `CASE WHEN ${createComparisonCondition(colIdx, useTolerance, true)} THEN 1 ELSE 0 END`
                         ).join(' + ')} as key_matches
                     FROM table1 t1
                     CROSS JOIN table2 t2
@@ -955,7 +1008,21 @@ class FastTableComparator {
             const simpleConditions = comparisonColumns.slice(0, Math.min(maxColumns, comparisonColumns.length)).map(colIdx => {
                 const col1Name = sanitizedHeaders1[colIdx];
                 const col2Name = sanitizedHeaders2[colIdx];
-                return `UPPER(TRIM(COALESCE(t1."${col1Name}", ''))) = UPPER(TRIM(COALESCE(t2."${col2Name}", '')))`;
+                const col1Type = finalColumnTypes1[colIdx];
+                const col2Type = finalColumnTypes2[colIdx];
+                
+                // Use strict comparison for key columns - no COALESCE for NULL values
+                if (col1Type === 'DOUBLE' || col2Type === 'DOUBLE') {
+                    return `ROUND(t1."${col1Name}", 2) = ROUND(t2."${col2Name}", 2)`;
+                } else if (col1Type === 'BIGINT' || col1Type === 'INTEGER' || col1Type === 'FLOAT') {
+                    return `t1."${col1Name}" = t2."${col2Name}"`;
+                } else if (col1Type === 'DATE' || col2Type === 'DATE') {
+                    // For DATE columns as keys, always compare full datetime including time
+                    return `t1."${col1Name}" = t2."${col2Name}"`;
+                } else {
+                    // For VARCHAR, use strict comparison without COALESCE to handle NULL properly
+                    return `UPPER(TRIM(t1."${col1Name}")) = UPPER(TRIM(t2."${col2Name}"))`;
+                }
             });
 
             // Search for identical rows with limited conditions
@@ -1164,6 +1231,7 @@ class FastTableComparator {
             let numericCount = 0;
             let integerCount = 0;
             let dateCount = 0;
+            let timestampCount = 0;
             let totalNonEmpty = 0;
             let hasDecimals = false;
 
@@ -1188,7 +1256,12 @@ class FastTableComparator {
                     
                     const dateValue = new Date(strValue);
                     if (!isNaN(dateValue.getTime()) && strValue.match(/\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4}|\d{2}\.\d{2}\.\d{4}/)) {
-                        dateCount++;
+                        // Check if the string contains time information
+                        if (strValue.match(/\d{2}:\d{2}(:\d{2})?/) || strValue.includes('T')) {
+                            timestampCount++;
+                        } else {
+                            dateCount++;
+                        }
                     }
                 }
             }
@@ -1197,7 +1270,9 @@ class FastTableComparator {
             
             const numericRatio = numericCount / totalNonEmpty;
             const dateRatio = dateCount / totalNonEmpty;
+            const timestampRatio = timestampCount / totalNonEmpty;
 
+            if (timestampRatio >= 0.8) return 'TIMESTAMP';
             if (dateRatio >= 0.8) return 'DATE';
             if (numericRatio >= 0.9) {
                 // If there's at least one decimal number, the entire column should be DOUBLE
@@ -1238,6 +1313,13 @@ class FastTableComparator {
                         return `'${strValue.replace(/'/g, "''")}'`;
                     }
                     return `'${dateValue.toISOString().split('T')[0]}'`;
+                
+                case 'TIMESTAMP':
+                    const timestampValue = new Date(strValue);
+                    if (isNaN(timestampValue.getTime())) {
+                        return `'${strValue.replace(/'/g, "''")}'`;
+                    }
+                    return `'${timestampValue.toISOString()}'`;
                 
                 case 'VARCHAR':
                 default:
