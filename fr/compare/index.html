@@ -1,25 +1,28 @@
 <!DOCTYPE html>
-<html lang="pt" data-placeholder-text="Escolha arquivos no seu computador e clique em Comparar">
+<html lang="fr" data-placeholder-text="Sélectionnez les fichiers sur votre ordinateur et cliquez sur Comparer">
 <head>
-    <script src="../../javascript/redirect.js" defer></script>    <script async src="https://www.googletagmanager.com/gtag/js?id=G-C19L2VS3EH"></script>
+    <script src="../../javascript/redirect.js" defer></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-C19L2VS3EH"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
         gtag('js', new Date());
+
         gtag('config', 'G-C19L2VS3EH');
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Destaque diferenças entre planilhas eletrônicas online. Ferramenta gratuita para comparar Excel e CSV. Resultados precisos em segundos.">
-    <meta name="keywords" content="comparação Excel, comparação CSV, diferenças de arquivos, ferramenta online, gratuito, seguro">
+    <meta name="description" content="Détectez automatiquement les différences dans vos feuilles de calcul Excel et CSV. Analyse rapide et précise en ligne. Visualisation claire. Gratuit.">
+    <meta name="keywords" content="feuilles de calcul différences, différences automatiques, comparaison Excel, comparaison CSV, analyse automatique, outil en ligne, gratuit">
     <meta name="robots" content="index, follow">
     <meta name="author" content="MaxPilot">
-    <meta property="og:title" content="Como comparar dois arquivos Excel | MaksPilot">
-    <meta property="og:description" content="Como comparar dois arquivos Excel. Gratuito, seguro, sem cadastro - faça upload dos arquivos, obtenha diferenças em segundos.">
+    <meta property="og:title" content="Feuilles de calcul différences automatiques - MaksPilot">
+    <meta property="og:description" content="Détectez automatiquement les différences dans vos feuilles de calcul Excel et CSV. Analyse rapide et précise en ligne. Visualisation claire. Gratuit.">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://makspilot.com/pt/compare/">
+    <meta property="og:url" content="https://makspilot.com/fr/compare/">
     <meta property="og:image" content="https://makspilot.com/img/main.webp">
-    <link rel="canonical" href="https://makspilot.com/pt/compare/">
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml">
+    <link rel="canonical" href="https://makspilot.com/fr/compare/">
     <link rel="alternate" hreflang="en" href="https://makspilot.com/compare/">
     <link rel="alternate" hreflang="ru" href="https://makspilot.com/ru/compare/">
     <link rel="alternate" hreflang="pl" href="https://makspilot.com/pl/compare/">
@@ -30,7 +33,7 @@
     <link rel="alternate" hreflang="ja" href="https://makspilot.com/ja/compare/">
     <link rel="alternate" hreflang="de" href="https://makspilot.com/de/compare/">
     <link rel="alternate" hreflang="fr" href="https://makspilot.com/fr/compare/">
-    <title>Planilhas eletrônicas destacar diferenças</title>
+    <title>Feuilles de calcul différences automatiques - MaksPilot</title>
     <link rel="icon" type="image/x-icon" href="../../favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -39,45 +42,47 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
+    <!-- Mobile Warning -->
     <div class="mobile-warning" id="mobileWarning">
         <div class="mobile-warning-content">
             <span class="mobile-warning-icon">💻</span>
-            <h2 class="mobile-warning-title">Desktop Necessário</h2>
+            <h2 class="mobile-warning-title">Ordinateur Requis</h2>
             <p class="mobile-warning-text">
-                A funcionalidade de comparação de arquivos é otimizada para computadores desktop. 
-                Por favor, use um PC ou laptop com uma tela maior para a melhor experiência.
+                La fonctionnalité de comparaison de fichiers est optimisée pour les ordinateurs de bureau. 
+                Veuillez utiliser un PC ou un ordinateur portable avec un grand écran pour une meilleure expérience.
             </p>
-            <a href="../" class="mobile-warning-button">Voltar ao Início</a>
+            <a href="../" class="mobile-warning-button">Retour à l'Accueil</a>
         </div>
     </div>
 
+    <!-- Header will be loaded here -->
     <header>
     <div class="header-container">
         <a href="../" class="logo">
-            <img src="../../img/makspilot.svg" alt="MaxPilot Logo">
+            <img src="../../img/makspilot.svg" alt="Logo MaxPilot">
         </a>
         <nav>
             <ul class="nav-menu">
-                <li><a href="../#block-1">Problemas</a></li>
-                <li><a href="../#block-4">Segurança</a></li>
-                <li><a href="./" class="nav-cta">Iniciar Comparação</a></li>
-                <li><a href="https://medium.com/@protmaks/comparing-excel-and-csv-without-loading-online-tool-for-business-5ab689ff1850" target="_blank">Como Usar</a></li>
-                <li><a href="https://medium.com/@protmaks" target="_blank">Meu Blog</a></li>
-                <li><a href="https://www.linkedin.c../protmaks/" class="social-link" title="linkedin" target="_blank">
+                <li><a href="../#block-1">Problèmes</a></li>
+                <li><a href="../#block-4">Sécurité</a></li>
+                <li><a href="./" class="nav-cta">Commencer la Comparaison</a></li>
+                <li><a href="../how_use/">Comment Utiliser</a></li>
+                <li><a href="https://medium.com/@protmaks" target="_blank">Mon Blog</a></li>
+                <li><a href="https://www.linkedin.com/in/protmaks/" class="social-link" title="linkedin" target="_blank">
                     <img src="../../img/linkedin.svg" alt="linkedin">
                 </a></li>
                 <li class="lang-switcher">
                     <select class="lang-select" onchange="window.location.href=this.value">
                         <option value="/compare/">English</option>
                         <option value="/ru/compare/">Русский</option>
-                        <option value="/pl/compare/">Polski</option>
-                        <option value="/zh/compare/">中文</option>
-                        <option value="/es/compare/">Español</option>
-                        <option value="/ar/compare/">العربية</option>
-                        <option value="/pt/compare/" selected>Português</option>
+                        <option value="../../pl/compare/">Polski</option>
+                        <option value="../../zh/compare/">中文</option>
+                        <option value="../../es/compare/">Español</option>
+                        <option value="../../ar/compare/">العربية</option>
+                        <option value="../../pt/compare/">Português</option>
                         <option value="../../ja/compare/">日本語</option>
                         <option value="../../de/compare/">Deutsch</option>
-                        <option value="/fr/compare/">Français</option>
+                        <option value="/fr/compare/" selected>Français</option>
                     </select>
                 </li>
             </ul>
@@ -90,54 +95,54 @@
     </div>
 </header>
     
-    <div class="main-content" class="main-content-padded">
-        <h1>Planilhas eletrônicas destacar diferenças</h1>
+    <div class="main-content main-content-padded"><!-- Account for fixed header -->
+        <h1>Feuilles de calcul différences automatiques</h1>
         <div id="summary"></div>
         <div class="comparison-container">
             <div class="table-container">
                 <input type="file" id="file1" accept=".xlsx,.xls,.csv"><br>
-                <div class="sheet-selector" id="sheetSelector1" class="sheet-selector-hidden">
-                    <label for="sheetSelect1">Selecionar planilha:</label>
+                <div class="sheet-selector sheet-selector-hidden" id="sheetSelector1">
+                    <label for="sheetSelect1">Choisir la feuille :</label>
                     <select id="sheetSelect1"></select>
                 </div>
                 <div id="table1"></div>
             </div>
             <div class="table-container">
                 <input type="file" id="file2" accept=".xlsx,.xls,.csv"><br>
-                <div class="sheet-selector" id="sheetSelector2" class="sheet-selector-hidden">
-                    <label for="sheetSelect2">Selecionar planilha:</label>
+                <div class="sheet-selector sheet-selector-hidden" id="sheetSelector2">
+                    <label for="sheetSelect2">Choisir la feuille :</label>
                     <select id="sheetSelect2"></select>
                 </div>
                 <div id="table2"></div>
             </div>
             <div class="controls-container">
                 <div class="exclude-compare-row">
-                    <div class="buttons-container" class="buttons-container">
-                        <div class="button-half" class="button-half">
-                            <button class="compare-btn" onclick="compareTables(false)" class="button-full-width">Comparar</button>
+                    <div class="buttons-container">
+                        <div class="button-half">
+                            <button class="compare-btn button-full-width" onclick="compareTables(false)">Comparer</button>
                         </div>
-                        <div class="button-half" class="button-half">
-                            <button class="compare-btn tolerance-btn" onclick="compareTables(true)" class="button-full-width">Comparar com tolerância 1,5%</button>
+                        <div class="button-half">
+                            <button class="compare-btn tolerance-btn button-full-width" onclick="compareTables(true)">Comparer avec tolérance de 1,5%</button>
                         </div>
-                        <div class="button-half" class="button-half">
-                            <button id="exportExcelBtn" onclick="exportToExcel()" class="export-btn" class="export-btn-hidden">
-                                📊 Exportar para Excel
+                        <div class="button-half">
+                            <button id="exportExcelBtn" onclick="exportToExcel()" class="export-btn export-btn-hidden">
+                                📊 Exporter vers Excel
                             </button>
                         </div>
                     </div>
                     <div class="exclude-columns-container">
-                        <label for="excludeColumns" class="exclude-label">Excluir colunas:</label>
-                        <input type="text" id="excludeColumns" placeholder="ex: ID, Timestamp, DataCriacao" class="exclude-input">
+                        <label for="excludeColumns" class="exclude-label">Exclure les colonnes :</label>
+                        <input type="text" id="excludeColumns" placeholder="par exemple, ID, Temps, DateCreation" class="exclude-input">
                     </div>
                     <div class="key-columns-container">
-                        <label class="key-columns-label">Colunas-chave:</label>
+                        <label class="key-columns-label">Colonnes clés :</label>
                         <div class="key-columns-dropdown">
                             <div class="key-columns-dropdown-button" id="keyColumnsDropdownButton">
-                                <span class="dropdown-text">Selecionar colunas-chave...</span>
+                                <span class="dropdown-text">Sélectionnez les colonnes clés...</span>
                                 <span class="dropdown-arrow">▼</span>
                             </div>
                             <div class="key-columns-dropdown-content" id="keyColumnsDropdownContent">
-                                <div class="key-columns-placeholder">Carregue arquivos para ver as colunas disponíveis</div>
+                                <div class="key-columns-placeholder">Téléchargez les fichiers pour voir les colonnes disponibles</div>
                             </div>
                         </div>
                     </div>
@@ -146,10 +151,10 @@
         </div>
         <div class="filter-controls filter-controls-hidden">
             <div class="filter-options">
-                <label><input type="checkbox" id="hideSameRows"> Ocultar linhas IGUAIS</label>
-                <label><input type="checkbox" id="hideDiffColumns"> Ocultar linhas DIFERENTES</label>
-                <label><input type="checkbox" id="hideNewRows1"> Ocultar linhas apenas no arquivo 1</label>
-                <label><input type="checkbox" id="hideNewRows2"> Ocultar linhas apenas no arquivo 2</label>
+                <label><input type="checkbox" id="hideSameRows"> Masquer les lignes IDENTIQUES</label>
+                <label><input type="checkbox" id="hideDiffColumns"> Masquer les lignes DIFFÉRENTES</label>
+                <label><input type="checkbox" id="hideNewRows1"> Masquer les lignes uniquement dans le fichier 1</label>
+                <label><input type="checkbox" id="hideNewRows2"> Masquer les lignes uniquement dans le fichier 2</label>
             </div>
         </div>
     </div>
@@ -168,12 +173,21 @@
         </div>
     </div>
 
+    <!-- Load the comparison functions -->
     <script src="../../javascript/functions.js"></script>
+    
+    <!-- Load the export functions -->
     <script src="../../javascript/export.js"></script>
+    
+    <!-- Load the key columns functionality -->
     <script src="../../javascript/key-columns.js"></script>
+    
+    <!-- Load the shared header -->
     <script src="../../javascript/script.js"></script>
     
+    <!-- Mobile device detection and warning -->
     <script>
+        // Function to detect mobile devices
         function isMobileDevice() {
             const userAgent = navigator.userAgent;
             const mobileKeywords = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
@@ -182,6 +196,7 @@
             return mobileKeywords.test(userAgent) || screenWidth < 768;
         }
         
+        // Show/hide mobile warning based on device type
         function checkDeviceType() {
             const mobileWarning = document.getElementById('mobileWarning');
             const mainContent = document.querySelector('.main-content');
@@ -194,6 +209,7 @@
                 if (mainContent) mainContent.style.display = 'none';
                 if (result) result.style.display = 'none';
                 if (diffTable) diffTable.style.display = 'none';
+                // Ensure header stays visible on mobile
                 if (header) {
                     header.style.display = 'block';
                     header.style.position = 'fixed';
@@ -205,6 +221,7 @@
                 if (mainContent) mainContent.style.display = 'block';
                 if (result) result.style.display = 'block';
                 if (diffTable) diffTable.style.display = 'block';
+                // Reset header styles for desktop
                 if (header) {
                     header.style.display = 'block';
                     header.style.position = 'fixed';
@@ -214,7 +231,10 @@
             }
         }
         
+        // Check device type on page load
         document.addEventListener('DOMContentLoaded', checkDeviceType);
+        
+        // Check device type on window resize (in case user rotates device or resizes window)
         window.addEventListener('resize', checkDeviceType);
     </script>
 </body>
