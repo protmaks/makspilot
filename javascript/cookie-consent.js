@@ -79,15 +79,21 @@
     document.body.appendChild(banner);
 
     document.getElementById('accept-cookies').onclick = function() {
+      console.log('User accepted cookies');
       gtag('consent', 'update', {
         'ad_storage': 'granted',
         'analytics_storage': 'granted'
+      });
+      // Send test event
+      gtag('event', 'cookie_consent', {
+        'consent_type': 'granted'
       });
       localStorage.setItem('cookie_consent', 'granted');
       banner.remove();
     };
 
     document.getElementById('decline-cookies').onclick = function() {
+      console.log('User declined cookies, using anonymous analytics');
       // Enable analytics but without storage/cookies (anonymous mode)
       gtag('consent', 'update', {
         'ad_storage': 'denied',
@@ -98,7 +104,10 @@
         'allow_google_signals': false,  // Disable cross-device tracking
         'allow_ad_personalization_signals': false  // Disable ad personalization
       });
-      // Send a pageview event to ensure tracking works
+      // Send test events
+      gtag('event', 'cookie_consent', {
+        'consent_type': 'denied_anonymous'
+      });
       gtag('event', 'page_view', {
         'page_title': document.title,
         'page_location': window.location.href
