@@ -88,15 +88,20 @@
     };
 
     document.getElementById('decline-cookies').onclick = function() {
+      // Enable analytics but without storage/cookies (anonymous mode)
       gtag('consent', 'update', {
         'ad_storage': 'denied',
-        'analytics_storage': 'denied'
+        'analytics_storage': 'granted'  // Allow analytics but configure it as anonymous
       });
-      // Enable anonymous analytics without cookies
       gtag('config', 'G-C19L2VS3EH', {
         'anonymize_ip': true,
-        'storage': 'none',
-        'client_storage': 'none'
+        'allow_google_signals': false,  // Disable cross-device tracking
+        'allow_ad_personalization_signals': false  // Disable ad personalization
+      });
+      // Send a pageview event to ensure tracking works
+      gtag('event', 'page_view', {
+        'page_title': document.title,
+        'page_location': window.location.href
       });
       localStorage.setItem('cookie_consent', 'denied');
       banner.remove();
