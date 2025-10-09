@@ -1,22 +1,22 @@
 (function() {
   const messages = {
     ru: {
-      text: "Мы используем cookie для персонализированной аналитики. При отклонении будет использоваться анонимная статистика.",
+      text: "Мы используем cookie для персонализированной аналитики. Через 30 сек автоматически включится анонимная статистика.",
       accept: "Принять",
       decline: "Анонимно"
     },
     en: {
-      text: "We use cookies for personalized analytics. If declined, anonymous statistics will be used.",
+      text: "We use cookies for personalized analytics. Anonymous statistics will auto-enable in 30 seconds.",
       accept: "Accept",
       decline: "Anonymous"
     },
     fr: {
-      text: "Nous utilisons des cookies pour l'analyse personnalisée. Si refusé, des statistiques anonymes seront utilisées.",
+      text: "Cookies pour analyses personnalisées. Statistiques anonymes auto-activées en 30s.",
       accept: "Accepter",
       decline: "Anonyme"
     },
     de: {
-      text: "Wir verwenden Cookies für personalisierte Analysen. Bei Ablehnung werden anonyme Statistiken verwendet.",
+      text: "Cookies für personalisierte Analysen. Anonyme Statistiken in 30s auto-aktiviert.",
       accept: "Akzeptieren",
       decline: "Anonym"
     },
@@ -58,6 +58,27 @@
 
     if (localStorage.getItem('cookie_consent')) return;
 
+    // Auto-enable anonymous analytics after 30 seconds if no choice made
+    const autoConsentTimer = setTimeout(() => {
+      console.log('Auto-enabling anonymous analytics after 30 seconds of no user action');
+      // Enable anonymous analytics automatically
+      gtag('consent', 'update', {
+        'ad_storage': 'denied',
+        'analytics_storage': 'granted'
+      });
+      gtag('config', 'G-C19L2VS3EH', {
+        'anonymize_ip': true,
+        'allow_google_signals': false,
+        'allow_ad_personalization_signals': false
+      });
+      gtag('event', 'cookie_consent', {
+        'consent_type': 'auto_anonymous'
+      });
+      localStorage.setItem('cookie_consent', 'auto_anonymous');
+      const banner = document.getElementById('cookie-banner');
+      if (banner) banner.remove();
+    }, 30000); // 30 seconds
+
 
     const banner = document.createElement('div');
     banner.id = 'cookie-banner';
@@ -79,6 +100,7 @@
     document.body.appendChild(banner);
 
     document.getElementById('accept-cookies').onclick = function() {
+      clearTimeout(autoConsentTimer); // Cancel auto-consent
       console.log('User accepted cookies');
       gtag('consent', 'update', {
         'ad_storage': 'granted',
@@ -93,6 +115,7 @@
     };
 
     document.getElementById('decline-cookies').onclick = function() {
+      clearTimeout(autoConsentTimer); // Cancel auto-consent
       console.log('User declined cookies, using anonymous analytics');
       // Enable analytics but without storage/cookies (anonymous mode)
       gtag('consent', 'update', {
