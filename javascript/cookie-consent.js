@@ -56,7 +56,36 @@
     const lang = (document.documentElement.lang || 'en').slice(0,2);
     const t = messages[lang] || messages.en;
 
-    if (localStorage.getItem('cookie_consent')) return;
+    const existingConsent = localStorage.getItem('cookie_consent');
+    if (existingConsent) {
+      // Initialize analytics for returning users
+      if (existingConsent === 'granted') {
+        gtag('consent', 'update', {
+          'ad_storage': 'granted',
+          'analytics_storage': 'granted'
+        });
+        gtag('js', new Date());
+        gtag('config', 'G-C19L2VS3EH');
+      } else if (existingConsent === 'denied' || existingConsent === 'auto_anonymous') {
+        gtag('consent', 'update', {
+          'ad_storage': 'denied',
+          'analytics_storage': 'granted'
+        });
+        gtag('js', new Date());
+        gtag('config', 'G-C19L2VS3EH', {
+          'anonymize_ip': true,
+          'allow_google_signals': false,
+          'allow_ad_personalization_signals': false
+        });
+      }
+      // Send page view for returning users
+      gtag('event', 'page_view', {
+        'page_title': document.title,
+        'page_location': window.location.href,
+        'send_to': 'G-C19L2VS3EH'
+      });
+      return;
+    }
 
     // Auto-enable anonymous analytics after 30 seconds if no choice made
     const autoConsentTimer = setTimeout(() => {
@@ -66,6 +95,7 @@
         'ad_storage': 'denied',
         'analytics_storage': 'granted'
       });
+      gtag('js', new Date());
       gtag('config', 'G-C19L2VS3EH', {
         'anonymize_ip': true,
         'allow_google_signals': false,
@@ -112,6 +142,7 @@
         'ad_storage': 'granted',
         'analytics_storage': 'granted'
       });
+      gtag('js', new Date());
       gtag('config', 'G-C19L2VS3EH');
       // Send required events for proper tracking
       gtag('event', 'cookie_consent', {
@@ -134,6 +165,7 @@
         'ad_storage': 'denied',
         'analytics_storage': 'granted'  // Allow analytics but configure it as anonymous
       });
+      gtag('js', new Date());
       gtag('config', 'G-C19L2VS3EH', {
         'anonymize_ip': true,
         'allow_google_signals': false,  // Disable cross-device tracking
