@@ -71,8 +71,14 @@
         'allow_google_signals': false,
         'allow_ad_personalization_signals': false
       });
+      // Send required events for proper tracking
       gtag('event', 'cookie_consent', {
         'consent_type': 'auto_anonymous'
+      });
+      gtag('event', 'page_view', {
+        'page_title': document.title,
+        'page_location': window.location.href,
+        'send_to': 'G-C19L2VS3EH'
       });
       localStorage.setItem('cookie_consent', 'auto_anonymous');
       const banner = document.getElementById('cookie-banner');
@@ -106,9 +112,15 @@
         'ad_storage': 'granted',
         'analytics_storage': 'granted'
       });
-      // Send test event
+      gtag('config', 'G-C19L2VS3EH');
+      // Send required events for proper tracking
       gtag('event', 'cookie_consent', {
         'consent_type': 'granted'
+      });
+      gtag('event', 'page_view', {
+        'page_title': document.title,
+        'page_location': window.location.href,
+        'send_to': 'G-C19L2VS3EH'
       });
       localStorage.setItem('cookie_consent', 'granted');
       banner.remove();
@@ -127,13 +139,14 @@
         'allow_google_signals': false,  // Disable cross-device tracking
         'allow_ad_personalization_signals': false  // Disable ad personalization
       });
-      // Send test events
+      // Send required events for proper tracking
       gtag('event', 'cookie_consent', {
         'consent_type': 'denied_anonymous'
       });
       gtag('event', 'page_view', {
         'page_title': document.title,
-        'page_location': window.location.href
+        'page_location': window.location.href,
+        'send_to': 'G-C19L2VS3EH'
       });
       localStorage.setItem('cookie_consent', 'denied');
       banner.remove();
