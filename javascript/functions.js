@@ -4150,7 +4150,6 @@ function getKeyColumnIndexes(headers, selectedKeyColumns) {
 
 
 function createFullStatisticsPairs(tableHeaders, body1, body2, finalAllCols, keyColumnIndexes, userSelectedKeys) {
-    console.log('🔥 Creating complete pairs for statistics - body1:', body1.length, 'body2:', body2.length);
     
     // Create complete pairs array for statistics - use EXACT same logic as performFuzzyMatchingForExport
     const fullPairs = [];
@@ -4283,8 +4282,6 @@ function createFullStatisticsPairs(tableHeaders, body1, body2, finalAllCols, key
         }
     }
     
-    console.log('🎯 Created', fullPairs.length, 'complete pairs for statistics');
-    
     // Calculate statistics using complete pairs
     const originalCurrentPairs = currentPairs;
     const originalCurrentFinalAllCols = currentFinalAllCols;
@@ -4305,9 +4302,6 @@ function createFullStatisticsPairs(tableHeaders, body1, body2, finalAllCols, key
     
     // Also save for export.js compatibility
     window.fullComparisonPairs = fullPairs.slice();
-    
-    console.log('💾 Saved full dataset stats for export:', window.fullDatasetStats.only1, window.fullDatasetStats.only2);
-    console.log('💾 Saved fullComparisonPairs for export:', window.fullComparisonPairs.length, 'pairs');
     
     // Restore for display
     currentPairs = originalCurrentPairs;
@@ -4562,7 +4556,6 @@ function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols,
         currentFinalAllCols = finalAllCols;
         
         // For statistics, ALWAYS process ALL rows to ensure accuracy
-        console.log('🎯 Creating full pairs for statistics calculation (ensuring complete data)');
         createFullStatisticsPairs(tableHeaders, body1, body2, finalAllCols, actualKeyColumnIndexes, userSelectedKeys);
         
         if (isLargeFile) {
