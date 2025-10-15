@@ -3528,6 +3528,12 @@ async function performComparison() {
     
     const userSelectedKeys = selectedKeyColumns.length > 0; // Track if user manually selected key columns
     
+    // Store original data for export functionality (before any processing)
+    window.originalBody1 = body1.slice(); // Create a copy
+    window.originalBody2 = body2.slice(); // Create a copy
+    window.currentFinalHeaders = finalHeaders.slice(); // Store headers
+    window.currentFinalAllCols = finalAllCols;
+    
     if (isLargeFile) {
         // For large files, do quick comparison first (only first 100 different rows)
         performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols, true, tableHeaders, true, keyColumnIndexes, userSelectedKeys);

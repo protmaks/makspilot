@@ -550,8 +550,8 @@ async function performFullComparisonForExport() {
             // Get the original data that was used for quick comparison
             const body1 = window.originalBody1 || [];
             const body2 = window.originalBody2 || [];
-            const finalHeaders = currentFinalHeaders || [];
-            const finalAllCols = currentFinalAllCols || 0;
+            const finalHeaders = window.currentFinalHeaders || [];
+            const finalAllCols = window.currentFinalAllCols || 0;
             
             if (!body1.length || !body2.length) {
                 reject(new Error('Original comparison data not available'));

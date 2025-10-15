@@ -1545,6 +1545,25 @@ async function compareTablesWithFastComparator(data1, data2, excludeColumns = []
             return null;
         }
 
+        // Store original data for export functionality - extract data rows only (skip headers)
+        if (data1 && data1.length > 1) {
+            window.originalBody1 = data1.slice(1); // Store body without headers
+        }
+        if (data2 && data2.length > 1) {
+            window.originalBody2 = data2.slice(1); // Store body without headers
+        }
+        
+        // Store headers and column information for export
+        if (data1 && data1.length > 0 && data2 && data2.length > 0) {
+            const headers1 = data1[0] || [];
+            const headers2 = data2[0] || [];
+            
+            // Create unified header list
+            const allHeaders = [...new Set([...headers1, ...headers2])];
+            window.currentFinalHeaders = allHeaders;
+            window.currentFinalAllCols = allHeaders.length;
+        }
+
         const startTime = performance.now();
 
         if (fastComparator.mode === 'wasm') {
