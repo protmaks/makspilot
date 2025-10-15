@@ -9,6 +9,12 @@ async function exportToExcel() {
     );
     
     if (!hasStandardData && !hasFastData) {
+        console.log('❌ Export check failed:', {
+            hasStandardData,
+            hasFastData,
+            currentPairs: currentPairs?.length || 0,
+            currentFastResult: window.currentFastResult ? 'exists' : 'missing'
+        });
         alert('No data to export. Please compare files first.');
         return;
     }
@@ -65,10 +71,26 @@ async function exportToExcel() {
             }
             const htmlContent = await createStyledHTMLTable(exportData);
             downloadExcelFromHTML(htmlContent);
+            
+            // Reset button state after standard export
+            const exportBtn = document.getElementById('exportExcelBtn');
+            if (exportBtn) {
+                exportBtn.innerHTML = '📊 Export to Excel';
+                exportBtn.disabled = false;
+            }
+            
+            showExportSuccess();
         }
     } catch (error) {
         console.error('Export error:', error);
         alert('Error exporting to Excel: ' + error.message);
+        
+        // Reset button state on error
+        const exportBtn = document.getElementById('exportExcelBtn');
+        if (exportBtn) {
+            exportBtn.innerHTML = '📊 Export to Excel';
+            exportBtn.disabled = false;
+        }
     }
 }
 
@@ -131,12 +153,18 @@ async function exportWithFastEngine() {
         
         // Fallback to old method
         setTimeout(async () => {
-            const exportData = prepareDataForExport();
-            const htmlContent = await createStyledHTMLTable(exportData);
-            downloadExcelFromHTML(htmlContent);
+            try {
+                const exportData = prepareDataForExport();
+                const htmlContent = await createStyledHTMLTable(exportData);
+                downloadExcelFromHTML(htmlContent);
+                showExportSuccess();
+            } catch (fallbackError) {
+                console.error('Standard export also failed:', fallbackError);
+                alert('Export failed: ' + fallbackError.message);
+            }
             
             if (exportBtn) {
-                exportBtn.innerHTML = 'Export to Excel';
+                exportBtn.innerHTML = '📊 Export to Excel';
                 exportBtn.disabled = false;
             }
         }, 100);

@@ -342,12 +342,26 @@ function updateKeyColumnsOptionsInternal(forceUpdate = false) {
                 }
                 updateCheckboxStyle(checkboxWrapper, checkbox.checked);
                 updateDropdownButtonText();
+                
+                // Check if export button should be re-enabled
+                setTimeout(() => {
+                    if (typeof checkAndEnableExportButton === 'function') {
+                        checkAndEnableExportButton();
+                    }
+                }, 50);
             });
             
             // Add change handler for the checkbox
             checkbox.addEventListener('change', function() {
                 updateCheckboxStyle(checkboxWrapper, this.checked);
                 updateDropdownButtonText();
+                
+                // Check if export button should be re-enabled
+                setTimeout(() => {
+                    if (typeof checkAndEnableExportButton === 'function') {
+                        checkAndEnableExportButton();
+                    }
+                }, 50);
             });
             
             checkboxWrapper.appendChild(checkbox);

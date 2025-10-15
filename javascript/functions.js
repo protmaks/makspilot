@@ -2859,12 +2859,32 @@ function clearComparisonResults() {
     const buttonsContainer = document.querySelector('.buttons-container');
     const exportButtonHalf = exportBtn ? exportBtn.closest('.button-half') : null;
     
-    if (exportBtn && buttonsContainer) {
+    // Check if we have data to export - either from standard comparison or fast comparison
+    const hasStandardData = currentPairs && currentPairs.length > 0;
+    const hasFastData = window.currentFastResult && (
+        (window.currentFastResult.identical && window.currentFastResult.identical.length > 0) ||
+        (window.currentFastResult.similar && window.currentFastResult.similar.length > 0) ||
+        (window.currentFastResult.onlyInTable1 && window.currentFastResult.onlyInTable1.length > 0) ||
+        (window.currentFastResult.onlyInTable2 && window.currentFastResult.onlyInTable2.length > 0)
+    );
+    
+    console.log('🔄 clearComparisonResults:', {
+        hasStandardData,
+        hasFastData,
+        currentPairsLength: currentPairs?.length || 0,
+        hasFastResult: !!window.currentFastResult
+    });
+    
+    // Only hide export button if there's no data to export
+    if (exportBtn && buttonsContainer && !hasStandardData && !hasFastData) {
         exportBtn.style.display = 'none';
         if (exportButtonHalf) {
             exportButtonHalf.classList.add('export-hidden');
         }
         buttonsContainer.classList.add('export-hidden');
+        console.log('❌ Export button hidden - no data available');
+    } else if (exportBtn && (hasStandardData || hasFastData)) {
+        console.log('✅ Export button preserved - data available for export');
     }
     
     
@@ -2873,6 +2893,55 @@ function clearComparisonResults() {
     currentSortDirection = 'asc';
     currentDiffColumns1 = '-';
     currentDiffColumns2 = '-';
+}
+
+// Check if export button should be enabled and enable it
+function checkAndEnableExportButton() {
+    const exportBtn = document.getElementById('exportExcelBtn');
+    const buttonsContainer = document.querySelector('.buttons-container');
+    const exportButtonHalf = exportBtn ? exportBtn.closest('.button-half') : null;
+    
+    if (!exportBtn) return;
+    
+    // Check if we have data to export - either from standard comparison or fast comparison
+    const hasStandardData = currentPairs && currentPairs.length > 0;
+    const hasFastData = window.currentFastResult && (
+        (window.currentFastResult.identical && window.currentFastResult.identical.length > 0) ||
+        (window.currentFastResult.similar && window.currentFastResult.similar.length > 0) ||
+        (window.currentFastResult.onlyInTable1 && window.currentFastResult.onlyInTable1.length > 0) ||
+        (window.currentFastResult.onlyInTable2 && window.currentFastResult.onlyInTable2.length > 0)
+    );
+    
+    console.log('🔍 Export button check:', {
+        hasStandardData,
+        hasFastData,
+        currentPairsLength: currentPairs?.length || 0,
+        buttonVisible: exportBtn.style.display !== 'none',
+        buttonDisabled: exportBtn.disabled
+    });
+    
+    if (hasStandardData || hasFastData) {
+        exportBtn.style.display = 'inline-block';
+        exportBtn.disabled = false;
+        exportBtn.style.opacity = '1';
+        exportBtn.style.cursor = 'pointer';
+        
+        // Reset button text if it's in a processing state
+        if (exportBtn.innerHTML.includes('processing') || exportBtn.innerHTML.includes('Performing')) {
+            exportBtn.innerHTML = '📊 Export to Excel';
+        }
+        
+        if (exportButtonHalf) {
+            exportButtonHalf.classList.remove('export-hidden');
+        }
+        if (buttonsContainer) {
+            buttonsContainer.classList.remove('export-hidden');
+        }
+        
+        console.log('✅ Export button enabled - data available for export');
+    } else {
+        console.log('❌ Export button check - no data available');
+    }
 }
 
 function restoreTableStructure() {
@@ -3061,6 +3130,11 @@ function compareTables(useTolerance = false) {
     
     setTimeout(async () => {
         await performComparison();
+        
+        // Additional check for export button after comparison completes
+        setTimeout(() => {
+            checkAndEnableExportButton();
+        }, 200);
     }, 10);
 }
 
@@ -3537,11 +3611,15 @@ async function performComparison() {
     if (isLargeFile) {
         // For large files, do quick comparison first (only first 100 different rows)
         performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols, true, tableHeaders, true, keyColumnIndexes, userSelectedKeys);
-        return;
     } else {
         // For smaller files, render detailed table
         performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols, false, tableHeaders, false, keyColumnIndexes, userSelectedKeys);
     }
+    
+    // Ensure export button is enabled after comparison
+    setTimeout(() => {
+        checkAndEnableExportButton();
+    }, 100);
 }
 
 
@@ -4171,6 +4249,11 @@ function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols,
         } else {
             renderComparisonTable();
         }
+        
+        // Ensure export button is enabled after comparison completes
+        setTimeout(() => {
+            checkAndEnableExportButton();
+        }, 100);
     }
     
     
@@ -4910,9 +4993,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     document.getElementById('file1').addEventListener('change', function(e) {
         handleFile(e.target.files[0], 1);
+        // Check if export button should be enabled after file load
+        setTimeout(() => checkAndEnableExportButton(), 100);
     });
     document.getElementById('file2').addEventListener('change', function(e) {
         handleFile(e.target.files[0], 2);
+        // Check if export button should be enabled after file load
+        setTimeout(() => checkAndEnableExportButton(), 100);
     });
     
     const hideSameRowsEl = document.getElementById('hideSameRows');
