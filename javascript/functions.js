@@ -3850,6 +3850,16 @@ function calculateFullSummaryStatistics(tableHeaders, body1, body2, finalHeaders
             }
         }
         
+        // Debug criteria (only once)
+        if (i === 0) {
+            console.log('🎯 Matching criteria:');
+            console.log('  userSelectedKeys:', userSelectedKeys);
+            console.log('  keyColumnsCount:', keyColumnsCount);
+            console.log('  minKeyMatches:', minKeyMatches);
+            console.log('  minTotalMatches:', minTotalMatches);
+            console.log('  finalAllCols:', finalAllCols);
+        }
+        
         // Check if match meets criteria
         let shouldMatch = false;
         if (userSelectedKeys && keyColumnsCount > 0) {
@@ -3880,6 +3890,14 @@ function calculateFullSummaryStatistics(tableHeaders, body1, body2, finalHeaders
             allPairs.push({row1: body1[i], row2: body2[bestIdx]});
             used2[bestIdx] = true;
         } else {
+            // Debug: why didn't this row match?
+            if (i < 5) { // Only log first 5 unmatched rows to avoid spam
+                console.log('🚨 Row', i, 'from file1 did not match. bestScore:', bestScore, 'minKeyMatches:', minKeyMatches, 'minTotalMatches:', minTotalMatches);
+                console.log('  Row data:', body1[i].slice(0, 10), '...');
+                if (bestIdx !== -1) {
+                    console.log('  Best match from file2:', body2[bestIdx].slice(0, 10), '...');
+                }
+            }
             allPairs.push({row1: body1[i], row2: null});
         }
     }
@@ -4424,9 +4442,12 @@ function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols,
         currentFinalHeaders = finalHeaders;
         currentFinalAllCols = finalAllCols;
         
-        // Calculate full statistics on complete dataset, regardless of display mode
-        console.log('🎯 STARTING full statistics calculation for all data');
-        calculateFullSummaryStatistics(tableHeaders, body1, body2, finalHeaders, finalAllCols, actualKeyColumnIndexes, userSelectedKeys);
+        // Use full pairs for statistics, regardless of display mode
+        console.log('🎯 Using pairs for full statistics. Total pairs:', pairs.length);
+        const originalCurrentPairs = currentPairs;
+        currentPairs = pairs; // Use all pairs for statistics
+        updateSummaryStatistics(tableHeaders, body1.length, body2.length);
+        currentPairs = originalCurrentPairs; // Restore for display
         
         if (isLargeFile) {
             if (quickModeOnly) {
@@ -4690,6 +4711,19 @@ function renderComparisonTable() {
             } else {
                 hasDiff = true;
                 allSame = false;
+            }
+        }
+        
+        // Count for debug comparison with summary stats
+        if (!isEmpty) {
+            if (row1 && row2 && allSame && !hasTolerance) {
+                detailedIdenticalCount++;
+            } else if (row1 && row2 && (hasWarn || hasTolerance)) {
+                detailedDifferentCount++;
+            } else if (row1 && !row2) {
+                detailedOnlyFile1Count++;
+            } else if (!row1 && row2) {
+                detailedOnlyFile2Count++;
             }
         }
         
