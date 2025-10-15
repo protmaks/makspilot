@@ -2685,7 +2685,6 @@ function prepareDataForComparison(data1, data2) {
     const mapping = createColumnMapping(header1, header2);
     
     if (mapping.commonColumns.length === 0) {
-        console.log('⚠️ No common columns found');
         return { 
             data1, 
             data2, 
@@ -2868,13 +2867,7 @@ function clearComparisonResults() {
         (window.currentFastResult.onlyInTable2 && window.currentFastResult.onlyInTable2.length > 0)
     );
     
-    console.log('🔄 clearComparisonResults:', {
-        hasStandardData,
-        hasFastData,
-        currentPairsLength: currentPairs?.length || 0,
-        hasFastResult: !!window.currentFastResult
-    });
-    
+
     // Only hide export button if there's no data to export
     if (exportBtn && buttonsContainer && !hasStandardData && !hasFastData) {
         exportBtn.style.display = 'none';
@@ -2882,10 +2875,7 @@ function clearComparisonResults() {
             exportButtonHalf.classList.add('export-hidden');
         }
         buttonsContainer.classList.add('export-hidden');
-        console.log('❌ Export button hidden - no data available');
-    } else if (exportBtn && (hasStandardData || hasFastData)) {
-        console.log('✅ Export button preserved - data available for export');
-    }
+    } else if (exportBtn && (hasStandardData || hasFastData)) {    }
     
     
     currentPairs = [];
@@ -2911,14 +2901,7 @@ function checkAndEnableExportButton() {
         (window.currentFastResult.onlyInTable1 && window.currentFastResult.onlyInTable1.length > 0) ||
         (window.currentFastResult.onlyInTable2 && window.currentFastResult.onlyInTable2.length > 0)
     );
-    
-    console.log('🔍 Export button check:', {
-        hasStandardData,
-        hasFastData,
-        currentPairsLength: currentPairs?.length || 0,
-        buttonVisible: exportBtn.style.display !== 'none',
-        buttonDisabled: exportBtn.disabled
-    });
+
     
     if (hasStandardData || hasFastData) {
         exportBtn.style.display = 'inline-block';
@@ -2938,10 +2921,7 @@ function checkAndEnableExportButton() {
             buttonsContainer.classList.remove('export-hidden');
         }
         
-        console.log('✅ Export button enabled - data available for export');
-    } else {
-        console.log('❌ Export button check - no data available');
-    }
+    } else {    }
 }
 
 function restoreTableStructure() {
@@ -3624,7 +3604,11 @@ async function performComparison() {
 
 
 function updateSummaryStatistics(tableHeaders, file1Size = null, file2Size = null) {
-    if (!currentPairs || currentPairs.length === 0) return;
+    
+    // Use the same pairs that are used in the detailed table
+    if (!currentPairs || currentPairs.length === 0) {
+        return;
+    }
     
     let identicalCount = 0;
     let onlyInFile1 = 0;
@@ -3632,37 +3616,53 @@ function updateSummaryStatistics(tableHeaders, file1Size = null, file2Size = nul
     let toleranceCount = 0;
     let differentCount = 0;
     
+    // Process pairs exactly like the detailed table does
     currentPairs.forEach(pair => {
         const row1 = pair.row1;
         const row2 = pair.row2;
         
         if (row1 && row2) {
-            
-            let isIdentical = true;
+            // Use the same logic as in renderComparisonTable
+            let allSame = true;
             let hasTolerance = false;
+            let isEmpty = true; // Add isEmpty check like in detailed table
             
             for (let c = 0; c < currentFinalAllCols; c++) {
-                const v1 = row1[c] !== undefined ? row1[c] : '';
-                const v2 = row2[c] !== undefined ? row2[c] : '';
+                let v1 = row1[c] !== undefined ? row1[c] : '';
+                let v2 = row2[c] !== undefined ? row2[c] : '';
+                
+                // Check if row is empty (same logic as detailed table)
+                if ((v1 && v1.toString().trim() !== '') || (v2 && v2.toString().trim() !== '')) {
+                    isEmpty = false;
+                }
                 
                 if (toleranceMode) {
-                    const compResult = compareValuesWithTolerance(v1, v2);
-                    if (compResult === 'different') {
-                        isIdentical = false;
+                    const comparisonResult = compareValuesWithTolerance(v1, v2);
+                    if (comparisonResult === 'different') {
+                        allSame = false;
                         break;
-                    } else if (compResult === 'tolerance') {
+                    } else if (comparisonResult === 'tolerance') {
                         hasTolerance = true;
-                        isIdentical = false;
+                        allSame = false;
                     }
                 } else {
-                    if (v1.toString().toUpperCase() !== v2.toString().toUpperCase()) {
-                        isIdentical = false;
+                    // Same logic as in detailed table: compare in upper case
+                    const v1Upper = v1.toString().toUpperCase();
+                    const v2Upper = v2.toString().toUpperCase();
+                    if (v1Upper !== v2Upper) {
+                        allSame = false;
                         break;
                     }
                 }
             }
             
-            if (isIdentical && !hasTolerance) {
+            // Skip empty rows just like detailed table does
+            if (isEmpty) {
+                return; // Skip this pair, don't count it
+            }
+            
+            // Classify the pair
+            if (allSame && !hasTolerance) {
                 identicalCount++;
             } else if (hasTolerance && toleranceMode) {
                 toleranceCount++;
@@ -3670,12 +3670,34 @@ function updateSummaryStatistics(tableHeaders, file1Size = null, file2Size = nul
                 differentCount++;
             }
         } else if (row1 && !row2) {
-            onlyInFile1++;
+            // Check if row1 is empty
+            let isEmpty = true;
+            for (let c = 0; c < currentFinalAllCols; c++) {
+                let v1 = row1[c] !== undefined ? row1[c] : '';
+                if (v1 && v1.toString().trim() !== '') {
+                    isEmpty = false;
+                    break;
+                }
+            }
+            if (!isEmpty) {
+                onlyInFile1++;
+            }
         } else if (!row1 && row2) {
-            onlyInFile2++;
+            // Check if row2 is empty
+            let isEmpty = true;
+            for (let c = 0; c < currentFinalAllCols; c++) {
+                let v2 = row2[c] !== undefined ? row2[c] : '';
+                if (v2 && v2.toString().trim() !== '') {
+                    isEmpty = false;
+                    break;
+                }
+            }
+            if (!isEmpty) {
+                onlyInFile2++;
+            }
         }
     });
-    
+        
     
     if (toleranceMode) {
         
@@ -3707,11 +3729,158 @@ function updateSummaryStatistics(tableHeaders, file1Size = null, file2Size = nul
     else percentClass = 'percent-high';
     
     
-    updateSummaryTable(window.summaryStats.only1, window.summaryStats.only2, window.summaryStats.both, percentDiff, percentClass, tableHeaders);
+    updateSummaryTable(window.summaryStats.only1, window.summaryStats.only2, window.summaryStats.both, percentDiff, percentClass, tableHeaders, file1Size, file2Size);
+}
+
+function calculateFullSummaryStatistics(tableHeaders, body1, body2, finalHeaders, finalAllCols, keyColumnIndexes, userSelectedKeys) {
+    
+    // Create pairs for the entire dataset, not just limited pairs
+    const allPairs = [];
+    const used2 = new Array(body2.length).fill(false);
+    
+    // Use the same fuzzy matching logic as in performFuzzyMatchingForExport
+    function countMatches(rowA, rowB) {
+        let matches = 0;
+        let keyMatches = 0; 
+        let toleranceMatches = 0; 
+        let keyToleranceMatches = 0; 
+        
+        for (let i = 0; i < finalAllCols; i++) {
+            let valueA = (rowA[i] || '').toString();
+            let valueB = (rowB[i] || '').toString();
+            
+            if (toleranceMode) {
+                const compResult = compareValuesWithTolerance(valueA, valueB);
+                
+                if (compResult === 'identical') {
+                    matches++;
+                    if (keyColumnIndexes.includes(i)) {
+                        keyMatches++;
+                    }
+                } else if (compResult === 'tolerance') {
+                    toleranceMatches++;
+                    if (keyColumnIndexes.includes(i)) {
+                        keyToleranceMatches++;
+                    }
+                }
+            } else {
+                if (valueA.toUpperCase() === valueB.toUpperCase()) {
+                    matches++;
+                    if (keyColumnIndexes.includes(i)) {
+                        keyMatches++;
+                    }
+                }
+            }
+        }
+        
+        if (toleranceMode) {
+            const adjustedToleranceMatches = toleranceMatches * 0.7;
+            const adjustedKeyToleranceMatches = keyToleranceMatches * 0.7;
+            
+            const totalKeyScore = (keyMatches * 3) + (adjustedKeyToleranceMatches * 3);
+            const totalOtherScore = (matches - keyMatches) + (adjustedToleranceMatches - adjustedKeyToleranceMatches);
+            
+            return totalKeyScore + totalOtherScore;
+        } else {
+            const otherMatches = matches - keyMatches;
+            const weightedScore = (keyMatches * 3) + otherMatches;
+            return weightedScore;
+        }
+    }
+    
+    // Match all rows from body1 to body2
+    for (let i = 0; i < body1.length; i++) {
+        let bestIdx = -1, bestScore = -1;
+        
+        // Find best match in body2
+        for (let j = 0; j < body2.length; j++) {
+            if (used2[j]) continue;
+            let score = countMatches(body1[i], body2[j]);
+            if (score > bestScore) {
+                bestScore = score;
+                bestIdx = j;
+            }
+        }
+        
+        // Determine matching criteria
+        const keyColumnsCount = keyColumnIndexes.length;
+        let minKeyMatches, minTotalMatches;
+        
+        if (userSelectedKeys && keyColumnsCount > 0) {
+            minKeyMatches = keyColumnsCount * 3;
+            minTotalMatches = keyColumnsCount * 3;
+        } else {
+            minKeyMatches = Math.ceil(keyColumnsCount * 0.6) * 3; 
+            minTotalMatches = Math.ceil(finalAllCols * 0.5); 
+            
+            if (toleranceMode) {
+                minKeyMatches = Math.ceil(keyColumnsCount * 0.8) * 3; 
+                minTotalMatches = Math.ceil(finalAllCols * 0.7); 
+            }
+        }
+                
+        // Check if match meets criteria
+        let shouldMatch = false;
+        if (userSelectedKeys && keyColumnsCount > 0) {
+            let allKeyColumnsMatch = true;
+            for (let colIdx of keyColumnIndexes) {
+                const valueA = (body1[i][colIdx] || '').toString();
+                const valueB = (body2[bestIdx][colIdx] || '').toString();
+                
+                if (toleranceMode) {
+                    const compResult = compareValuesWithTolerance(valueA, valueB);
+                    if (compResult !== 'identical') {
+                        allKeyColumnsMatch = false;
+                        break;
+                    }
+                } else {
+                    if (valueA.toUpperCase() !== valueB.toUpperCase()) {
+                        allKeyColumnsMatch = false;
+                        break;
+                    }
+                }
+            }
+            shouldMatch = allKeyColumnsMatch;
+        } else {
+            shouldMatch = (bestScore >= minKeyMatches || bestScore >= minTotalMatches);
+        }
+        
+        if (shouldMatch && bestIdx !== -1) {
+            allPairs.push({row1: body1[i], row2: body2[bestIdx]});
+            used2[bestIdx] = true;
+        } else {
+            // Debug: why didn't this row match?
+            if (i < 5) { // Only log first 5 unmatched rows to avoid spam
+                if (bestIdx !== -1) {          }
+            }
+            allPairs.push({row1: body1[i], row2: null});
+        }
+    }
+    
+    // Add unmatched rows from body2
+    for (let j = 0; j < body2.length; j++) {
+        if (!used2[j]) {
+            allPairs.push({row1: null, row2: body2[j]});
+        }
+    }
+    
+    
+    // Now calculate statistics using all pairs
+    const originalCurrentPairs = currentPairs;
+    const originalCurrentFinalAllCols = currentFinalAllCols;
+    
+    currentPairs = allPairs;
+    currentFinalAllCols = finalAllCols;
+    
+    updateSummaryStatistics(tableHeaders, body1.length, body2.length);
+    
+    // Restore original values
+    currentPairs = originalCurrentPairs;
+    currentFinalAllCols = originalCurrentFinalAllCols;
 }
 
 
-function updateSummaryTable(only1, only2, both, percentDiff, percentClass, tableHeaders) {
+function updateSummaryTable(only1, only2, both, percentDiff, percentClass, tableHeaders, file1Size = null, file2Size = null) {
     
     const summaryDiv = document.getElementById('summary');
     const existingHTML = summaryDiv.innerHTML;
@@ -3731,13 +3900,17 @@ function updateSummaryTable(only1, only2, both, percentDiff, percentClass, table
     const diffColumns1Html = (diffColumns1 !== '-') ? `<span style="color: red; font-weight: bold;">${diffColumns1}</span>` : diffColumns1;
     const diffColumns2Html = (diffColumns2 !== '-') ? `<span style="color: red; font-weight: bold;">${diffColumns2}</span>` : diffColumns2;
     
+    // Use provided file sizes or fall back to currentPairs count
+    const file1RowCount = file1Size !== null ? file1Size : (currentPairs ? currentPairs.filter(p => p.row1).length : 0);
+    const file2RowCount = file2Size !== null ? file2Size : (currentPairs ? currentPairs.filter(p => p.row2).length : 0);
+    
     let htmlSummary = `
         ${excludedInfo}
         ${toleranceInfo}
         <table style="margin-bottom:20px; border: 1px solid #ccc;">
             <tr><th>${tableHeaders.file}</th><th>${tableHeaders.rowCount}</th><th>${tableHeaders.rowsOnlyInFile}</th><th>${tableHeaders.identicalRows}</th><th>${tableHeaders.similarity}</th><th>${tableHeaders.diffColumns}</th></tr>
-            <tr><td>${getFileDisplayName(fileName1, sheetName1) || tableHeaders.file1}</td><td>${currentPairs.filter(p => p.row1).length}</td><td>${only1}</td><td rowspan="2">${both}</td><td rowspan="2" class="percent-cell ${percentClass}">${percentDiff}%</td><td>${diffColumns1Html}</td></tr>
-            <tr><td>${getFileDisplayName(fileName2, sheetName2) || tableHeaders.file2}</td><td>${currentPairs.filter(p => p.row2).length}</td><td>${only2}</td><td>${diffColumns2Html}</td></tr>
+            <tr><td>${getFileDisplayName(fileName1, sheetName1) || tableHeaders.file1}</td><td>${file1RowCount}</td><td>${only1}</td><td rowspan="2">${both}</td><td rowspan="2" class="percent-cell ${percentClass}">${percentDiff}%</td><td>${diffColumns1Html}</td></tr>
+            <tr><td>${getFileDisplayName(fileName2, sheetName2) || tableHeaders.file2}</td><td>${file2RowCount}</td><td>${only2}</td><td>${diffColumns2Html}</td></tr>
         </table>
     `;
     
@@ -3976,6 +4149,165 @@ function getKeyColumnIndexes(headers, selectedKeyColumns) {
 }
 
 
+function createFullStatisticsPairs(tableHeaders, body1, body2, finalAllCols, keyColumnIndexes, userSelectedKeys) {
+    
+    // Create complete pairs array for statistics - use EXACT same logic as performFuzzyMatchingForExport
+    const fullPairs = [];
+    const used2ForStats = new Array(body2.length).fill(false);
+    
+    // Use SAME countMatches function as main algorithm
+    function countMatches(rowA, rowB) {
+        let matches = 0;
+        let keyMatches = 0; 
+        let toleranceMatches = 0; 
+        let keyToleranceMatches = 0; 
+        
+        const keyColumnsIndexes = keyColumnIndexes;
+        
+        for (let i = 0; i < finalAllCols; i++) {
+            let valueA = (rowA[i] || '').toString();
+            let valueB = (rowB[i] || '').toString();
+            
+            if (toleranceMode) {
+                const compResult = compareValuesWithTolerance(valueA, valueB);
+                
+                if (compResult === 'identical') {
+                    matches++;
+                    if (keyColumnsIndexes.includes(i)) {
+                        keyMatches++;
+                    }
+                } else if (compResult === 'tolerance') {
+                    toleranceMatches++;
+                    if (keyColumnsIndexes.includes(i)) {
+                        keyToleranceMatches++;
+                    }
+                }
+            } else {
+                if (valueA.toUpperCase() === valueB.toUpperCase()) {
+                    matches++;
+                    if (keyColumnsIndexes.includes(i)) {
+                        keyMatches++;
+                    }
+                }
+            }
+        }
+        
+        if (toleranceMode) {
+            const adjustedToleranceMatches = toleranceMatches * 0.7;
+            const adjustedKeyToleranceMatches = keyToleranceMatches * 0.7;
+            
+            const totalKeyScore = (keyMatches * 3) + (adjustedKeyToleranceMatches * 3);
+            const totalOtherScore = (matches - keyMatches) + (adjustedToleranceMatches - adjustedKeyToleranceMatches);
+            
+            return totalKeyScore + totalOtherScore;
+        } else {
+            const otherMatches = matches - keyMatches;
+            const weightedScore = (keyMatches * 3) + otherMatches;
+            return weightedScore;
+        }
+    }
+    
+    // Process ALL rows from body1 - using EXACT same logic as main algorithm
+    for (let i = 0; i < body1.length; i++) {
+        let bestIdx = -1, bestScore = -1;
+        
+        // Find best match in body2
+        for (let j = 0; j < body2.length; j++) {
+            if (used2ForStats[j]) continue;
+            let score = countMatches(body1[i], body2[j]);
+            if (score > bestScore) {
+                bestScore = score;
+                bestIdx = j;
+            }
+        }
+        
+        // Use EXACT same matching criteria as main algorithm
+        const keyColumnsCount = keyColumnIndexes.length;
+        let minKeyMatches, minTotalMatches;
+        
+        if (userSelectedKeys && keyColumnsCount > 0) {
+            minKeyMatches = keyColumnsCount * 3;
+            minTotalMatches = keyColumnsCount * 3;
+        } else {
+            minKeyMatches = Math.ceil(keyColumnsCount * 0.6) * 3; 
+            minTotalMatches = Math.ceil(finalAllCols * 0.5); 
+            
+            if (toleranceMode) {
+                minKeyMatches = Math.ceil(keyColumnsCount * 0.8) * 3; 
+                minTotalMatches = Math.ceil(finalAllCols * 0.7); 
+            }
+        }
+        
+        // Use EXACT same matching logic as main algorithm
+        let shouldMatch = false;
+        if (userSelectedKeys && keyColumnsCount > 0) {
+            // Strict key matching: check if ALL key columns match exactly
+            let allKeyColumnsMatch = true;
+            for (let colIdx of keyColumnIndexes) {
+                const valueA = (body1[i][colIdx] || '').toString();
+                const valueB = bestIdx !== -1 ? (body2[bestIdx][colIdx] || '').toString() : '';
+                
+                // In strict key matching mode, always require exact match regardless of tolerance mode
+                if (toleranceMode) {
+                    const compResult = compareValuesWithTolerance(valueA, valueB);
+                    if (compResult !== 'identical') {
+                        allKeyColumnsMatch = false;
+                        break;
+                    }
+                } else {
+                    if (valueA.toUpperCase() !== valueB.toUpperCase()) {
+                        allKeyColumnsMatch = false;
+                        break;
+                    }
+                }
+            }
+            shouldMatch = allKeyColumnsMatch;
+        } else {
+            // Fuzzy matching based on score thresholds
+            shouldMatch = (bestScore >= minKeyMatches || bestScore >= minTotalMatches);
+        }
+        
+        if (shouldMatch && bestIdx !== -1) {
+            fullPairs.push({row1: body1[i], row2: body2[bestIdx]});
+            used2ForStats[bestIdx] = true;
+        } else {
+            fullPairs.push({row1: body1[i], row2: null});
+        }
+    }
+    
+    // Add all unmatched rows from body2
+    for (let j = 0; j < body2.length; j++) {
+        if (!used2ForStats[j]) {
+            fullPairs.push({row1: null, row2: body2[j]});
+        }
+    }
+    
+    // Calculate statistics using complete pairs
+    const originalCurrentPairs = currentPairs;
+    const originalCurrentFinalAllCols = currentFinalAllCols;
+    
+    currentPairs = fullPairs;
+    currentFinalAllCols = finalAllCols;
+    
+    updateSummaryStatistics(tableHeaders, body1.length, body2.length);
+    
+    // Save full statistics for export before restoring limited data
+    window.fullDatasetStats = {
+        fullPairs: fullPairs.slice(), // Copy for export
+        only1: window.summaryStats ? window.summaryStats.only1 : 0,
+        only2: window.summaryStats ? window.summaryStats.only2 : 0,
+        both: window.summaryStats ? window.summaryStats.both : 0,
+        different: window.summaryStats ? window.summaryStats.different : 0
+    };
+    
+    // Also save for export.js compatibility
+    window.fullComparisonPairs = fullPairs.slice();
+    
+    // Restore for display
+    currentPairs = originalCurrentPairs;
+    currentFinalAllCols = originalCurrentFinalAllCols;
+}
+
 function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols, isLargeFile, tableHeaders, quickModeOnly = false, keyColumnIndexes = [], userSelectedKeys = false) {
     
     
@@ -3992,9 +4324,9 @@ function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols,
     
     let used2 = new Array(body2.length).fill(false);
     let pairs = [];
-    let limitedPairsForDisplay = []; // For large files, limit display to first 100 different rows
+    let limitedPairsForDisplay = []; // For large files, limit display to first 111 different rows
     let differentRowsCount = 0;
-    const MAX_DISPLAY_DIFFERENT_ROWS = quickModeOnly ? 100 : 100; // Limit to 100 different rows
+    const MAX_DISPLAY_DIFFERENT_ROWS = quickModeOnly ? 111 : 111; // Limit to 111 different rows
     
     function countMatches(rowA, rowB) {
         let matches = 0;
@@ -4223,9 +4555,8 @@ function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols,
         currentFinalHeaders = finalHeaders;
         currentFinalAllCols = finalAllCols;
         
-        if (!quickModeOnly) {
-            updateSummaryStatistics(tableHeaders, body1.length, body2.length);
-        }
+        // For statistics, ALWAYS process ALL rows to ensure accuracy
+        createFullStatisticsPairs(tableHeaders, body1, body2, finalAllCols, actualKeyColumnIndexes, userSelectedKeys);
         
         if (isLargeFile) {
             if (quickModeOnly) {
@@ -4257,7 +4588,7 @@ function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols,
     }
     
     
-    const batchSize = body1.length > 5000 ? 100 : body1.length > 1000 ? 250 : 1000;
+    const batchSize = body1.length > 5000 ? 111 : body1.length > 1000 ? 111 : 111;
     processBatch(0, batchSize);
 }
 
@@ -4456,6 +4787,12 @@ function renderComparisonTable() {
     let visibleRowCount = 0;
     let tempBodyHtml = '';
     
+    // Debug counters for detailed table
+    let detailedIdenticalCount = 0;
+    let detailedDifferentCount = 0;
+    let detailedOnlyFile1Count = 0;
+    let detailedOnlyFile2Count = 0;
+    
     currentPairs.forEach(pair => {
         let row1 = pair.row1;
         let row2 = pair.row2;
@@ -4468,6 +4805,7 @@ function renderComparisonTable() {
         let hasWarn = false;
         let allSame = true;
         let hasDiff = false;
+        let hasTolerance = false;
         
         for (let c = 0; c < currentFinalAllCols; c++) {
             let v1 = row1 ? (row1[c] !== undefined ? row1[c] : '') : '';
@@ -4476,13 +4814,37 @@ function renderComparisonTable() {
                 isEmpty = false;
             }
             if (row1 && row2) {
-                if (row1Upper[c] !== row2Upper[c]) {
-                    hasWarn = true;
-                    allSame = false;
-                } 
+                if (toleranceMode) {
+                    const comparisonResult = compareValuesWithTolerance(v1, v2);
+                    if (comparisonResult === 'different') {
+                        hasWarn = true;
+                        allSame = false;
+                    } else if (comparisonResult === 'tolerance') {
+                        hasTolerance = true;
+                        allSame = false;
+                    }
+                } else {
+                    if (row1Upper[c] !== row2Upper[c]) {
+                        hasWarn = true;
+                        allSame = false;
+                    }
+                }
             } else {
                 hasDiff = true;
                 allSame = false;
+            }
+        }
+        
+        // Count for debug comparison with summary stats
+        if (!isEmpty) {
+            if (row1 && row2 && allSame && !hasTolerance) {
+                detailedIdenticalCount++;
+            } else if (row1 && row2 && (hasWarn || hasTolerance)) {
+                detailedDifferentCount++;
+            } else if (row1 && !row2) {
+                detailedOnlyFile1Count++;
+            } else if (!row1 && row2) {
+                detailedOnlyFile2Count++;
             }
         }
         
@@ -4490,7 +4852,7 @@ function renderComparisonTable() {
         if (hideSame && row1 && row2 && allSame) return;
         if (hideNewRows1 && row1 && !row2) return;
         if (hideNewRows2 && !row1 && row2) return;
-        if (hideDiffRows && row1 && row2 && hasWarn) return;
+        if (hideDiffRows && row1 && row2 && (hasWarn || hasTolerance)) return;
         
         visibleRowCount++;
     });

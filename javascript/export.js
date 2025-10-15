@@ -473,7 +473,7 @@ function prepareDataFromRawData() {
             if ((v1 && v1.toString().trim() !== '') || (v2 && v2.toString().trim() !== '')) isEmpty = false;
             
             if (row1 && row2) {
-                if (toleranceMode && typeof compareValuesWithTolerance === 'function') {
+                if (window.toleranceMode && typeof compareValuesWithTolerance === 'function') {
                     const comparisonResult = compareValuesWithTolerance(v1, v2);
                     columnComparisons[c] = comparisonResult;
                     
@@ -624,30 +624,77 @@ function performFuzzyMatchingForExportInternal(body1, body2, finalHeaders, final
     window.originalBody1 = body1;
     window.originalBody2 = body2;
     
-    const combinedData = [finalHeaders, ...body1, ...body2];
-    const keyColumnIndexes = smartDetectKeyColumns ? smartDetectKeyColumns(finalHeaders, combinedData) : [];
+    // Use SAME logic as main comparison for determining key columns
+    const selectedKeyColumns = (typeof getSelectedKeyColumns === 'function') ? getSelectedKeyColumns() : [];
+    let keyColumnIndexes = [];
+    
+    if (selectedKeyColumns && selectedKeyColumns.length > 0) {
+        // Convert selected column names to indexes in the filtered headers
+        keyColumnIndexes = selectedKeyColumns.map(columnName => {
+            const index = finalHeaders.indexOf(columnName);
+            return index !== -1 ? index : null;
+        }).filter(index => index !== null);
+    } else {
+        // Auto-detect key columns if none selected
+        const combinedData = [finalHeaders, ...body1, ...body2];
+        keyColumnIndexes = smartDetectKeyColumns ? smartDetectKeyColumns(finalHeaders, combinedData) : [];
+    }
+    
+    // Use EXACT same logic as functions.js for userSelectedKeys
+    const userSelectedKeys = selectedKeyColumns.length > 0;
     
     let used2 = new Array(body2.length).fill(false);
     let pairs = [];
     let processedRows = 0;
     
+    // Use SAME countMatches logic as createFullStatisticsPairs
     function countMatches(rowA, rowB) {
         let matches = 0;
-        let keyMatches = 0;
+        let keyMatches = 0; 
+        let toleranceMatches = 0; 
+        let keyToleranceMatches = 0; 
         
         for (let i = 0; i < finalAllCols; i++) {
             let valueA = (rowA[i] || '').toString();
             let valueB = (rowB[i] || '').toString();
             
-            if (valueA.toUpperCase() === valueB.toUpperCase()) {
-                matches++;
-                if (keyColumnIndexes.includes(i)) {
-                    keyMatches++;
+            if (window.toleranceMode) {
+                const compResult = compareValuesWithTolerance ? compareValuesWithTolerance(valueA, valueB) : 'different';
+                
+                if (compResult === 'identical') {
+                    matches++;
+                    if (keyColumnIndexes.includes(i)) {
+                        keyMatches++;
+                    }
+                } else if (compResult === 'tolerance') {
+                    toleranceMatches++;
+                    if (keyColumnIndexes.includes(i)) {
+                        keyToleranceMatches++;
+                    }
+                }
+            } else {
+                if (valueA.toUpperCase() === valueB.toUpperCase()) {
+                    matches++;
+                    if (keyColumnIndexes.includes(i)) {
+                        keyMatches++;
+                    }
                 }
             }
         }
         
-        return (keyMatches * 3) + (matches - keyMatches);
+        if (window.toleranceMode) {
+            const adjustedToleranceMatches = toleranceMatches * 0.7;
+            const adjustedKeyToleranceMatches = keyToleranceMatches * 0.7;
+            
+            const totalKeyScore = (keyMatches * 3) + (adjustedKeyToleranceMatches * 3);
+            const totalOtherScore = (matches - keyMatches) + (adjustedToleranceMatches - adjustedKeyToleranceMatches);
+            
+            return totalKeyScore + totalOtherScore;
+        } else {
+            const otherMatches = matches - keyMatches;
+            const weightedScore = (keyMatches * 3) + otherMatches;
+            return weightedScore;
+        }
     }
     
     function processBatchInternal(startIndex, batchSize) {
@@ -664,9 +711,52 @@ function performFuzzyMatchingForExportInternal(body1, body2, finalHeaders, final
                 }
             }
             
-            const minTotalMatches = Math.ceil(finalAllCols * 0.5);
+            // Use SAME matching criteria as createFullStatisticsPairs
+            const keyColumnsCount = keyColumnIndexes.length;
+            let minKeyMatches, minTotalMatches;
             
-            if (bestScore >= minTotalMatches) {
+            if (userSelectedKeys && keyColumnsCount > 0) {
+                minKeyMatches = keyColumnsCount * 3;
+                minTotalMatches = keyColumnsCount * 3;
+            } else {
+                minKeyMatches = Math.ceil(keyColumnsCount * 0.6) * 3; 
+                minTotalMatches = Math.ceil(finalAllCols * 0.5); 
+                
+                if (window.toleranceMode) {
+                    minKeyMatches = Math.ceil(keyColumnsCount * 0.8) * 3; 
+                    minTotalMatches = Math.ceil(finalAllCols * 0.7); 
+                }
+            }
+            
+            // Use SAME matching logic as createFullStatisticsPairs
+            let shouldMatch = false;
+            if (userSelectedKeys && keyColumnsCount > 0) {
+                // Strict key matching: check if ALL key columns match exactly
+                let allKeyColumnsMatch = true;
+                for (let colIdx of keyColumnIndexes) {
+                    const valueA = (body1[i][colIdx] || '').toString();
+                    const valueB = bestIdx !== -1 ? (body2[bestIdx][colIdx] || '').toString() : '';
+                    
+                    if (window.toleranceMode) {
+                        const compResult = compareValuesWithTolerance ? compareValuesWithTolerance(valueA, valueB) : 'different';
+                        if (compResult !== 'identical') {
+                            allKeyColumnsMatch = false;
+                            break;
+                        }
+                    } else {
+                        if (valueA.toUpperCase() !== valueB.toUpperCase()) {
+                            allKeyColumnsMatch = false;
+                            break;
+                        }
+                    }
+                }
+                shouldMatch = allKeyColumnsMatch;
+            } else {
+                // Fuzzy matching based on score thresholds
+                shouldMatch = (bestScore >= minKeyMatches || bestScore >= minTotalMatches);
+            }
+            
+            if (shouldMatch && bestIdx !== -1) {
                 pairs.push({row1: body1[i], row2: body2[bestIdx]});
                 used2[bestIdx] = true;
             } else {
