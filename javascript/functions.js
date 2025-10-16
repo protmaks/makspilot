@@ -920,6 +920,14 @@ function processSelectedSheet(fileNum, selectedSheetName) {
         }
         
         updateSheetInfo(fileName, workbook.SheetNames, selectedSheetName, fileNum);
+        
+        // Update key columns dropdown when sheet is changed
+        // Use a longer delay to avoid conflict with renderPreview
+        setTimeout(() => {
+            if (typeof debouncedUpdateKeyColumnsOptions === 'function') {
+                debouncedUpdateKeyColumnsOptions(true); // true means restore from cache
+            }
+        }, 200);
     }, 10);
 }
 
@@ -3103,7 +3111,7 @@ function compareTables(useTolerance = false) {
     }
     
     
-    if (totalRows > 1000) {
+    if (totalRows > 1500) {
         const fileInfo = `${data1.length.toLocaleString()} vs ${data2.length.toLocaleString()} rows`;
         const progressMessages = getProgressMessages();
         const loadingMessage = totalRows > DETAILED_TABLE_LIMIT ? 
@@ -3423,45 +3431,53 @@ async function performComparison() {
         return JSON.stringify(keyValues.map(x => (x !== undefined ? x.toString().toUpperCase() : ''))); 
     }
     
-    let set1, set2, only1, only2, both;
-    
-    if (toleranceMode) {
-        
-        
-        set1 = new Set(body1.map((row, index) => `row1_${index}`));
-        set2 = new Set(body2.map((row, index) => `row2_${index}`));
-        only1 = 0; 
-        only2 = 0; 
-        both = 0; 
-    } else {
-        set1 = new Set(body1.map(rowKey));
-        set2 = new Set(body2.map(rowKey));
-        only1 = 0; only2 = 0; both = 0;
-        set1.forEach(k => { if (set2.has(k)) both++; else only1++; });
-        set2.forEach(k => { if (!set1.has(k)) only2++; });
-    }
-    
     let totalRows = Math.max(data1.length, data2.length) - 1;
     let maxRows = Math.max(body1.length, body2.length);
     
+    // Check if this is a large file that requires detailed processing
+    // For large files (>1500 rows), skip preliminary calculations to avoid showing incorrect statistics
+    // The correct statistics will be calculated later by performFuzzyMatchingForExport and updateSummaryStatistics
+    const isLargeFileForStats = totalRows > 1500;
     
-    
-    let totalUniqueRows = only1 + only2 + both;
-    let differentRows = only1 + only2;
+    let set1, set2, only1, only2, both;
     let percentDiff, percentClass;
     
-    if (toleranceMode && totalUniqueRows === 0) {
-        
+    if (isLargeFileForStats) {
+        // For large files, skip preliminary calculations and show "Calculating..." immediately
+        only1 = tableHeaders.calculating;
+        only2 = tableHeaders.calculating;
+        both = tableHeaders.calculating;
         percentDiff = tableHeaders.calculating;
         percentClass = 'percent-low';
     } else {
+        // For smaller files, do the quick preliminary calculation
+        if (toleranceMode) {
+            set1 = new Set(body1.map((row, index) => `row1_${index}`));
+            set2 = new Set(body2.map((row, index) => `row2_${index}`));
+            only1 = 0; 
+            only2 = 0; 
+            both = 0; 
+        } else {
+            set1 = new Set(body1.map(rowKey));
+            set2 = new Set(body2.map(rowKey));
+            only1 = 0; only2 = 0; both = 0;
+            set1.forEach(k => { if (set2.has(k)) both++; else only1++; });
+            set2.forEach(k => { if (!set1.has(k)) only2++; });
+        }
         
-        const maxFileSize = Math.max(body1.length, body2.length);
-        percentDiff = maxFileSize > 0 ? Math.min(((both / maxFileSize) * 100), 100).toFixed(2) + '%' : '0.00%';
-        percentClass = 'percent-high';
-        if (parseFloat(percentDiff) < 30) percentClass = 'percent-low';
-        else if (parseFloat(percentDiff) < 70) percentClass = 'percent-medium';
-        else percentClass = 'percent-high';
+        let totalUniqueRows = only1 + only2 + both;
+        
+        if (toleranceMode && totalUniqueRows === 0) {
+            percentDiff = tableHeaders.calculating;
+            percentClass = 'percent-low';
+        } else {
+            const maxFileSize = Math.max(body1.length, body2.length);
+            percentDiff = maxFileSize > 0 ? Math.min(((both / maxFileSize) * 100), 100).toFixed(2) + '%' : '0.00%';
+            percentClass = 'percent-high';
+            if (parseFloat(percentDiff) < 30) percentClass = 'percent-low';
+            else if (parseFloat(percentDiff) < 70) percentClass = 'percent-medium';
+            else percentClass = 'percent-high';
+        }
     }
     
     
@@ -3507,8 +3523,8 @@ async function performComparison() {
         ${toleranceInfo}
         <table style="margin-bottom:20px; border: 1px solid #ccc;">
             <tr><th>${tableHeaders.file}</th><th>${tableHeaders.rowCount}</th><th>${tableHeaders.rowsOnlyInFile}</th><th>${tableHeaders.identicalRows}</th><th>${tableHeaders.similarity}</th><th>${tableHeaders.diffColumns}</th></tr>
-            <tr><td>${fileName1 || tableHeaders.file1}</td><td>${body1.length}</td><td>${toleranceMode && totalUniqueRows === 0 ? tableHeaders.calculating : only1}</td><td rowspan="2">${toleranceMode && totalUniqueRows === 0 ? tableHeaders.calculating : both}</td><td rowspan="2" class="percent-cell ${percentClass}">${percentDiff}</td><td>${diffColumns1Html}</td></tr>
-            <tr><td>${fileName2 || tableHeaders.file2}</td><td>${body2.length}</td><td>${toleranceMode && totalUniqueRows === 0 ? tableHeaders.calculating : only2}</td><td>${diffColumns2Html}</td></tr>
+            <tr><td>${fileName1 || tableHeaders.file1}</td><td>${body1.length}</td><td>${only1}</td><td rowspan="2">${both}</td><td rowspan="2" class="percent-cell ${percentClass}">${percentDiff}</td><td>${diffColumns1Html}</td></tr>
+            <tr><td>${fileName2 || tableHeaders.file2}</td><td>${body2.length}</td><td>${only2}</td><td>${diffColumns2Html}</td></tr>
         </table>
     `;
     document.getElementById('summary').innerHTML = htmlSummary;
