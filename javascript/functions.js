@@ -3821,7 +3821,7 @@ function calculateFullSummaryStatistics(tableHeaders, body1, body2, finalHeaders
                 
         // Check if match meets criteria
         let shouldMatch = false;
-        if (userSelectedKeys && keyColumnsCount > 0) {
+        if (userSelectedKeys && keyColumnsCount > 0 && bestIdx !== -1) {
             let allKeyColumnsMatch = true;
             for (let colIdx of keyColumnIndexes) {
                 const valueA = (body1[i][colIdx] || '').toString();
@@ -3841,7 +3841,7 @@ function calculateFullSummaryStatistics(tableHeaders, body1, body2, finalHeaders
                 }
             }
             shouldMatch = allKeyColumnsMatch;
-        } else {
+        } else if (bestIdx !== -1) {
             shouldMatch = (bestScore >= minKeyMatches || bestScore >= minTotalMatches);
         }
         
@@ -4421,7 +4421,7 @@ function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols,
             
             // Special handling when user selected key columns
             let shouldMatch = false;
-            if (userSelectedKeys && keyColumnsCount > 0) {
+            if (userSelectedKeys && keyColumnsCount > 0 && bestIdx !== -1) {
 
                 // Strict key matching: check if ALL key columns match exactly
                 let allKeyColumnsMatch = true;
@@ -4444,12 +4444,12 @@ function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols,
                     }
                 }
                 shouldMatch = allKeyColumnsMatch;
-            } else {
+            } else if (bestIdx !== -1) {
                 // Normal fuzzy matching based on score thresholds
                 shouldMatch = (bestScore >= minKeyMatches || bestScore >= minTotalMatches);
             }
             
-            if (shouldMatch) {
+            if (shouldMatch && bestIdx !== -1) {
                 const pair = {row1: body1[i], row2: body2[bestIdx]};
                 pairs.push(pair);
                 used2[bestIdx] = true;
