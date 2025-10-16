@@ -150,6 +150,23 @@ function updateKeyColumnsOptionsInternal(forceUpdate = false) {
     existingSelectedCheckboxes.forEach(checkbox => {
         currentlySelected.push(checkbox.value);
     });
+    
+    // Try to load cached selections if no current selections or if forced update
+    if (currentlySelected.length === 0 || forceUpdate) {
+        const cachedSelections = loadKeyColumnsFromCache();
+        if (cachedSelections && cachedSelections.length > 0) {
+            // Only use cache if no current selections, or if forced update and cache is different
+            if (currentlySelected.length === 0 || 
+                (forceUpdate && JSON.stringify(currentlySelected.sort()) !== JSON.stringify(cachedSelections.sort()))) {
+                currentlySelected.length = 0; // Clear current
+                currentlySelected.push(...cachedSelections);
+                //console.log('🔄 Restored key columns from cache:', cachedSelections);
+            }
+        } else if (forceUpdate && currentlySelected.length === 0) {
+            // No cache found and no current selections - try auto-detection
+            //console.log('🤖 No cache found, attempting auto-detection...');
+        }
+    }
         
     // Clear existing checkboxes
     dropdownContent.innerHTML = '';
@@ -376,6 +393,13 @@ function updateKeyColumnsOptionsInternal(forceUpdate = false) {
         // Enable dropdown functionality
         setupDropdownToggle();
         updateDropdownButtonText();
+        
+        // Auto-detect key columns if no selections and force update (new file loaded)
+        if (forceUpdate && currentlySelected.length === 0) {
+            setTimeout(() => {
+                tryAutoDetectKeyColumns(allHeaders, dataTable1, dataTable2);
+            }, 100);
+        }
     } else {
         // Show placeholder with manual refresh button
         dropdownContent.innerHTML = `
@@ -619,7 +643,7 @@ document.addEventListener('DOMContentLoaded', function() {
         file1Input.addEventListener('change', function() {
             setTimeout(() => {
                 debouncedUpdateKeyColumnsOptions(true); // Force update when file changes
-            }, 2000); // Increase timeout to ensure file processing is complete
+            }, 3000); // Increased timeout to ensure file processing and cache loading
         });
     }
     
@@ -627,17 +651,216 @@ document.addEventListener('DOMContentLoaded', function() {
         file2Input.addEventListener('change', function() {
             setTimeout(() => {
                 debouncedUpdateKeyColumnsOptions(true); // Force update when file changes
-            }, 2000); // Increase timeout to ensure file processing is complete
+            }, 3000); // Increased timeout to ensure file processing and cache loading
         });
     }
     
     // Initial update only - no periodic updates to avoid resetting user selections
     setTimeout(() => debouncedUpdateKeyColumnsOptions(true), 500);
+    
+    // Cleanup old cache entries occasionally (run once per session)
+    setTimeout(() => {
+        cleanupKeyColumnsCache();
+    }, 1000);
 });
 
 // Public function that uses debouncing
 function updateKeyColumnsOptions(forceUpdate = false) {
     return debouncedUpdateKeyColumnsOptions(forceUpdate);
+}
+
+// Key columns cache functionality
+const KEY_COLUMNS_CACHE_KEY = 'keyColumnsCache';
+const MAX_CACHE_ENTRIES = 50; // Limit number of cached files
+
+// Generate cache key for file(s)
+function generateFileCacheKey() {
+    const fileName1 = window.fileName1 || '';
+    const fileName2 = window.fileName2 || '';
+    const sheetName1 = window.sheetName1 || '';
+    const sheetName2 = window.sheetName2 || '';
+    
+    // Create a unique key based on files and sheets
+    let key = '';
+    if (fileName1) {
+        key += fileName1;
+        if (sheetName1) key += ':' + sheetName1;
+    }
+    if (fileName2) {
+        if (key) key += '|';
+        key += fileName2;
+        if (sheetName2) key += ':' + sheetName2;
+    }
+    
+    return key || 'default';
+}
+
+// Save key columns selection to cache
+function saveKeyColumnsToCache(selectedColumns) {
+    try {
+        const cacheKey = generateFileCacheKey();
+        if (!cacheKey || cacheKey === 'default') return;
+        
+        let cache = {};
+        const stored = localStorage.getItem(KEY_COLUMNS_CACHE_KEY);
+        if (stored) {
+            cache = JSON.parse(stored);
+        }
+        
+        // Add timestamp for cleanup
+        cache[cacheKey] = {
+            columns: selectedColumns,
+            timestamp: Date.now()
+        };
+        
+        // Cleanup old entries if cache gets too large
+        const entries = Object.entries(cache);
+        if (entries.length > MAX_CACHE_ENTRIES) {
+            // Sort by timestamp and keep only the most recent entries
+            entries.sort((a, b) => b[1].timestamp - a[1].timestamp);
+            cache = {};
+            entries.slice(0, MAX_CACHE_ENTRIES).forEach(([key, value]) => {
+                cache[key] = value;
+            });
+        }
+        
+        localStorage.setItem(KEY_COLUMNS_CACHE_KEY, JSON.stringify(cache));
+        //console.log('💾 Saved key columns to cache for:', cacheKey, selectedColumns);
+    } catch (error) {
+        //console.warn('⚠️ Failed to save key columns to cache:', error);
+    }
+}
+
+// Load key columns selection from cache
+function loadKeyColumnsFromCache() {
+    try {
+        const cacheKey = generateFileCacheKey();
+        if (!cacheKey || cacheKey === 'default') return null;
+        
+        const stored = localStorage.getItem(KEY_COLUMNS_CACHE_KEY);
+        if (!stored) return null;
+        
+        const cache = JSON.parse(stored);
+        const cachedData = cache[cacheKey];
+        
+        if (cachedData && cachedData.columns) {
+            //console.log('📥 Loaded key columns from cache for:', cacheKey, cachedData.columns);
+            return cachedData.columns;
+        }
+    } catch (error) {
+        //console.warn('⚠️ Failed to load key columns from cache:', error);
+    }
+    return null;
+}
+
+// Clear old cache entries (older than 30 days)
+function cleanupKeyColumnsCache() {
+    try {
+        const stored = localStorage.getItem(KEY_COLUMNS_CACHE_KEY);
+        if (!stored) return;
+        
+        const cache = JSON.parse(stored);
+        const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+        
+        let cleaned = false;
+        Object.keys(cache).forEach(key => {
+            if (cache[key].timestamp < thirtyDaysAgo) {
+                delete cache[key];
+                cleaned = true;
+            }
+        });
+        
+        if (cleaned) {
+            localStorage.setItem(KEY_COLUMNS_CACHE_KEY, JSON.stringify(cache));
+            //console.log('🧹 Cleaned up old key columns cache entries');
+        }
+    } catch (error) {
+        //console.warn('⚠️ Failed to cleanup key columns cache:', error);
+    }
+}
+
+// Auto-detect and set key columns when no cache is available
+function tryAutoDetectKeyColumns(allHeaders, dataTable1, dataTable2) {
+    try {
+        // Prepare data for auto-detection
+        let headers = [];
+        let combinedData = [];
+        
+        if (dataTable1 && dataTable1.length > 0) {
+            headers = dataTable1[0];
+            combinedData = [...dataTable1];
+        }
+        
+        if (dataTable2 && dataTable2.length > 0) {
+            if (headers.length === 0) {
+                headers = dataTable2[0];
+                combinedData = [...dataTable2];
+            } else {
+                // Add data from second table
+                combinedData.push(...dataTable2.slice(1));
+            }
+        }
+        
+        if (headers.length === 0) return;
+        
+        // Use existing smart detection function if available
+        let autoDetectedIndexes = [];
+        if (typeof smartDetectKeyColumns === 'function') {
+            autoDetectedIndexes = smartDetectKeyColumns(headers, combinedData);
+        } else {
+            // Fallback simple detection - look for ID-like columns
+            for (let i = 0; i < headers.length; i++) {
+                const header = headers[i].toString().toLowerCase();
+                if (header.includes('id') || header.includes('key') || header.includes('код') || 
+                    header.includes('номер') || header.includes('артикул')) {
+                    autoDetectedIndexes.push(i);
+                    break; // Take first ID-like column
+                }
+            }
+            // If no ID-like columns, use first column
+            if (autoDetectedIndexes.length === 0) {
+                autoDetectedIndexes = [0];
+            }
+        }
+        
+        // Convert indexes to column names
+        const autoDetectedColumnNames = autoDetectedIndexes
+            .map(index => headers[index])
+            .filter(name => name && allHeaders.has(name.toString()));
+        
+        if (autoDetectedColumnNames.length > 0) {
+            //console.log('🤖 Auto-detected key columns:', autoDetectedColumnNames);
+            
+            // Set these columns as selected in the UI
+            setTimeout(() => {
+                setSelectedKeyColumns(autoDetectedColumnNames);
+            }, 50);
+        }
+        
+    } catch (error) {
+        //console.warn('⚠️ Error in auto-detection:', error);
+    }
+}
+
+// Save current key columns selection to cache (called when comparison starts)
+function saveCurrentKeyColumnsSelection() {
+    const selectedColumns = getSelectedKeyColumns();
+    if (selectedColumns.length > 0) {
+        saveKeyColumnsToCache(selectedColumns);
+        //console.log('💾 Saved current key columns selection to cache:', selectedColumns);
+    }
+}
+
+// Clear key columns cache completely
+function clearKeyColumnsCache() {
+    try {
+        localStorage.removeItem(KEY_COLUMNS_CACHE_KEY);
+        //console.log('🗑️ Cleared all key columns cache');
+        return true;
+    } catch (error) {
+        //console.warn('⚠️ Failed to clear key columns cache:', error);
+        return false;
+    }
 }
 
 // Make functions globally available
@@ -646,3 +869,9 @@ window.debouncedUpdateKeyColumnsOptions = debouncedUpdateKeyColumnsOptions;
 window.getSelectedKeyColumns = getSelectedKeyColumns;
 window.setSelectedKeyColumns = setSelectedKeyColumns;
 window.getKeyColumnIndexes = getKeyColumnIndexes;
+window.saveKeyColumnsToCache = saveKeyColumnsToCache;
+window.loadKeyColumnsFromCache = loadKeyColumnsFromCache;
+window.cleanupKeyColumnsCache = cleanupKeyColumnsCache;
+window.clearKeyColumnsCache = clearKeyColumnsCache;
+window.saveCurrentKeyColumnsSelection = saveCurrentKeyColumnsSelection;
+window.tryAutoDetectKeyColumns = tryAutoDetectKeyColumns;
