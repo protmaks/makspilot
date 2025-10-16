@@ -2235,6 +2235,13 @@ function handleFile(file, num) {
         window.sheetName2 = ''; // Make globally accessible
     }
     
+    // Trigger cache restoration after file name is set
+    setTimeout(() => {
+        if (typeof debouncedUpdateKeyColumnsOptions === 'function') {
+            debouncedUpdateKeyColumnsOptions(true);
+        }
+    }, 500);
+    
     
     document.getElementById('result').innerHTML = '';
     document.getElementById('summary').innerHTML = '';
@@ -3120,59 +3127,16 @@ function compareTables(useTolerance = false) {
 
 async function performComparison() {
     
-    // Check if key columns are selected, if not - auto-detect and set them
+    // Save current key columns selection to cache before comparison
+    if (typeof saveCurrentKeyColumnsSelection === 'function') {
+        saveCurrentKeyColumnsSelection();
+    }
+    
+    // Check if key columns are selected
     const selectedKeyColumns = (typeof getSelectedKeyColumns === 'function') ? getSelectedKeyColumns() : [];
     
     // Early calculation of key column indexes - will be updated later after filtering
     let keyColumnIndexes = [];
-    
-    if (selectedKeyColumns.length === 0) {
-        // Auto-detect key columns and set them in UI
-        const headers = data1.length > 0 ? data1[0] : (data2.length > 0 ? data2[0] : []);
-        if (headers.length > 0) {
-            const combinedData = [headers, ...data1.slice(1), ...data2.slice(1)];
-            const autoDetectedIndexes = smartDetectKeyColumns(headers, combinedData);
-            
-            // Convert indexes to column names
-            const autoDetectedColumnNames = autoDetectedIndexes.map(index => headers[index]).filter(name => name);
-            
-            // Set these columns as selected in the UI with a small delay to ensure dropdown is ready
-            if (autoDetectedColumnNames.length > 0 && typeof setSelectedKeyColumns === 'function') {
-                // Ensure dropdown is populated first
-                if (typeof debouncedUpdateKeyColumnsOptions === 'function') {
-                    debouncedUpdateKeyColumnsOptions(true);
-                }
-                
-                // Set selected columns after a brief delay with retry logic
-                setTimeout(() => {
-                    setSelectedKeyColumns(autoDetectedColumnNames);
-                    
-                    // Verify if selection was successful and retry if needed
-                    setTimeout(() => {
-                        const currentlySelected = (typeof getSelectedKeyColumns === 'function') ? getSelectedKeyColumns() : [];
-                        if (currentlySelected.length === 0) {
-                            console.warn('⚠️ Auto-selection failed, retrying...');
-                            setSelectedKeyColumns(autoDetectedColumnNames);
-                        }
-                    }, 100);
-                    
-                    // Show brief notification to user about auto-selection
-                    const keyColumnsLabel = document.querySelector('.key-columns-label');
-                    if (keyColumnsLabel) {
-                        const originalText = keyColumnsLabel.textContent;
-                        keyColumnsLabel.style.color = '#28a745';
-                        keyColumnsLabel.textContent = `Key columns (auto-selected): `;
-                        
-                        // Restore original text after 3 seconds
-                        setTimeout(() => {
-                            keyColumnsLabel.style.color = '';
-                            keyColumnsLabel.textContent = originalText;
-                        }, 3000);
-                    }
-                }, 500); // Increased delay
-            }
-        }
-    }
 
     if (window.MaxPilotDuckDB && window.MaxPilotDuckDB.fastComparator && window.MaxPilotDuckDB.fastComparator.initialized) {
         try {
