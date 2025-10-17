@@ -2823,7 +2823,7 @@ async function generateDetailedComparisonTable(fastResult, useTolerance) {
     
     const pairs = [];
     
-    const maxIdenticalToShow = (onlyInTable1?.length || 0) === 0 && (onlyInTable2?.length || 0) === 0 ? 1000 : 100;
+    const maxIdenticalToShow = (onlyInTable1?.length || 0) === 0 && (onlyInTable2?.length || 0) === 0 ? 500 : 100;
     (identical || []).slice(0, maxIdenticalToShow).forEach(identicalPair => {
         const row1Index = identicalPair.row1;
         const row2Index = identicalPair.row2;
@@ -3102,7 +3102,7 @@ async function createBasicFallbackTable(pairs, headers) {
         ? window.getFileDisplayName(window.fileName2 || 'File 2', window.sheetName2 || '')
         : (window.fileName2 || 'File 2');
     
-    pairs.slice(0, 1000).forEach((pair, index) => {
+    pairs.slice(0, 500).forEach((pair, index) => {
         // Check checkbox filters
         const row1 = pair.row1;
         const row2 = pair.row2;
@@ -3323,10 +3323,6 @@ async function createBasicFallbackTable(pairs, headers) {
             bodyHtml += `</tr>`;
         }
     });
-    
-    if (pairs.length > 1000) {
-        bodyHtml += `<tr class="info-row"><td colspan="${realHeaders.length + 1}" style="text-align:center; padding:10px; background:#f8f9fa; font-style: italic;">⚠️ Showing first 1,000 of ${pairs.length} differences</td></tr>`;
-    }
     
     bodyTable.innerHTML = bodyHtml;
     
