@@ -424,11 +424,11 @@ class FastTableComparator {
             
             const insertSQL = `
                 INSERT OR REPLACE INTO file_aggregation_stats 
-                (file_id, file_name, row_count, column_count, file_size_bytes)
-                VALUES ('${fileId}', '${fileName.replace(/'/g, "''")}', ${rowCount}, ${columnCount}, ${fileSize})
+                (file_id, file_name, row_count, column_count, file_size_bytes, loaded_at)
+                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             `;
             
-            await window.duckdbLoader.query(insertSQL);
+            await window.duckdbLoader.query(insertSQL, [fileId, fileName, rowCount, columnCount, fileSize]);
             
             logDatabaseOperation('File Added to Aggregation', {
                 fileId: fileId,
@@ -502,28 +502,30 @@ class FastTableComparator {
             // Update file 1 statistics
             await window.duckdbLoader.query(`
                 UPDATE file_aggregation_stats 
-                SET identical_rows = ${file1Stats.identicalRows}, 
-                    rows_only_in_file = ${file1Stats.rowsOnlyInFile}, 
-                    similar_rows = ${file1Stats.similarRows},
-                    diff_columns = ${file1Stats.diffColumns}, 
-                    similarity_percent = ${file1Stats.similarityPercent}, 
+                SET identical_rows = ?, 
+                    rows_only_in_file = ?, 
+                    similar_rows = ?,
+                    diff_columns = ?, 
+                    similarity_percent = ?, 
                     is_compared = TRUE, 
                     compared_at = CURRENT_TIMESTAMP
-                WHERE file_id = '${file1Id}'
-            `);
+                WHERE file_id = ?
+            `, [file1Stats.identicalRows, file1Stats.rowsOnlyInFile, file1Stats.similarRows,
+                file1Stats.diffColumns, file1Stats.similarityPercent, file1Id]);
             
             // Update file 2 statistics
             await window.duckdbLoader.query(`
                 UPDATE file_aggregation_stats 
-                SET identical_rows = ${file2Stats.identicalRows}, 
-                    rows_only_in_file = ${file2Stats.rowsOnlyInFile}, 
-                    similar_rows = ${file2Stats.similarRows},
-                    diff_columns = ${file2Stats.diffColumns}, 
-                    similarity_percent = ${file2Stats.similarityPercent}, 
+                SET identical_rows = ?, 
+                    rows_only_in_file = ?, 
+                    similar_rows = ?,
+                    diff_columns = ?, 
+                    similarity_percent = ?, 
                     is_compared = TRUE, 
                     compared_at = CURRENT_TIMESTAMP
-                WHERE file_id = '${file2Id}'
-            `);
+                WHERE file_id = ?
+            `, [file2Stats.identicalRows, file2Stats.rowsOnlyInFile, file2Stats.similarRows,
+                file2Stats.diffColumns, file2Stats.similarityPercent, file2Id]);
             
             logDatabaseOperation('Comparison Results Updated', {
                 file1Id: file1Id,
@@ -574,11 +576,6 @@ class FastTableComparator {
 
     async getAggregationData() {
         try {
-            // First check if table exists and has data
-            const countResult = await window.duckdbLoader.query(`SELECT COUNT(*) as total FROM file_aggregation_stats`);
-            const countData = countResult.toArray();
-            const count = Number(countData[0]?.total || 0);
-            
             const result = await window.duckdbLoader.query(`
                 SELECT 
                     file_id,
@@ -598,24 +595,7 @@ class FastTableComparator {
                 ORDER BY loaded_at DESC
             `);
             
-            const data = result.toArray();
-            
-            // Convert BigInt values to regular numbers for JSON serialization
-            const convertedData = data.map(row => {
-                const convertedRow = {};
-                for (const [key, value] of Object.entries(row)) {
-                    if (typeof value === 'bigint') {
-                        convertedRow[key] = Number(value);
-                    } else {
-                        convertedRow[key] = value;
-                    }
-                }
-                return convertedRow;
-            });
-            
-            console.log(`📊 Aggregation table updated: ${convertedData.length} files loaded`);
-            
-            return convertedData;
+            return result.toArray();
             
         } catch (error) {
             console.error('❌ Failed to get aggregation data:', error);
@@ -627,8 +607,6 @@ class FastTableComparator {
         try {
             const aggregationData = await this.getAggregationData();
             
-            // UI update with aggregation data
-            
             // Dispatch custom event with aggregation data
             const event = new CustomEvent('aggregationDataUpdated', {
                 detail: { data: aggregationData }
@@ -637,14 +615,6 @@ class FastTableComparator {
             
             // Also call global function if it exists
             if (typeof window.updateAggregationTable === 'function') {
-                window.updateAggregationTable(aggregationData);
-            } else {
-                // Create a temporary function for aggregation data
-                if (!window.updateAggregationTable) {
-                    window.updateAggregationTable = function(data) {
-                        console.log('� Aggregation UI updated:', data.length > 0 ? `${data.length} files` : 'no data');
-                    };
-                }
                 window.updateAggregationTable(aggregationData);
             }
             
@@ -671,7 +641,7 @@ class FastTableComparator {
 
     async removeFileFromAggregation(fileId) {
         try {
-            await window.duckdbLoader.query(`DELETE FROM file_aggregation_stats WHERE file_id = '${fileId}'`);
+            await window.duckdbLoader.query('DELETE FROM file_aggregation_stats WHERE file_id = ?', [fileId]);
             
             logDatabaseOperation('File Removed from Aggregation', {
                 fileId: fileId
@@ -909,6 +879,10 @@ class FastTableComparator {
             // Initialize progress tracking
             initializeProgress(totalSize, 'Initializing comparison...');
             
+            if (totalSize > 30000 || columnCount > 40) {
+                return await this.compareTablesOptimizedForLargeData(data1, data2, excludeColumns, useTolerance);
+            }
+
             updateStageProgress('Validating input data', 5);
 
             if (!Array.isArray(data1) || !Array.isArray(data2) || data1.length === 0 || data2.length === 0) {
@@ -1501,6 +1475,244 @@ class FastTableComparator {
         }
     }
 
+    async compareTablesOptimizedForLargeData(data1, data2, excludeColumns = [], useTolerance = false) {
+        const startTime = performance.now();
+
+        // Reset zero value formatting counter for this comparison
+        zeroValueFormattingCount = 0;
+
+        logDatabaseOperation('Large Data Comparison Started', {
+            table1Rows: data1 ? data1.length - 1 : 0,
+            table2Rows: data2 ? data2.length - 1 : 0,
+            excludeColumns: excludeColumns,
+            useTolerance: useTolerance
+        });
+
+        try {
+            const totalRows = Math.max(data1.length - 1, data2.length - 1);
+            initializeProgress(totalRows, 'Preparing data structure');
+            
+            const headers1 = data1[0] || [];
+            const headers2 = data2[0] || [];
+            
+            const sanitizeColumnName = (name, index) => {
+                if (!name || typeof name !== 'string') {
+                    return `col_${index}`;
+                }
+                return name.replace(/[^a-zA-Z0-9_]/g, '_').replace(/^[0-9]/, 'col_$&') || `col_${index}`;
+            };
+
+            const sanitizedHeaders1 = headers1.map((h, i) => sanitizeColumnName(h, i));
+            const sanitizedHeaders2 = headers2.map((h, i) => sanitizeColumnName(h, i));
+
+            updateStageProgress('Creating database tables', 5);
+            
+            const createTable1SQL = `CREATE OR REPLACE TABLE table1 (
+                rowid INTEGER,
+                ${sanitizedHeaders1.map(h => `"${h}" VARCHAR`).join(', ')}
+            )`;
+
+            const createTable2SQL = `CREATE OR REPLACE TABLE table2 (
+                rowid INTEGER,
+                ${sanitizedHeaders2.map(h => `"${h}" VARCHAR`).join(', ')}
+            )`;
+
+            await window.duckdbLoader.query(createTable1SQL);
+            await window.duckdbLoader.query(createTable2SQL);
+
+            updateStageProgress('Loading data into tables', 10);
+            
+            const LARGE_BATCH_SIZE = 2000;
+            
+            const insertOptimizedBatch = async (tableName, data, headers) => {
+                const totalBatches = Math.ceil((data.length - 1) / LARGE_BATCH_SIZE);
+                let currentBatch = 0;
+                let processedRows = 0;
+                
+                updateRowProgress(processedRows, `Loading ${tableName}`);
+                
+                for (let i = 1; i < data.length; i += LARGE_BATCH_SIZE) {
+                    currentBatch++;
+                    const batchEnd = Math.min(i + LARGE_BATCH_SIZE, data.length);
+                    const batchData = data.slice(i, batchEnd);
+                    
+                    const values = batchData.map((row, idx) => {
+                        const rowId = i + idx - 1;
+                        const cleanRow = headers.map((_, colIdx) => {
+                            const val = row[colIdx];
+                            if (val === null || val === undefined || val === '') {
+                                return 'NULL';
+                            }
+                            return `'${val.toString().replace(/'/g, "''")}'`;
+                        }).join(', ');
+                        return `(${rowId}, ${cleanRow})`;
+                    }).join(', ');
+
+                    if (values) {
+                        const insertSQL = `INSERT INTO ${tableName} VALUES ${values}`;
+                        await window.duckdbLoader.query(insertSQL);
+                        
+                        processedRows = batchEnd - 1;
+                        updateRowProgress(processedRows, `Loading ${tableName} (batch ${currentBatch}/${totalBatches})`);
+                    }
+                }
+            };
+
+            await insertOptimizedBatch('table1', data1, headers1);
+            await insertOptimizedBatch('table2', data2, headers2);
+
+            updateStageProgress('Analyzing columns for comparison', 15);
+            
+            const comparisonColumns = [];
+            headers1.forEach((header, index) => {
+                const shouldExclude = excludeColumns.some(excCol => {
+                    if (typeof excCol === 'string') {
+                        return header.toLowerCase().includes(excCol.toLowerCase());
+                    } else if (typeof excCol === 'number') {
+                        return index === excCol;
+                    }
+                    return false;
+                });
+                
+                if (!shouldExclude && index < headers2.length) {
+                    comparisonColumns.push(index);
+                }
+            });
+
+            if (comparisonColumns.length === 0) {
+                throw new Error('No columns available for comparison');
+            }
+
+            // For very large data, limit the number of comparison columns
+            const dataSize = (data1.length - 1) + (data2.length - 1);
+            const maxColumns = dataSize > 40000 ? 5 : (dataSize > 20000 ? 8 : 10);
+            
+            const simpleConditions = comparisonColumns.slice(0, Math.min(maxColumns, comparisonColumns.length)).map(colIdx => {
+                const col1Name = sanitizedHeaders1[colIdx];
+                const col2Name = sanitizedHeaders2[colIdx];
+                
+                // For large data optimization, use simple VARCHAR comparison for all columns
+                // Use strict comparison for key columns - no COALESCE for NULL values
+                return `UPPER(TRIM(t1."${col1Name}")) = UPPER(TRIM(t2."${col2Name}"))`;
+            });
+
+            // Search for identical rows with limited conditions
+            updateStageProgress('Finding identical records', 80);
+            
+            const identicalSQL = `
+                CREATE OR REPLACE TABLE identical_pairs AS
+                SELECT 
+                    t1.rowid as row1_id,
+                    t2.rowid as row2_id,
+                    'IDENTICAL' as match_type
+                FROM table1 t1
+                INNER JOIN table2 t2 ON (${simpleConditions.join(' AND ')})
+            `;
+            
+            await window.duckdbLoader.query(identicalSQL);
+            
+            // Search for unique records only in first table
+            updateStageProgress('Finding records only in first table', 90);
+            
+            const onlyTable1SQL = `
+                CREATE OR REPLACE TABLE only_table1 AS
+                SELECT t1.rowid as row1_id, 'ONLY_IN_TABLE1' as type
+                FROM table1 t1
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM identical_pairs ip WHERE ip.row1_id = t1.rowid
+                )
+            `;
+            await window.duckdbLoader.query(onlyTable1SQL);
+
+            // Search for unique records only in second table
+            updateStageProgress('Finding records only in second table', 95);
+            
+            const onlyTable2SQL = `
+                CREATE OR REPLACE TABLE only_table2 AS
+                SELECT t2.rowid as row2_id, 'ONLY_IN_TABLE2' as type
+                FROM table2 t2
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM identical_pairs ip WHERE ip.row2_id = t2.rowid
+                )
+            `;
+            await window.duckdbLoader.query(onlyTable2SQL);
+
+            // Get results
+            updateStageProgress('Collecting final results', 100);
+            const identicalResult = await window.duckdbLoader.query('SELECT * FROM identical_pairs');
+            const onlyTable1Result = await window.duckdbLoader.query('SELECT * FROM only_table1');
+            const onlyTable2Result = await window.duckdbLoader.query('SELECT * FROM only_table2');
+
+            const identical = identicalResult.toArray().map(r => ({
+                row1: r.row1_id,
+                row2: r.row2_id,
+                status: 'IDENTICAL'
+            }));
+
+            const onlyInTable1 = onlyTable1Result.toArray().map(r => ({
+                row1: r.row1_id,
+                row2: null,
+                status: 'ONLY_IN_TABLE1'
+            }));
+
+            const onlyInTable2 = onlyTable2Result.toArray().map(r => ({
+                row1: null,
+                row2: r.row2_id,
+                status: 'ONLY_IN_TABLE2'
+            }));
+
+            const duration = performance.now() - startTime;
+            updateProgressMessage('Comparison completed successfully!', 100);
+
+            const comparisonResults = {
+                identical: identical,
+                similar: [], // For large data, don't search for similar records
+                onlyInTable1: onlyInTable1,
+                onlyInTable2: onlyInTable2,
+                table1Count: data1.length - 1,
+                table2Count: data2.length - 1,
+                commonColumns: headers1,
+                comparisonColumns: comparisonColumns,
+                excludedColumns: excludeColumns,
+                keyColumns: comparisonColumns.slice(0, 3), // First 3 columns as key columns
+                performance: {
+                    duration: duration,
+                    rowsPerSecond: Math.round(((data1.length + data2.length) / duration) * 1000),
+                    strategy: 'optimized_large_data'
+                }
+            };
+
+            // Update aggregation table with comparison results
+            if (this.mode === 'wasm') {
+                try {
+                    await this.updateComparisonResults('table1', 'table2', comparisonResults);
+                } catch (error) {
+                    console.error('❌ Failed to update aggregation table:', error);
+                }
+            }
+
+            logDatabaseOperation('Large Data Comparison Completed', {
+                duration: Math.round(duration),
+                identicalRows: identical.length,
+                onlyInTable1: onlyInTable1.length,
+                onlyInTable2: onlyInTable2.length,
+                rowsPerSecond: Math.round(((data1.length + data2.length) / duration) * 1000),
+                strategy: 'optimized_large_data',
+                zeroValuesFormatted: zeroValueFormattingCount
+            });
+
+            return comparisonResults;
+
+        } catch (error) {
+            clearAllProgressIntervals(); // Clear all active progress intervals
+            updateProgressMessage('Comparison failed - switching to fallback mode', 0);
+            console.error('❌ Optimized large data comparison failed:', error);
+            logDatabaseOperation('Large Data Comparison Failed', {
+                error: error.message || error
+            });
+            throw error;
+        }
+    }
 
     detectKeyColumnsSQL(headers, data = null) {
         
@@ -2000,31 +2212,15 @@ async function createTableFromPreviewData(tableNumber, data, fileName = null) {
         const dataRows = data.slice(1);
         
         if (fastComparator.mode === 'wasm') {
-            // Get file name with sheet from global variables or parameter
+            // Get file name from global variables or parameter
             let displayName = fileName;
             if (!displayName) {
                 // Try to get from global variables (assuming they are available)
                 if (typeof window !== 'undefined') {
                     if (tableNumber === 1 && window.fileName1) {
-                        // Use getFileDisplayName to include sheet name
-                        if (typeof window.getFileDisplayName === 'function') {
-                            displayName = window.getFileDisplayName(window.fileName1, window.sheetName1 || '');
-                        } else {
-                            displayName = window.fileName1;
-                            if (window.sheetName1) {
-                                displayName += ':' + window.sheetName1;
-                            }
-                        }
+                        displayName = window.fileName1;
                     } else if (tableNumber === 2 && window.fileName2) {
-                        // Use getFileDisplayName to include sheet name
-                        if (typeof window.getFileDisplayName === 'function') {
-                            displayName = window.getFileDisplayName(window.fileName2, window.sheetName2 || '');
-                        } else {
-                            displayName = window.fileName2;
-                            if (window.sheetName2) {
-                                displayName += ':' + window.sheetName2;
-                            }
-                        }
+                        displayName = window.fileName2;
                     }
                 }
                 displayName = displayName || `Table ${tableNumber}`;
@@ -2201,11 +2397,6 @@ async function createTableFromPreviewData(tableNumber, data, fileName = null) {
             // For local mode, create local tables for preview
             await fastComparator.createTableFromData(tableName, dataRows, headers);
             console.log(`✅ [CALL-${callId}] Table ${tableNumber} created in local mode with ${dataRows.length} rows`);
-        }
-        
-        // Ensure UI is updated after table creation
-        if (fastComparator.mode === 'wasm') {
-            await fastComparator.updateAggregationUI();
         }
         
         console.log(`🏁 [CALL-${callId}] createTableFromPreviewData completed for table${tableNumber}`);
