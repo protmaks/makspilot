@@ -1,5 +1,102 @@
 if (typeof window.MaxPilotDuckDB === 'undefined') {
 
+// Database logging configuration
+const DB_LOGGING_ENABLED = true; // Set to false to disable logging
+const DB_LOGGING_LEVELS = {
+    QUERY: true,      // Log individual SQL queries
+    OPERATION: true,  // Log high-level operations (create table, comparison, etc.)
+    TIMING: true,     // Log operation timings
+    RESULTS: true     // Log query results summary
+};
+let dbOperationCounter = 0;
+
+// Database logging function
+function logDatabaseOperation(operation, details = {}) {
+    if (!DB_LOGGING_ENABLED) return;
+    
+    dbOperationCounter++;
+    const timestamp = new Date().toISOString();
+    const operationId = `DB_OP_${dbOperationCounter.toString().padStart(4, '0')}`;
+    
+    // Determine log level
+    const isQuery = operation.toLowerCase().includes('query');
+    const isOperation = operation.toLowerCase().includes('started') || operation.toLowerCase().includes('completed') || operation.toLowerCase().includes('failed');
+    
+    if (isQuery && !DB_LOGGING_LEVELS.QUERY) return;
+    if (isOperation && !DB_LOGGING_LEVELS.OPERATION) return;
+    
+    console.group(`🗃️ [${operationId}] ${operation} - ${timestamp}`);
+    
+    if (details.query && DB_LOGGING_LEVELS.QUERY) {
+        console.log('📝 SQL Query:', details.query);
+    }
+    if (details.parameters) {
+        console.log('🔧 Parameters:', details.parameters);
+    }
+    if (details.tableName) {
+        console.log('📊 Table:', details.tableName);
+    }
+    if (details.rowCount !== undefined) {
+        console.log('📈 Row Count:', details.rowCount);
+    }
+    if (details.duration !== undefined && DB_LOGGING_LEVELS.TIMING) {
+        console.log('⏱️ Duration:', `${details.duration}ms`);
+    }
+    if (details.error) {
+        console.error('❌ Error:', details.error);
+    }
+    if (details.result && typeof details.result === 'object' && DB_LOGGING_LEVELS.RESULTS) {
+        console.log('✅ Result:', details.result);
+    }
+    if (details.result && typeof details.result === 'string' && DB_LOGGING_LEVELS.RESULTS) {
+        console.log('✅ Result:', details.result);
+    }
+    
+    // Add performance metrics if available
+    if (details.rowsPerSecond && DB_LOGGING_LEVELS.TIMING) {
+        console.log('🚀 Performance:', `${details.rowsPerSecond} rows/sec`);
+    }
+    if (details.identicalRows !== undefined && DB_LOGGING_LEVELS.RESULTS) {
+        console.log('🔄 Identical:', details.identicalRows);
+    }
+    if (details.onlyInTable1 !== undefined && DB_LOGGING_LEVELS.RESULTS) {
+        console.log('📋 Only in Table 1:', details.onlyInTable1);
+    }
+    if (details.onlyInTable2 !== undefined && DB_LOGGING_LEVELS.RESULTS) {
+        console.log('📄 Only in Table 2:', details.onlyInTable2);
+    }
+    
+    console.groupEnd();
+}
+
+// Global logging control functions for browser console
+window.enableDatabaseLogging = function() {
+    DB_LOGGING_ENABLED = true;
+    console.log('🗃️ Database logging enabled');
+};
+
+window.disableDatabaseLogging = function() {
+    DB_LOGGING_ENABLED = false;
+    console.log('🗃️ Database logging disabled');
+};
+
+window.setDatabaseLoggingLevel = function(level, enabled) {
+    if (DB_LOGGING_LEVELS.hasOwnProperty(level)) {
+        DB_LOGGING_LEVELS[level] = enabled;
+        console.log(`🗃️ Database logging level ${level} ${enabled ? 'enabled' : 'disabled'}`);
+    } else {
+        console.log('🗃️ Available logging levels:', Object.keys(DB_LOGGING_LEVELS));
+    }
+};
+
+window.showDatabaseLoggingStatus = function() {
+    console.group('🗃️ Database Logging Status');
+    console.log('Enabled:', DB_LOGGING_ENABLED);
+    console.log('Operation counter:', dbOperationCounter);
+    console.log('Levels:', DB_LOGGING_LEVELS);
+    console.groupEnd();
+};
+
 // Progress display functions
 let activeProgressIntervals = []; // For tracking active intervals
 let progressState = {
@@ -163,12 +260,55 @@ class FastTableComparator {
             
             this.db = await window.duckdbLoader.initialize();
             
+            // Create logged wrapper for database queries
+            this.originalQuery = window.duckdbLoader.query.bind(window.duckdbLoader);
+            window.duckdbLoader.query = this.createLoggedQuery();
+            
+            logDatabaseOperation('DuckDB WASM Initialized', {
+                result: 'Database successfully initialized'
+            });
+            
             return true;
             
         } catch (error) {
             console.error('❌ Real DuckDB WASM initialization failed:', error);
             throw new Error('Real DuckDB WASM not available');
         }
+    }
+
+    createLoggedQuery() {
+        return async (query, parameters = null) => {
+            const startTime = Date.now();
+            
+            logDatabaseOperation('Query Started', {
+                query: query,
+                parameters: parameters
+            });
+            
+            try {
+                const result = await this.originalQuery(query, parameters);
+                const duration = Date.now() - startTime;
+                
+                logDatabaseOperation('Query Completed', {
+                    query: query,
+                    duration: duration,
+                    result: result ? `${result.length || 0} rows returned` : 'No result data'
+                });
+                
+                return result;
+                
+            } catch (error) {
+                const duration = Date.now() - startTime;
+                
+                logDatabaseOperation('Query Failed', {
+                    query: query,
+                    duration: duration,
+                    error: error.message || error
+                });
+                
+                throw error;
+            }
+        };
     }
 
     async initializeLocal() {
@@ -181,13 +321,29 @@ class FastTableComparator {
             throw new Error('Comparator not initialized');
         }
 
+        logDatabaseOperation('Create Table Started', {
+            tableName: tableName,
+            rowCount: data ? data.length : 0,
+            headers: headers
+        });
+
         try {
             const processedData = this.processTableData(data, headers);
             this.tables.set(tableName, processedData);
             
+            logDatabaseOperation('Create Table Completed', {
+                tableName: tableName,
+                rowCount: processedData.rows.length,
+                columnCount: processedData.columns.length
+            });
+            
             return true;
             
         } catch (error) {
+            logDatabaseOperation('Create Table Failed', {
+                tableName: tableName,
+                error: error.message || error
+            });
             throw error;
         }
     }
@@ -354,15 +510,28 @@ class FastTableComparator {
     async compareTablesWithOriginalLogic(data1, data2, excludeColumns = [], useTolerance = false, customKeyColumns = null) {
         const startTime = performance.now();
 
+        logDatabaseOperation('Original Logic Comparison Started', {
+            table1Rows: data1 ? data1.length - 1 : 0,
+            table2Rows: data2 ? data2.length - 1 : 0,
+            excludeColumns: excludeColumns,
+            useTolerance: useTolerance,
+            customKeyColumns: customKeyColumns
+        });
+
         try {
             const table1Size = data1.length - 1;
             const table2Size = data2.length - 1;
             const totalSize = table1Size + table2Size;
             const columnCount = Math.max(data1[0]?.length || 0, data2[0]?.length || 0);
             
+            // Initialize progress tracking
+            initializeProgress(totalSize, 'Initializing comparison...');
+            
             if (totalSize > 30000 || columnCount > 40) {
                 return await this.compareTablesOptimizedForLargeData(data1, data2, excludeColumns, useTolerance);
             }
+
+            updateStageProgress('Validating input data', 5);
 
             if (!Array.isArray(data1) || !Array.isArray(data2) || data1.length === 0 || data2.length === 0) {
                 console.error('❌ Data validation failed:', {
@@ -373,6 +542,8 @@ class FastTableComparator {
                 });
                 throw new Error('Invalid input data');
             }
+
+            updateStageProgress('Analyzing column structure', 10);
 
             const headers1 = data1[0] || [];
             const headers2 = data2[0] || [];
@@ -456,6 +627,8 @@ class FastTableComparator {
             const sanitizedHeaders1 = headers1.map((h, i) => sanitizeColumnName(h, i));
             const sanitizedHeaders2 = headers2.map((h, i) => sanitizeColumnName(h, i));
 
+            updateStageProgress('Detecting column types', 20);
+
             const columnTypes1 = sanitizedHeaders1.map((_, i) => detectColumnType(data1, i));
             const columnTypes2 = sanitizedHeaders2.map((_, i) => detectColumnType(data2, i));
 
@@ -503,6 +676,8 @@ class FastTableComparator {
 
             const { types1: finalColumnTypes1, types2: finalColumnTypes2 } = harmonizeColumnTypes(columnTypes1, columnTypes2);
 
+            updateStageProgress('Creating database tables', 30);
+
             const createTable1SQL = `CREATE OR REPLACE TABLE table1 (
                 rowid INTEGER,
                 ${sanitizedHeaders1.map((h, i) => `"${h}" ${finalColumnTypes1[i]}`).join(', ')}
@@ -516,6 +691,8 @@ class FastTableComparator {
             await window.duckdbLoader.query(createTable1SQL);
             await window.duckdbLoader.query(createTable2SQL);
             await window.duckdbLoader.query(createTable2SQL);
+
+            updateStageProgress('Loading data into tables', 40);
 
             const formatValue = (value, columnType) => {
                 if (value === null || value === undefined || value === '') {
@@ -585,6 +762,8 @@ class FastTableComparator {
 
             await insertBatch('table1', data1, headers1, finalColumnTypes1);
             await insertBatch('table2', data2, headers2, finalColumnTypes2);
+            
+            updateStageProgress('Preparing comparison logic', 50);
             
             const createComparisonCondition = (colIdx, useTolerance = false, isKeyColumn = false) => {
                 const col1Type = finalColumnTypes1[colIdx];
@@ -691,6 +870,8 @@ class FastTableComparator {
                 keyColumns.push(0);
             }
             
+            updateStageProgress('Setting up key columns', 55);
+            
             // If no custom key columns were provided, mark the auto-detected ones in UI
             if (!customKeyColumns || customKeyColumns.length === 0) {
                 const autoDetectedColumnNames = keyColumns.map(idx => headers1[idx] || `Column ${idx}`);
@@ -717,6 +898,8 @@ class FastTableComparator {
             const table1Count = Number(table1CountResult.toArray()[0]?.count || 0);
             const table2Count = Number(table2CountResult.toArray()[0]?.count || 0);
             
+            updateStageProgress('Finding identical records', 65);
+            
             const identicalSQL = `
                 CREATE OR REPLACE TABLE identical_pairs AS
                 SELECT 
@@ -733,6 +916,8 @@ class FastTableComparator {
             
             const identicalCountResult = await window.duckdbLoader.query('SELECT COUNT(*) as count FROM identical_pairs');
             const identicalCount = Number(identicalCountResult.toArray()[0]?.count || 0);
+
+            updateStageProgress('Finding similar records', 75);
 
             const keyColumnChecks = keyColumns.map(colIdx => createComparisonCondition(colIdx, useTolerance, true)).join(' AND ');
 
@@ -823,6 +1008,9 @@ class FastTableComparator {
                 ) stats
             `);
             const filterStats = filterStatsResult.toArray()[0];
+            
+            updateStageProgress('Generating final results', 90);
+            
             const finalResultsSQL = `
                 SELECT 'IDENTICAL' as type, row1_id, row2_id, ${headers1.length} as matches
                 FROM identical_pairs
@@ -880,6 +1068,17 @@ class FastTableComparator {
 
             const duration = performance.now() - startTime;
 
+            updateProgressMessage('Comparison completed successfully!', 100);
+
+            logDatabaseOperation('Original Logic Comparison Completed', {
+                duration: Math.round(duration),
+                identicalRows: identical.length,
+                similarRows: similar.length,
+                onlyInTable1: onlyInTable1.length,
+                onlyInTable2: onlyInTable2.length,
+                rowsPerSecond: Math.round(((data1.length + data2.length) / duration) * 1000)
+            });
+
             return {
                 identical: identical,
                 similar: similar, 
@@ -898,13 +1097,25 @@ class FastTableComparator {
             };
 
         } catch (error) {
+            clearAllProgressIntervals();
+            updateProgressMessage('Comparison failed - switching to fallback mode', 0);
             console.error('❌ Multi-stage DuckDB comparison failed:', error);
+            logDatabaseOperation('Original Logic Comparison Failed', {
+                error: error.message || error
+            });
             throw error;
         }
     }
 
     async compareTablesOptimizedForLargeData(data1, data2, excludeColumns = [], useTolerance = false) {
         const startTime = performance.now();
+
+        logDatabaseOperation('Large Data Comparison Started', {
+            table1Rows: data1 ? data1.length - 1 : 0,
+            table2Rows: data2 ? data2.length - 1 : 0,
+            excludeColumns: excludeColumns,
+            useTolerance: useTolerance
+        });
 
         try {
             const totalRows = Math.max(data1.length - 1, data2.length - 1);
@@ -1008,21 +1219,10 @@ class FastTableComparator {
             const simpleConditions = comparisonColumns.slice(0, Math.min(maxColumns, comparisonColumns.length)).map(colIdx => {
                 const col1Name = sanitizedHeaders1[colIdx];
                 const col2Name = sanitizedHeaders2[colIdx];
-                const col1Type = finalColumnTypes1[colIdx];
-                const col2Type = finalColumnTypes2[colIdx];
                 
+                // For large data optimization, use simple VARCHAR comparison for all columns
                 // Use strict comparison for key columns - no COALESCE for NULL values
-                if (col1Type === 'DOUBLE' || col2Type === 'DOUBLE') {
-                    return `ROUND(t1."${col1Name}", 2) = ROUND(t2."${col2Name}", 2)`;
-                } else if (col1Type === 'BIGINT' || col1Type === 'INTEGER' || col1Type === 'FLOAT') {
-                    return `t1."${col1Name}" = t2."${col2Name}"`;
-                } else if (col1Type === 'DATE' || col2Type === 'DATE') {
-                    // For DATE columns as keys, always compare full datetime including time
-                    return `t1."${col1Name}" = t2."${col2Name}"`;
-                } else {
-                    // For VARCHAR, use strict comparison without COALESCE to handle NULL properly
-                    return `UPPER(TRIM(t1."${col1Name}")) = UPPER(TRIM(t2."${col2Name}"))`;
-                }
+                return `UPPER(TRIM(t1."${col1Name}")) = UPPER(TRIM(t2."${col2Name}"))`;
             });
 
             // Search for identical rows with limited conditions
@@ -1036,7 +1236,6 @@ class FastTableComparator {
                     'IDENTICAL' as match_type
                 FROM table1 t1
                 INNER JOIN table2 t2 ON (${simpleConditions.join(' AND ')})
-                LIMIT 50000
             `;
             
             await window.duckdbLoader.query(identicalSQL);
@@ -1051,7 +1250,6 @@ class FastTableComparator {
                 WHERE NOT EXISTS (
                     SELECT 1 FROM identical_pairs ip WHERE ip.row1_id = t1.rowid
                 )
-                LIMIT 25000
             `;
             await window.duckdbLoader.query(onlyTable1SQL);
 
@@ -1065,7 +1263,6 @@ class FastTableComparator {
                 WHERE NOT EXISTS (
                     SELECT 1 FROM identical_pairs ip WHERE ip.row2_id = t2.rowid
                 )
-                LIMIT 25000
             `;
             await window.duckdbLoader.query(onlyTable2SQL);
 
@@ -1096,6 +1293,15 @@ class FastTableComparator {
             const duration = performance.now() - startTime;
             updateProgressMessage('Comparison completed successfully!', 100);
 
+            logDatabaseOperation('Large Data Comparison Completed', {
+                duration: Math.round(duration),
+                identicalRows: identical.length,
+                onlyInTable1: onlyInTable1.length,
+                onlyInTable2: onlyInTable2.length,
+                rowsPerSecond: Math.round(((data1.length + data2.length) / duration) * 1000),
+                strategy: 'optimized_large_data'
+            });
+
             return {
                 identical: identical,
                 similar: [], // For large data, don't search for similar records
@@ -1118,6 +1324,9 @@ class FastTableComparator {
             clearAllProgressIntervals(); // Clear all active progress intervals
             updateProgressMessage('Comparison failed - switching to fallback mode', 0);
             console.error('❌ Optimized large data comparison failed:', error);
+            logDatabaseOperation('Large Data Comparison Failed', {
+                error: error.message || error
+            });
             throw error;
         }
     }
@@ -1226,6 +1435,12 @@ class FastTableComparator {
     }
 
     async createDuckDBTable(tableName, tableData) {
+        logDatabaseOperation('DuckDB Table Creation Started', {
+            tableName: tableName,
+            rowCount: tableData.rows.length,
+            columnCount: tableData.columns.length
+        });
+
         const detectColumnType = (data, columnIndex) => {
             const sampleSize = Math.min(100, data.length);
             let numericCount = 0;
@@ -1345,12 +1560,27 @@ class FastTableComparator {
             const insertSQL = `INSERT INTO ${tableName} VALUES ${values}`;
             await window.duckdbLoader.query(insertSQL);
         }
+
+        logDatabaseOperation('DuckDB Table Creation Completed', {
+            tableName: tableName,
+            rowCount: tableData.rows.length,
+            columnCount: tableData.columns.length,
+            batchCount: Math.ceil(tableData.rows.length / BATCH_SIZE)
+        });
     }
 
     async compareTablesLocal(table1Name, table2Name, excludeColumns = [], useTolerance = false, customKeyColumns = null) {
         if (!this.initialized) {
             throw new Error('Comparator not initialized');
         }
+
+        logDatabaseOperation('Local Table Comparison Started', {
+            table1Name: table1Name,
+            table2Name: table2Name,
+            excludeColumns: excludeColumns,
+            useTolerance: useTolerance,
+            customKeyColumns: customKeyColumns
+        });
 
         const table1 = this.tables.get(table1Name);
         const table2 = this.tables.get(table2Name);
@@ -1428,6 +1658,16 @@ class FastTableComparator {
 
         const duration = performance.now() - startTime;
 
+        logDatabaseOperation('Local Table Comparison Completed', {
+            table1Name: table1Name,
+            table2Name: table2Name,
+            duration: Math.round(duration),
+            identicalRows: identical.length,
+            onlyInTable1: onlyInTable1.length,
+            onlyInTable2: onlyInTable2.length,
+            rowsPerSecond: Math.round((table1.rows.length + table2.rows.length) / (duration / 1000))
+        });
+
         return {
             identical,
             onlyInTable1,
@@ -1465,24 +1705,40 @@ let fastComparator = null;
 
 async function initializeFastComparator() {
     if (fastComparator) {
+        logDatabaseOperation('Fast Comparator Already Initialized', {
+            mode: fastComparator.mode,
+            result: 'Using existing instance'
+        });
         return fastComparator;
     }
+
+    logDatabaseOperation('Fast Comparator Initialization Started');
 
     try {
         fastComparator = new FastTableComparator();
         const initialized = await fastComparator.initialize();
         
         if (initialized) {
+            logDatabaseOperation('Fast Comparator Initialization Completed', {
+                mode: fastComparator.mode,
+                result: 'Successfully initialized'
+            });
             showFastModeStatus(true, fastComparator.mode);
             window.duckDBManager = fastComparator;
             window.duckDBAvailable = true;
             
             return fastComparator;
         } else {
+            logDatabaseOperation('Fast Comparator Initialization Failed', {
+                error: 'Initialization returned false'
+            });
             showFastModeStatus(false);
             return null;
         }
     } catch (error) {
+        logDatabaseOperation('Fast Comparator Initialization Failed', {
+            error: error.message || error
+        });
         showFastModeStatus(false);
         return null;
     }
@@ -1538,12 +1794,28 @@ function showFastModeStatus(available, mode = 'local') {
 }
 
 async function compareTablesWithFastComparator(data1, data2, excludeColumns = [], useTolerance = false, tolerance = 1.5, customKeyColumns = null) {
+    logDatabaseOperation('Table Comparison Started', {
+        table1Rows: data1 ? data1.length : 0,
+        table2Rows: data2 ? data2.length : 0,
+        excludeColumns: excludeColumns,
+        useTolerance: useTolerance,
+        tolerance: tolerance,
+        customKeyColumns: customKeyColumns
+    });
+
     try {
 
         if (!fastComparator || !fastComparator.initialized) {
             console.log('❌ Fast comparator not initialized');
+            logDatabaseOperation('Table Comparison Failed', {
+                error: 'Fast comparator not initialized'
+            });
             return null;
         }
+
+        // Initialize progress for comparison
+        const totalRows = (data1 ? data1.length - 1 : 0) + (data2 ? data2.length - 1 : 0);
+        initializeProgress(totalRows, 'Preparing comparison data...');
 
         // Store original data for export functionality - extract data rows only (skip headers)
         if (data1 && data1.length > 1) {
@@ -1599,6 +1871,8 @@ async function compareTablesWithFastComparator(data1, data2, excludeColumns = []
             
         } else {
             
+            updateStageProgress('Filtering excluded columns', 10);
+            
             // Apply exclude columns filtering BEFORE preparing data for comparison
             let filteredData1 = data1;
             let filteredData2 = data2;
@@ -1608,8 +1882,12 @@ async function compareTablesWithFastComparator(data1, data2, excludeColumns = []
                 filteredData2 = filterExcludeColumns(data2, excludeColumns);
             }
             
+            updateStageProgress('Preparing data alignment', 20);
+            
             // Prepare data for comparison to get column information
             const { data1: alignedData1, data2: alignedData2, columnInfo } = prepareDataForComparison(filteredData1, filteredData2);
+            
+            updateStageProgress('Creating comparison tables', 30);
             
             const headers1 = alignedData1[0] || [];
             const headers2 = alignedData2[0] || [];
@@ -1619,9 +1897,13 @@ async function compareTablesWithFastComparator(data1, data2, excludeColumns = []
             await fastComparator.createTableFromData('table1', dataRows1, headers1);
             await fastComparator.createTableFromData('table2', dataRows2, headers2);
             
+            updateStageProgress('Running table comparison', 60);
+            
             const comparisonResult = await fastComparator.compareTablesFast(
                 'table1', 'table2', []
             );
+
+            updateStageProgress('Finalizing results', 90);
 
             const totalTime = performance.now() - startTime;
 
@@ -1630,11 +1912,26 @@ async function compareTablesWithFastComparator(data1, data2, excludeColumns = []
             comparisonResult.alignedData1 = alignedData1;
             comparisonResult.alignedData2 = alignedData2;
 
+            updateProgressMessage('Comparison completed successfully!', 100);
+
+            logDatabaseOperation('Table Comparison Completed', {
+                duration: Math.round(totalTime),
+                identicalRows: comparisonResult.identical?.length || 0,
+                onlyInTable1: comparisonResult.onlyInTable1?.length || 0,
+                onlyInTable2: comparisonResult.onlyInTable2?.length || 0,
+                result: 'Comparison successful'
+            });
+
             return comparisonResult;
         }
         
     } catch (error) {
+        clearAllProgressIntervals();
+        updateProgressMessage('Comparison failed', 0);
         console.error('❌ Fast comparison failed:', error);
+        logDatabaseOperation('Table Comparison Failed', {
+            error: error.message || error
+        });
         throw error;
     }
 }
