@@ -314,7 +314,6 @@ class FastTableComparator {
                 const duration = Date.now() - startTime;
                 
                 logDatabaseOperation('Query Completed', {
-                    query: query,
                     duration: duration,
                     result: result ? `${result.length || 0} rows returned` : 'No result data'
                 });
@@ -1829,20 +1828,35 @@ function showFastModeStatus(available, mode = 'local') {
     }
 }
 
+// Track ongoing table creation to prevent duplicate calls
+const ongoingTableCreation = new Set();
+
 // Create table from preview data - called when file is loaded or sheet is changed
 async function createTableFromPreviewData(tableNumber, data) {
-    if (!fastComparator || !fastComparator.initialized) {
-        console.log('⚠️ Fast comparator not initialized, skipping table creation');
+    const callId = Math.random().toString(36).substr(2, 9);
+    const tableName = `table${tableNumber}`;
+    
+    // Check if table creation is already in progress
+    if (ongoingTableCreation.has(tableName)) {
+        console.log(`⏭️ [CALL-${callId}] Table ${tableName} creation already in progress, skipping`);
         return false;
     }
     
-    if (!data || data.length === 0) {
-        console.log('⚠️ No data provided for table creation');
-        return false;
-    }
+    // Mark table creation as in progress
+    ongoingTableCreation.add(tableName);
+    
+    console.log(`🚀 [CALL-${callId}] createTableFromPreviewData started for table${tableNumber}`);
     
     try {
-        const tableName = `table${tableNumber}`;
+        if (!fastComparator || !fastComparator.initialized) {
+            console.log('⚠️ Fast comparator not initialized, skipping table creation');
+            return false;
+        }
+        
+        if (!data || data.length === 0) {
+            console.log('⚠️ No data provided for table creation');
+            return false;
+        }
         
         // For WASM mode, create DuckDB tables directly for preview
         // For local mode, create local tables for preview
@@ -1970,7 +1984,7 @@ async function createTableFromPreviewData(tableNumber, data) {
             };
 
             // Always create or replace the table to ensure fresh data on tab switch
-            console.log(`🔄 Creating/replacing table ${tableName}`);
+            console.log(`🔄 [CALL-${callId}] Creating/replacing table ${tableName}`);
             
             const createTableSQL = `CREATE OR REPLACE TABLE ${tableName} (
                 rowid INTEGER,
@@ -2006,8 +2020,6 @@ async function createTableFromPreviewData(tableNumber, data) {
                 }
             }
             
-            console.log(`✅ Table ${tableNumber} created in DuckDB WASM mode with ${dataRows.length} rows`);
-            
             logDatabaseOperation('Preview Table Creation Completed', {
                 tableName: tableName,
                 rowCount: dataRows.length,
@@ -2015,18 +2027,22 @@ async function createTableFromPreviewData(tableNumber, data) {
                 batchCount: Math.ceil(dataRows.length / BATCH_SIZE)
             });
             
-            console.log(`✅ Table ${tableNumber} created in DuckDB WASM mode with ${dataRows.length} rows`);
+            console.log(`✅ [CALL-${callId}] Table ${tableNumber} created in DuckDB WASM mode with ${dataRows.length} rows`);
         } else {
             // For local mode, create local tables for preview
             await fastComparator.createTableFromData(tableName, dataRows, headers);
-            console.log(`✅ Table ${tableNumber} created in local mode with ${dataRows.length} rows`);
+            console.log(`✅ [CALL-${callId}] Table ${tableNumber} created in local mode with ${dataRows.length} rows`);
         }
         
+        console.log(`🏁 [CALL-${callId}] createTableFromPreviewData completed for table${tableNumber}`);
         return true;
         
     } catch (error) {
-        console.error(`❌ Failed to create table ${tableNumber}:`, error);
+        console.error(`❌ [CALL-${callId}] Failed to create table ${tableNumber}:`, error);
         return false;
+    } finally {
+        // Always clear the ongoing creation flag
+        ongoingTableCreation.delete(tableName);
     }
 }
 
