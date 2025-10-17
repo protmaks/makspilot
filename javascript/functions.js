@@ -2823,6 +2823,22 @@ function renderPreview(data, elementId, title) {
     }
     document.getElementById(elementId).innerHTML = html;
     
+    // Create table in DuckDB when preview is rendered
+    if (data && data.length > 0) {
+        // Determine table number from elementId
+        const tableNumber = elementId === 'table1' ? 1 : elementId === 'table2' ? 2 : null;
+        if (tableNumber && window.MaxPilotDuckDB && window.MaxPilotDuckDB.createTableFromPreviewData) {
+            // Create table asynchronously without blocking UI
+            setTimeout(async () => {
+                try {
+                    await window.MaxPilotDuckDB.createTableFromPreviewData(tableNumber, data);
+                } catch (error) {
+                    console.log(`Note: Could not create DuckDB table for ${elementId}:`, error.message);
+                }
+            }, 100);
+        }
+    }
+    
     // Update key columns dropdown when table is rendered
     if (typeof window.debouncedUpdateKeyColumnsOptions === 'function') {
         window.debouncedUpdateKeyColumnsOptions(false);

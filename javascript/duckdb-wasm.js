@@ -6,9 +6,14 @@ const DB_LOGGING_LEVELS = {
     QUERY: true,      // Log individual SQL queries
     OPERATION: true,  // Log high-level operations (create table, comparison, etc.)
     TIMING: true,     // Log operation timings
-    RESULTS: true     // Log query results summary
+    RESULTS: true,    // Log query results summary
+    ZERO_VALUES: false // Log zero value formatting (can create many logs)
 };
 let dbOperationCounter = 0;
+
+// Zero value formatting tracking
+let zeroValueFormattingCount = 0;
+const MAX_ZERO_VALUE_LOGS = 5; // Log only first 5 zero value formatting operations
 
 // Database logging function
 function logDatabaseOperation(operation, details = {}) {
@@ -93,8 +98,27 @@ window.showDatabaseLoggingStatus = function() {
     console.group('🗃️ Database Logging Status');
     console.log('Enabled:', DB_LOGGING_ENABLED);
     console.log('Operation counter:', dbOperationCounter);
+    console.log('Zero value formattings:', zeroValueFormattingCount);
     console.log('Levels:', DB_LOGGING_LEVELS);
     console.groupEnd();
+};
+
+// Reset zero value formatting counter
+window.resetZeroValueFormatting = function() {
+    zeroValueFormattingCount = 0;
+    console.log('🔄 Zero value formatting counter reset');
+};
+
+// Quick toggle for zero value logging
+window.toggleZeroValueLogging = function() {
+    DB_LOGGING_LEVELS.ZERO_VALUES = !DB_LOGGING_LEVELS.ZERO_VALUES;
+    console.log(`🔧 Zero value logging ${DB_LOGGING_LEVELS.ZERO_VALUES ? 'enabled' : 'disabled'}`);
+};
+
+// Disable zero value logging immediately (for users experiencing spam)
+window.disableZeroValueLogging = function() {
+    DB_LOGGING_LEVELS.ZERO_VALUES = false;
+    console.log('🚫 Zero value logging disabled to reduce log spam');
 };
 
 // Progress display functions
@@ -510,6 +534,9 @@ class FastTableComparator {
     async compareTablesWithOriginalLogic(data1, data2, excludeColumns = [], useTolerance = false, customKeyColumns = null) {
         const startTime = performance.now();
 
+        // Reset zero value formatting counter for this comparison
+        zeroValueFormattingCount = 0;
+
         logDatabaseOperation('Original Logic Comparison Started', {
             table1Rows: data1 ? data1.length - 1 : 0,
             table2Rows: data2 ? data2.length - 1 : 0,
@@ -678,90 +705,85 @@ class FastTableComparator {
 
             updateStageProgress('Creating database tables', 30);
 
-            const createTable1SQL = `CREATE OR REPLACE TABLE table1 (
-                rowid INTEGER,
-                ${sanitizedHeaders1.map((h, i) => `"${h}" ${finalColumnTypes1[i]}`).join(', ')}
-            )`;
-
-            const createTable2SQL = `CREATE OR REPLACE TABLE table2 (
-                rowid INTEGER,
-                ${sanitizedHeaders2.map((h, i) => `"${h}" ${finalColumnTypes2[i]}`).join(', ')}
-            )`;
-
-            await window.duckdbLoader.query(createTable1SQL);
-            await window.duckdbLoader.query(createTable2SQL);
-            await window.duckdbLoader.query(createTable2SQL);
-
-            updateStageProgress('Loading data into tables', 40);
-
-            const formatValue = (value, columnType) => {
-                if (value === null || value === undefined || value === '') {
-                    return 'NULL';
-                }
+            // Check if DuckDB tables already exist (created from preview)
+            let tablesExist = false;
+            try {
+                const table1CountResult = await window.duckdbLoader.query('SELECT COUNT(*) as count FROM table1');
+                const table2CountResult = await window.duckdbLoader.query('SELECT COUNT(*) as count FROM table2');
                 
-                const strValue = value.toString().trim();
+                const table1Count = Number(table1CountResult.toArray()[0]?.count || 0);
+                const table2Count = Number(table2CountResult.toArray()[0]?.count || 0);
                 
-                switch (columnType) {
-                    case 'BIGINT':
-                    case 'INTEGER':
-                        const intValue = parseInt(strValue);
-                        return isNaN(intValue) ? 'NULL' : intValue.toString();
+                // Tables exist and have data
+                if (table1Count > 0 && table2Count > 0) {
+                    tablesExist = true;
+                    console.log(`✅ Using existing DuckDB tables from preview (table1: ${table1Count} rows, table2: ${table2Count} rows)`);
                     
-                    case 'DOUBLE':
-                    case 'FLOAT':
-                        const floatValue = parseFloat(strValue);
-                        if (isNaN(floatValue)) {
-                            return 'NULL';
-                        } else {
-                            return columnType === 'DOUBLE' ? 
-                                (Math.round(floatValue * 100) / 100).toString() : 
-                                floatValue.toString();
-                        }
+                    logDatabaseOperation('Using Existing DuckDB Tables', {
+                        table1: 'table1',
+                        table2: 'table2',
+                        table1Count: table1Count,
+                        table2Count: table2Count,
+                        reason: 'Tables already exist from preview with data'
+                    });
+                } else {
+                    tablesExist = false;
+                    console.log('📋 Tables exist but are empty, will recreate');
                     
-                    case 'DATE':
-                        const dateValue = new Date(strValue);
-                        if (isNaN(dateValue.getTime())) {
-                            return `'${strValue.replace(/'/g, "''")}'`;
-                        }
-                        return `'${dateValue.toISOString().split('T')[0]}'`;
-                    
-                    case 'TIMESTAMP':
-                        const timestampValue = new Date(strValue);
-                        if (isNaN(timestampValue.getTime())) {
-                            return `'${strValue.replace(/'/g, "''")}'`;
-                        }
-                        return `'${timestampValue.toISOString()}'`;
-                    
-                    case 'VARCHAR':
-                    default:
-                        return `'${strValue.replace(/'/g, "''")}'`;
+                    // Drop empty tables
+                    await window.duckdbLoader.query('DROP TABLE IF EXISTS table1');
+                    await window.duckdbLoader.query('DROP TABLE IF EXISTS table2');
                 }
-            };
+            } catch (error) {
+                // Tables don't exist, will create them
+                tablesExist = false;
+                console.log('📋 Creating new DuckDB tables for comparison');
+            }
 
-            const insertBatch = async (tableName, data, headers, columnTypes) => {
-                const BATCH_SIZE = 1000;
-                for (let i = 1; i < data.length; i += BATCH_SIZE) {
-                    const batchEnd = Math.min(i + BATCH_SIZE, data.length);
-                    const batchData = data.slice(i, batchEnd);
-                    
-                    const values = batchData.map((row, idx) => {
-                        const rowId = i + idx - 1;
-                        const cleanRow = headers.map((_, colIdx) => {
-                            const val = row[colIdx];
-                            return formatValue(val, columnTypes[colIdx]);
+            if (!tablesExist) {
+                const createTable1SQL = `CREATE TABLE table1 (
+                    rowid INTEGER,
+                    ${sanitizedHeaders1.map((h, i) => `"${h}" ${finalColumnTypes1[i]}`).join(', ')}
+                )`;
+
+                const createTable2SQL = `CREATE TABLE table2 (
+                    rowid INTEGER,
+                    ${sanitizedHeaders2.map((h, i) => `"${h}" ${finalColumnTypes2[i]}`).join(', ')}
+                )`;
+
+                await window.duckdbLoader.query(createTable1SQL);
+                await window.duckdbLoader.query(createTable2SQL);
+
+                updateStageProgress('Loading data into tables', 40);
+
+
+                const insertBatch = async (tableName, data, headers, columnTypes) => {
+                    const BATCH_SIZE = 1000;
+                    for (let i = 1; i < data.length; i += BATCH_SIZE) {
+                        const batchEnd = Math.min(i + BATCH_SIZE, data.length);
+                        const batchData = data.slice(i, batchEnd);
+                        
+                        const values = batchData.map((row, idx) => {
+                            const rowId = i + idx - 1;
+                            const cleanRow = headers.map((_, colIdx) => {
+                                const val = row[colIdx];
+                                return formatValue(val, columnTypes[colIdx]);
+                            }).join(', ');
+                            return `(${rowId}, ${cleanRow})`;
                         }).join(', ');
-                        return `(${rowId}, ${cleanRow})`;
-                    }).join(', ');
 
-                    if (values) {
-                        const insertSQL = `INSERT INTO ${tableName} VALUES ${values}`;
-                        await window.duckdbLoader.query(insertSQL);
+                        if (values) {
+                            const insertSQL = `INSERT INTO ${tableName} VALUES ${values}`;
+                            await window.duckdbLoader.query(insertSQL);
+                        }
                     }
-                }
-            };
+                };
 
-            await insertBatch('table1', data1, headers1, finalColumnTypes1);
-            await insertBatch('table2', data2, headers2, finalColumnTypes2);
+                await insertBatch('table1', data1, headers1, finalColumnTypes1);
+                await insertBatch('table2', data2, headers2, finalColumnTypes2);
+            } else {
+                updateStageProgress('Using existing DuckDB tables', 40);
+            }
             
             updateStageProgress('Preparing comparison logic', 50);
             
@@ -893,10 +915,19 @@ class FastTableComparator {
             );
             if (doubleColumns.length > 0) { }
 
-            const table1CountResult = await window.duckdbLoader.query('SELECT COUNT(*) as count FROM table1');
-            const table2CountResult = await window.duckdbLoader.query('SELECT COUNT(*) as count FROM table2');
-            const table1Count = Number(table1CountResult.toArray()[0]?.count || 0);
-            const table2Count = Number(table2CountResult.toArray()[0]?.count || 0);
+            // Get table counts - either from existing tables or newly created tables
+            let table1Count, table2Count;
+            if (tablesExist) {
+                // Use counts from table existence check
+                const table1CountResult = await window.duckdbLoader.query('SELECT COUNT(*) as count FROM table1');
+                const table2CountResult = await window.duckdbLoader.query('SELECT COUNT(*) as count FROM table2');
+                table1Count = Number(table1CountResult.toArray()[0]?.count || 0);
+                table2Count = Number(table2CountResult.toArray()[0]?.count || 0);
+            } else {
+                // For newly created tables, count from data
+                table1Count = data1.length - 1;
+                table2Count = data2.length - 1;
+            }
             
             updateStageProgress('Finding identical records', 65);
             
@@ -1076,7 +1107,8 @@ class FastTableComparator {
                 similarRows: similar.length,
                 onlyInTable1: onlyInTable1.length,
                 onlyInTable2: onlyInTable2.length,
-                rowsPerSecond: Math.round(((data1.length + data2.length) / duration) * 1000)
+                rowsPerSecond: Math.round(((data1.length + data2.length) / duration) * 1000),
+                zeroValuesFormatted: zeroValueFormattingCount
             });
 
             return {
@@ -1109,6 +1141,9 @@ class FastTableComparator {
 
     async compareTablesOptimizedForLargeData(data1, data2, excludeColumns = [], useTolerance = false) {
         const startTime = performance.now();
+
+        // Reset zero value formatting counter for this comparison
+        zeroValueFormattingCount = 0;
 
         logDatabaseOperation('Large Data Comparison Started', {
             table1Rows: data1 ? data1.length - 1 : 0,
@@ -1299,7 +1334,8 @@ class FastTableComparator {
                 onlyInTable1: onlyInTable1.length,
                 onlyInTable2: onlyInTable2.length,
                 rowsPerSecond: Math.round(((data1.length + data2.length) / duration) * 1000),
-                strategy: 'optimized_large_data'
+                strategy: 'optimized_large_data',
+                zeroValuesFormatted: zeroValueFormattingCount
             });
 
             return {
@@ -1793,6 +1829,283 @@ function showFastModeStatus(available, mode = 'local') {
     }
 }
 
+// Create table from preview data - called when file is loaded or sheet is changed
+async function createTableFromPreviewData(tableNumber, data) {
+    if (!fastComparator || !fastComparator.initialized) {
+        console.log('⚠️ Fast comparator not initialized, skipping table creation');
+        return false;
+    }
+    
+    if (!data || data.length === 0) {
+        console.log('⚠️ No data provided for table creation');
+        return false;
+    }
+    
+    try {
+        const tableName = `table${tableNumber}`;
+        
+        // For WASM mode, create DuckDB tables directly for preview
+        // For local mode, create local tables for preview
+        const headers = data[0] || [];
+        const dataRows = data.slice(1);
+        
+        if (fastComparator.mode === 'wasm') {
+            // Create DuckDB table directly for preview in WASM mode
+            
+            // Detect column types for DuckDB table
+            const detectColumnType = (data, columnIndex) => {
+                const sampleSize = Math.min(100, data.length);
+                let numericCount = 0;
+                let integerCount = 0;
+                let dateCount = 0;
+                let timestampCount = 0;
+                let totalNonEmpty = 0;
+                let hasDecimals = false;
+
+                for (let i = 0; i < Math.min(sampleSize, data.length); i++) {
+                    const value = data[i]?.[columnIndex];
+                    if (value && value.toString().trim() !== '') {
+                        totalNonEmpty++;
+                        const strValue = value.toString().trim();
+                        
+                        if (!isNaN(strValue) && !isNaN(parseFloat(strValue)) && isFinite(strValue)) {
+                            numericCount++;
+                            const numValue = parseFloat(strValue);
+                            
+                            if (Number.isInteger(numValue)) {
+                                integerCount++;
+                            } else {
+                                hasDecimals = true;
+                            }
+                        }
+                        
+                        const dateValue = new Date(strValue);
+                        if (!isNaN(dateValue.getTime()) && strValue.match(/\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4}|\d{2}\.\d{2}\.\d{4}/)) {
+                            if (strValue.match(/\d{2}:\d{2}(:\d{2})?/) || strValue.includes('T')) {
+                                timestampCount++;
+                            } else {
+                                dateCount++;
+                            }
+                        }
+                    }
+                }
+
+                if (totalNonEmpty === 0) return 'VARCHAR';
+                
+                const numericRatio = numericCount / totalNonEmpty;
+                const dateRatio = dateCount / totalNonEmpty;
+                const timestampRatio = timestampCount / totalNonEmpty;
+
+                if (timestampRatio >= 0.8) return 'TIMESTAMP';
+                if (dateRatio >= 0.8) return 'DATE';
+                if (numericRatio >= 0.9) {
+                    return hasDecimals ? 'DOUBLE' : 'BIGINT';
+                }
+                return 'VARCHAR';
+            };
+
+            // Sanitize column names for DuckDB
+            const sanitizeColumnName = (name, index) => {
+                if (!name || typeof name !== 'string') {
+                    return `col_${index}`;
+                }
+                let sanitized = name.replace(/[^a-zA-Z0-9а-яА-Я_]/g, '_')
+                                   .replace(/\s+/g, '_')
+                                   .replace(/_{2,}/g, '_')
+                                   .replace(/^_|_$/g, '');
+                
+                if (!sanitized || /^\d/.test(sanitized)) {
+                    sanitized = `col_${index}_${sanitized}`;
+                }
+                
+                return sanitized || `col_${index}`;
+            };
+
+            const sanitizedHeaders = headers.map((h, i) => sanitizeColumnName(h, i));
+            const columnTypes = headers.map((_, i) => detectColumnType(dataRows, i));
+
+            // Format value function for data insertion
+            const formatValue = (value, columnType) => {
+                if (value === null || value === undefined || value === '') {
+                    return 'NULL';
+                }
+                
+                const strValue = value.toString().trim();
+                
+                switch (columnType) {
+                    case 'BIGINT':
+                    case 'INTEGER':
+                        const intValue = parseInt(strValue);
+                        return isNaN(intValue) ? 'NULL' : intValue.toString();
+                    
+                    case 'DOUBLE':
+                    case 'FLOAT':
+                        const floatValue = parseFloat(strValue);
+                        if (isNaN(floatValue)) {
+                            return 'NULL';
+                        } else {
+                            return columnType === 'DOUBLE' ? 
+                                (Math.round(floatValue * 100) / 100).toString() : 
+                                floatValue.toString();
+                        }
+                    
+                    case 'DATE':
+                        const dateValue = new Date(strValue);
+                        if (isNaN(dateValue.getTime())) {
+                            return `'${strValue.replace(/'/g, "''")}'`;
+                        }
+                        return `'${dateValue.toISOString().split('T')[0]}'`;
+                    
+                    case 'TIMESTAMP':
+                        const timestampValue = new Date(strValue);
+                        if (isNaN(timestampValue.getTime())) {
+                            return `'${strValue.replace(/'/g, "''")}'`;
+                        }
+                        return `'${timestampValue.toISOString()}'`;
+                    
+                    case 'VARCHAR':
+                    default:
+                        return `'${strValue.replace(/'/g, "''")}'`;
+                }
+            };
+
+            // Always create or replace the table to ensure fresh data on tab switch
+            console.log(`🔄 Creating/replacing table ${tableName}`);
+            
+            const createTableSQL = `CREATE OR REPLACE TABLE ${tableName} (
+                rowid INTEGER,
+                ${sanitizedHeaders.map((h, i) => `"${h}" ${columnTypes[i]}`).join(', ')}
+            )`;
+
+            await window.duckdbLoader.query(createTableSQL);
+
+            logDatabaseOperation('Preview Table Creation Started', {
+                tableName: tableName,
+                rowCount: dataRows.length,
+                columnCount: headers.length
+            });
+
+            // Insert data in batches
+            const BATCH_SIZE = 1000;
+            for (let i = 0; i < dataRows.length; i += BATCH_SIZE) {
+                const batchEnd = Math.min(i + BATCH_SIZE, dataRows.length);
+                const batchData = dataRows.slice(i, batchEnd);
+                
+                const values = batchData.map((row, idx) => {
+                    const rowId = i + idx;
+                    const cleanRow = headers.map((_, colIdx) => {
+                        const val = row[colIdx];
+                        return formatValue(val, columnTypes[colIdx]);
+                    }).join(', ');
+                    return `(${rowId}, ${cleanRow})`;
+                }).join(', ');
+
+                if (values) {
+                    const insertSQL = `INSERT INTO ${tableName} VALUES ${values}`;
+                    await window.duckdbLoader.query(insertSQL);
+                }
+            }
+            
+            console.log(`✅ Table ${tableNumber} created in DuckDB WASM mode with ${dataRows.length} rows`);
+            
+            logDatabaseOperation('Preview Table Creation Completed', {
+                tableName: tableName,
+                rowCount: dataRows.length,
+                columnCount: headers.length,
+                batchCount: Math.ceil(dataRows.length / BATCH_SIZE)
+            });
+            
+            console.log(`✅ Table ${tableNumber} created in DuckDB WASM mode with ${dataRows.length} rows`);
+        } else {
+            // For local mode, create local tables for preview
+            await fastComparator.createTableFromData(tableName, dataRows, headers);
+            console.log(`✅ Table ${tableNumber} created in local mode with ${dataRows.length} rows`);
+        }
+        
+        return true;
+        
+    } catch (error) {
+        console.error(`❌ Failed to create table ${tableNumber}:`, error);
+        return false;
+    }
+}
+
+// Create preview from existing table - called to update UI from table data
+async function createPreviewFromTable(tableNumber, elementId) {
+    if (!fastComparator || !fastComparator.initialized) {
+        return;
+    }
+    
+    try {
+        const tableName = `table${tableNumber}`;
+        
+        if (fastComparator.mode === 'wasm') {
+            // For WASM mode, query DuckDB table directly
+            try {
+                const result = await window.duckdbLoader.query(`
+                    SELECT * FROM ${tableName} 
+                    ORDER BY rowid 
+                    LIMIT 10
+                `);
+                
+                if (result && result.toArray) {
+                    const rows = result.toArray();
+                    if (rows.length > 0) {
+                        // Get column names (excluding rowid)
+                        const columns = Object.keys(rows[0]).filter(col => col !== 'rowid');
+                        
+                        // Reconstruct data format for renderPreview
+                        const fullData = [columns]; // Headers
+                        rows.forEach(row => {
+                            const dataRow = columns.map(col => row[col]);
+                            fullData.push(dataRow);
+                        });
+                        
+                        // Use existing renderPreview function but don't call createTableFromPreviewData again
+                        if (typeof renderPreview === 'function') {
+                            const originalCreateTable = window.MaxPilotDuckDB.createTableFromPreviewData;
+                            window.MaxPilotDuckDB.createTableFromPreviewData = () => {}; // Temporarily disable to avoid recursion
+                            renderPreview(fullData, elementId);
+                            window.MaxPilotDuckDB.createTableFromPreviewData = originalCreateTable; // Restore
+                        }
+                        
+                        console.log(`✅ Preview updated for table ${tableNumber} from DuckDB with ${rows.length} rows`);
+                        return;
+                    }
+                }
+            } catch (error) {
+                console.log(`Note: Could not query DuckDB table ${tableName}:`, error.message);
+            }
+        }
+        
+        // Fallback to local mode or if DuckDB query failed
+        const tableData = fastComparator.tables.get(tableName);
+        
+        if (!tableData) {
+            return;
+        }
+        
+        // Reconstruct full data array (headers + rows)
+        const fullData = [tableData.columns];
+        tableData.rows.slice(0, 10).forEach(row => { // Show first 10 rows in preview
+            fullData.push(row.data);
+        });
+        
+        // Use existing renderPreview function but don't call createTableFromPreviewData again
+        if (typeof renderPreview === 'function') {
+            const originalCreateTable = window.MaxPilotDuckDB.createTableFromPreviewData;
+            window.MaxPilotDuckDB.createTableFromPreviewData = () => {}; // Temporarily disable to avoid recursion
+            renderPreview(fullData, elementId);
+            window.MaxPilotDuckDB.createTableFromPreviewData = originalCreateTable; // Restore
+        }
+        
+        console.log(`✅ Preview updated for table ${tableNumber} from stored data`);
+        
+    } catch (error) {
+        console.error(`❌ Failed to create preview from table ${tableNumber}:`, error);
+    }
+}
+
 async function compareTablesWithFastComparator(data1, data2, excludeColumns = [], useTolerance = false, tolerance = 1.5, customKeyColumns = null) {
     logDatabaseOperation('Table Comparison Started', {
         table1Rows: data1 ? data1.length : 0,
@@ -1894,14 +2207,25 @@ async function compareTablesWithFastComparator(data1, data2, excludeColumns = []
             const dataRows1 = alignedData1.slice(1);
             const dataRows2 = alignedData2.slice(1);
             
-            await fastComparator.createTableFromData('table1', dataRows1, headers1);
-            await fastComparator.createTableFromData('table2', dataRows2, headers2);
-            
-            updateStageProgress('Running table comparison', 60);
-            
-            const comparisonResult = await fastComparator.compareTablesFast(
-                'table1', 'table2', []
-            );
+            // For WASM mode, pass the data directly to compareTablesFast
+            // For local mode, create tables first
+            let comparisonResult;
+            if (fastComparator.mode === 'wasm') {
+                updateStageProgress('Running table comparison', 60);
+                
+                comparisonResult = await fastComparator.compareTablesFast(
+                    alignedData1, alignedData2, excludeColumns, useTolerance, customKeyColumns
+                );
+            } else {
+                await fastComparator.createTableFromData('table1', dataRows1, headers1);
+                await fastComparator.createTableFromData('table2', dataRows2, headers2);
+                
+                updateStageProgress('Running table comparison', 60);
+                
+                comparisonResult = await fastComparator.compareTablesFast(
+                    'table1', 'table2', excludeColumns, useTolerance, customKeyColumns
+                );
+            }
 
             updateStageProgress('Finalizing results', 90);
 
@@ -2840,6 +3164,8 @@ window.MaxPilotDuckDB = {
     FastTableComparator,
     fastComparator,
     initializeFastComparator,
+    createTableFromPreviewData,
+    createPreviewFromTable,
     compareTablesWithFastComparator,
     compareTablesEnhanced,
     processFastComparisonResults,
