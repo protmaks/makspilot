@@ -1311,7 +1311,12 @@ class FastTableComparator {
                              ABS(t1."${col1Name}" - t2."${col2Name}") / ((ABS(t1."${col1Name}") + ABS(t2."${col2Name}")) / 2) <= ${tolerancePercent})
                         )`;
                     } else {
-                        return `ROUND(t1."${col1Name}", 2) = ROUND(t2."${col2Name}", 2)`;
+                        // Handle double comparison with special case for zeros
+                        return `(
+                            (t1."${col1Name}" = 0 AND t2."${col2Name}" = 0) OR
+                            (t1."${col1Name}" != 0 AND t2."${col2Name}" != 0 AND ROUND(t1."${col1Name}", 2) = ROUND(t2."${col2Name}", 2)) OR
+                            (t1."${col1Name}" = t2."${col2Name}")
+                        )`;
                     }
                 }
                 
@@ -2992,8 +2997,8 @@ async function processFastComparisonResults(fastResult, useTolerance) {
                         <th>${tableHeaders.rowsOnlyInFile}</th>
                         <th>${tableHeaders.diffRows}</th>
                         <th>Identical Rows</th>
-                        <th>${tableHeaders.diffColumns}</th>
                         <th>${tableHeaders.similarity}</th>
+                        <th>${tableHeaders.diffColumns}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -3003,8 +3008,8 @@ async function processFastComparisonResults(fastResult, useTolerance) {
                         <td>${onlyInTable1.length.toLocaleString()}</td>
                         <td rowspan="2" style="vertical-align: middle; font-weight: bold; font-size: 16px; color: #dc3545;">${diffCount.toLocaleString()}</td>
                         <td rowspan="2" style="vertical-align: middle; font-weight: bold; font-size: 16px; color: #28a745;">${identicalCount.toLocaleString()}</td>
-                        <td>${diffColumns1Html}</td>
                         <td rowspan="2" style="vertical-align: middle; font-weight: bold; font-size: 18px;" class="percent-cell ${percentClass}">${similarity}%</td>
+                        <td>${diffColumns1Html}</td>
                     </tr>
                     <tr>
                         <td><strong>${file2Name}</strong></td>
@@ -3210,6 +3215,68 @@ async function generateDetailedComparisonTable(fastResult, useTolerance) {
     syncTableScroll();
 }
 
+// Helper functions for improved value comparison
+function isNumericStringLocal(str) {
+    if (!str || typeof str !== 'string') return false;
+    const cleanStr = str.replace(/['",$\s]/g, '').trim();
+    return !isNaN(cleanStr) && !isNaN(parseFloat(cleanStr)) && isFinite(cleanStr);
+}
+
+function parseNumberLocal(str) {
+    if (!str) return 0;
+    const cleanStr = str.toString().replace(/['",$\s]/g, '').trim();
+    return parseFloat(cleanStr) || 0;
+}
+
+function isWithinToleranceLocal(val1, val2, tolerance = 0.015) {
+    const num1 = parseNumberLocal(val1);
+    const num2 = parseNumberLocal(val2);
+    
+    if (num1 === 0 && num2 === 0) return true;
+    if (num1 === 0 || num2 === 0) return false;
+    
+    const diff = Math.abs(num1 - num2);
+    const avg = (Math.abs(num1) + Math.abs(num2)) / 2;
+    
+    return (diff / avg) <= tolerance;
+}
+
+function compareValuesImproved(v1, v2, useTolerance = false) {
+    if (!v1 && !v2) return 'identical';
+    if (!v1 || !v2) return 'different';
+    
+    const str1 = v1.toString().trim();
+    const str2 = v2.toString().trim();
+    
+    // Basic string comparison
+    if (str1.toUpperCase() === str2.toUpperCase()) {
+        return 'identical';
+    }
+    
+    // Numeric comparison with special handling for zeros
+    if (isNumericStringLocal(str1) && isNumericStringLocal(str2)) {
+        const num1 = parseNumberLocal(str1);
+        const num2 = parseNumberLocal(str2);
+        
+        // Special case for zeros
+        if (num1 === 0 && num2 === 0) {
+            return 'identical';
+        }
+        
+        // Check tolerance if enabled
+        if (useTolerance && isWithinToleranceLocal(str1, str2, 0.015)) {
+            return 'tolerance';
+        }
+        
+        // Exact numeric comparison
+        if (num1 === num2) {
+            return 'identical';
+        }
+    }
+    
+    return 'different';
+}
+
 async function createBasicFallbackTable(pairs, headers) {
     
     // Clear any remaining loading messages at the start
@@ -3380,7 +3447,9 @@ async function createBasicFallbackTable(pairs, headers) {
                     isEmpty = false;
                 }
                 
-                if (v1.toString().toUpperCase().trim() !== v2.toString().toUpperCase().trim()) {
+                // Use improved comparison function
+                const compResult = compareValuesImproved(v1, v2, false);
+                if (compResult !== 'identical') {
                     allSame = false;
                     hasWarn = true;
                 }
@@ -3419,7 +3488,9 @@ async function createBasicFallbackTable(pairs, headers) {
                 const v1 = row1[colIndex] !== undefined ? row1[colIndex] : '';
                 const v2 = row2[colIndex] !== undefined ? row2[colIndex] : '';
                 
-                if (v1 && v2 && v1.toString().toUpperCase().trim() === v2.toString().toUpperCase().trim()) {
+                // Use improved comparison function
+                const compResult = compareValuesImproved(v1, v2, false);
+                if (compResult === 'identical') {
                     columnComparisons[colIndex] = 'identical';
                 } else {
                     columnComparisons[colIndex] = 'different';
