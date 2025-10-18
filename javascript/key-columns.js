@@ -15,22 +15,14 @@ function getColumnType(columnValues, columnHeader = '') {
     
     let numberCount = 0;
     let dateCount = 0;
-    let booleanCount = 0;
     let textCount = 0;
     
     const headerLower = columnHeader.toString().toLowerCase();
     const dateKeywords = ['date', 'time', 'created', 'modified', 'updated', 'birth', 'дата', 'время', 'создан', 'изменен', 'обновлен'];
-    const booleanKeywords = ['active', 'enabled', 'disabled', 'visible', 'hidden', 'deleted', 'verified', 'confirmed', 'активен', 'включен', 'отключен', 'видимый', 'скрытый', 'удален', 'подтвержден'];
     const numberKeywords = ['id', 'count', 'amount', 'price', 'cost', 'sum', 'total', 'number', 'номер', 'количество', 'сумма', 'цена', 'стоимость'];
     
     for (let value of nonEmptyValues) {
         const strValue = value.toString().trim().toLowerCase();
-        
-        // Check for boolean values (excluding '1' and '0' since Excel treats them as numbers)
-        if (['true', 'false', 'yes', 'no', 'да', 'нет', 'истина', 'ложь'].includes(strValue)) {
-            booleanCount++;
-            continue;
-        }
         
         // Check for numbers
         if (!isNaN(value) && !isNaN(parseFloat(value)) && isFinite(value)) {
@@ -63,18 +55,12 @@ function getColumnType(columnValues, columnHeader = '') {
     const total = nonEmptyValues.length;
     const numberRatio = numberCount / total;
     const dateRatio = dateCount / total;
-    const booleanRatio = booleanCount / total;
     
     // Header-based hints
     const headerSuggestsDate = dateKeywords.some(keyword => headerLower.includes(keyword));
-    const headerSuggestsBoolean = booleanKeywords.some(keyword => headerLower.includes(keyword));
     const headerSuggestsNumber = numberKeywords.some(keyword => headerLower.includes(keyword));
     
     // Determine type based on ratios and header hints
-    if (booleanRatio > 0.7 || (headerSuggestsBoolean && booleanRatio > 0.4)) {
-        return 'boolean';
-    }
-    
     if (dateRatio > 0.6 || (headerSuggestsDate && dateRatio > 0.3)) {
         return 'date';
     }

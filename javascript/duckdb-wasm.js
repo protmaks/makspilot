@@ -2907,6 +2907,7 @@ async function processFastComparisonResults(fastResult, useTolerance) {
     
     const identicalCount = identical?.length || 0;
     const similarCount = similar?.length || 0;
+    const diffCount = similarCount; // similar contains different/modified rows
     const totalMatches = identicalCount;
     const similarity = table1Count > 0 ? ((identicalCount / Math.max(table1Count, table2Count)) * 100).toFixed(1) : 0;
     
@@ -2988,8 +2989,9 @@ async function processFastComparisonResults(fastResult, useTolerance) {
                     <tr>
                         <th>${tableHeaders.file}</th>
                         <th>${tableHeaders.rowCount}</th>
-                        <th>Identical Rows</th>
                         <th>${tableHeaders.rowsOnlyInFile}</th>
+                        <th>${tableHeaders.diffRows}</th>
+                        <th>Identical Rows</th>
                         <th>${tableHeaders.diffColumns}</th>
                         <th>${tableHeaders.similarity}</th>
                     </tr>
@@ -2998,8 +3000,9 @@ async function processFastComparisonResults(fastResult, useTolerance) {
                     <tr>
                         <td><strong>${file1Name}</strong></td>
                         <td>${table1Count.toLocaleString()}</td>
-                        <td rowspan="2" style="vertical-align: middle; font-weight: bold; font-size: 16px; color: #28a745;">${identicalCount.toLocaleString()}</td>
                         <td>${onlyInTable1.length.toLocaleString()}</td>
+                        <td rowspan="2" style="vertical-align: middle; font-weight: bold; font-size: 16px; color: #dc3545;">${diffCount.toLocaleString()}</td>
+                        <td rowspan="2" style="vertical-align: middle; font-weight: bold; font-size: 16px; color: #28a745;">${identicalCount.toLocaleString()}</td>
                         <td>${diffColumns1Html}</td>
                         <td rowspan="2" style="vertical-align: middle; font-weight: bold; font-size: 18px;" class="percent-cell ${percentClass}">${similarity}%</td>
                     </tr>

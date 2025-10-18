@@ -49,6 +49,7 @@ function getSummaryTableHeaders() {
             file: 'Файл',
             rowCount: 'Количество строк',
             rowsOnlyInFile: 'Строки только в этом файле',
+            diffRows: 'Различающиеся строки',
             identicalRows: 'Идентичные строки',
             similarity: '% Сходство',
             diffColumns: 'Различающиеся колонки',
@@ -60,6 +61,7 @@ function getSummaryTableHeaders() {
             file: 'Plik',
             rowCount: 'Liczba wierszy',
             rowsOnlyInFile: 'Wiersze tylko w tym pliku',
+            diffRows: 'Różne wiersze',
             identicalRows: 'Identyczne wiersze',
             similarity: '% Podobieństwo',
             diffColumns: 'Różne kolumny',
@@ -71,6 +73,7 @@ function getSummaryTableHeaders() {
             file: 'Archivo',
             rowCount: 'Número de filas',
             rowsOnlyInFile: 'Filas solo en este archivo',
+            diffRows: 'Filas diferentes',
             identicalRows: 'Filas idénticas',
             similarity: '% Similitud',
             diffColumns: 'Columnas diferentes',
@@ -82,6 +85,7 @@ function getSummaryTableHeaders() {
             file: 'Datei',
             rowCount: 'Anzahl Zeilen',
             rowsOnlyInFile: 'Zeilen nur in dieser Datei',
+            diffRows: 'Unterschiedliche Zeilen',
             identicalRows: 'Identische Zeilen',
             similarity: '% Ähnlichkeit',
             diffColumns: 'Unterschiedliche Spalten',
@@ -93,6 +97,7 @@ function getSummaryTableHeaders() {
             file: 'ファイル',
             rowCount: '行数',
             rowsOnlyInFile: 'このファイルのみの行',
+            diffRows: '異なる行',
             identicalRows: '同一行',
             similarity: '% 類似度',
             diffColumns: '異なる列',
@@ -104,6 +109,7 @@ function getSummaryTableHeaders() {
             file: 'Arquivo',
             rowCount: 'Número de linhas',
             rowsOnlyInFile: 'Linhas apenas neste arquivo',
+            diffRows: 'Linhas diferentes',
             identicalRows: 'Linhas idênticas',
             similarity: '% Similaridade',
             diffColumns: 'Colunas diferentes',
@@ -115,6 +121,7 @@ function getSummaryTableHeaders() {
             file: '文件',
             rowCount: '行数',
             rowsOnlyInFile: '仅此文件中的行',
+            diffRows: '不同行',
             identicalRows: '相同行',
             similarity: '% 相似度',
             diffColumns: '不同列',
@@ -126,6 +133,7 @@ function getSummaryTableHeaders() {
             file: 'ملف',
             rowCount: 'عدد الصفوف',
             rowsOnlyInFile: 'الصفوف في هذا الملف فقط',
+            diffRows: 'الصفوف المختلفة',
             identicalRows: 'الصفوف المتطابقة',
             similarity: '% التشابه',
             diffColumns: 'الأعمدة المختلفة',
@@ -137,6 +145,7 @@ function getSummaryTableHeaders() {
             file: 'File',
             rowCount: 'Row Count',
             rowsOnlyInFile: 'Rows only in this file',
+            diffRows: 'Diff rows',
             identicalRows: 'Identical rows',
             similarity: '% Similarity',
             diffColumns: 'Diff columns',
@@ -3538,9 +3547,29 @@ async function performComparison() {
         ${excludedInfo}
         ${toleranceInfo}
         <table style="margin-bottom:20px; border: 1px solid #ccc;">
-            <tr><th>${tableHeaders.file}</th><th>${tableHeaders.rowCount}</th><th>${tableHeaders.rowsOnlyInFile}</th><th>${tableHeaders.identicalRows}</th><th>${tableHeaders.similarity}</th><th>${tableHeaders.diffColumns}</th></tr>
-            <tr><td>${fileName1 || tableHeaders.file1}</td><td>${body1.length}</td><td>${only1}</td><td rowspan="2">${both}</td><td rowspan="2" class="percent-cell ${percentClass}">${percentDiff}</td><td>${diffColumns1Html}</td></tr>
-            <tr><td>${fileName2 || tableHeaders.file2}</td><td>${body2.length}</td><td>${only2}</td><td>${diffColumns2Html}</td></tr>
+            <tr>
+                <th>${tableHeaders.file}</th>
+                <th>${tableHeaders.rowCount}</th><th>${tableHeaders.rowsOnlyInFile}</th>
+                <th>${tableHeaders.diffRows}</th>
+                <th>${tableHeaders.identicalRows}</th>
+                <th>${tableHeaders.similarity}</th>
+                <th>${tableHeaders.diffColumns}</th>
+            </tr>
+            <tr>
+                <td>${fileName1 || tableHeaders.file1}</td>
+                <td>${body1.length}</td>
+                <td>${only1}</td>
+                <td rowspan="2">${isLargeFileForStats ? tableHeaders.calculating : '-'}</td>
+                <td rowspan="2">${both}</td>
+                <td rowspan="2" class="percent-cell ${percentClass}">${percentDiff}</td>
+                <td>${diffColumns1Html}</td>
+            </tr>
+            <tr>
+                <td>${fileName2 || tableHeaders.file2}</td>
+                <td>${body2.length}</td>
+                <td>${only2}</td>
+                <td>${diffColumns2Html}</td>
+            </tr>
         </table>
     `;
     document.getElementById('summary').innerHTML = htmlSummary;
@@ -3736,7 +3765,7 @@ function updateSummaryStatistics(tableHeaders, file1Size = null, file2Size = nul
     else percentClass = 'percent-high';
     
     
-    updateSummaryTable(window.summaryStats.only1, window.summaryStats.only2, window.summaryStats.both, percentDiff, percentClass, tableHeaders, file1Size, file2Size);
+    updateSummaryTable(window.summaryStats.only1, window.summaryStats.only2, window.summaryStats.both, percentDiff, percentClass, tableHeaders, file1Size, file2Size, window.summaryStats.different);
 }
 
 function calculateFullSummaryStatistics(tableHeaders, body1, body2, finalHeaders, finalAllCols, keyColumnIndexes, userSelectedKeys) {
@@ -3887,7 +3916,7 @@ function calculateFullSummaryStatistics(tableHeaders, body1, body2, finalHeaders
 }
 
 
-function updateSummaryTable(only1, only2, both, percentDiff, percentClass, tableHeaders, file1Size = null, file2Size = null) {
+function updateSummaryTable(only1, only2, both, percentDiff, percentClass, tableHeaders, file1Size = null, file2Size = null, diffRows = null) {
     
     const summaryDiv = document.getElementById('summary');
     const existingHTML = summaryDiv.innerHTML;
@@ -3911,12 +3940,15 @@ function updateSummaryTable(only1, only2, both, percentDiff, percentClass, table
     const file1RowCount = file1Size !== null ? file1Size : (currentPairs ? currentPairs.filter(p => p.row1).length : 0);
     const file2RowCount = file2Size !== null ? file2Size : (currentPairs ? currentPairs.filter(p => p.row2).length : 0);
     
+    // Handle diff rows display
+    const diffRowsDisplay = diffRows !== null ? diffRows : '-';
+    
     let htmlSummary = `
         ${excludedInfo}
         ${toleranceInfo}
         <table style="margin-bottom:20px; border: 1px solid #ccc;">
-            <tr><th>${tableHeaders.file}</th><th>${tableHeaders.rowCount}</th><th>${tableHeaders.rowsOnlyInFile}</th><th>${tableHeaders.identicalRows}</th><th>${tableHeaders.similarity}</th><th>${tableHeaders.diffColumns}</th></tr>
-            <tr><td>${getFileDisplayName(fileName1, sheetName1) || tableHeaders.file1}</td><td>${file1RowCount}</td><td>${only1}</td><td rowspan="2">${both}</td><td rowspan="2" class="percent-cell ${percentClass}">${percentDiff}%</td><td>${diffColumns1Html}</td></tr>
+            <tr><th>${tableHeaders.file}</th><th>${tableHeaders.rowCount}</th><th>${tableHeaders.rowsOnlyInFile}</th><th>${tableHeaders.diffRows}</th><th>${tableHeaders.identicalRows}</th><th>${tableHeaders.similarity}</th><th>${tableHeaders.diffColumns}</th></tr>
+            <tr><td>${getFileDisplayName(fileName1, sheetName1) || tableHeaders.file1}</td><td>${file1RowCount}</td><td>${only1}</td><td rowspan="2">${diffRowsDisplay}</td><td rowspan="2">${both}</td><td rowspan="2" class="percent-cell ${percentClass}">${percentDiff}%</td><td>${diffColumns1Html}</td></tr>
             <tr><td>${getFileDisplayName(fileName2, sheetName2) || tableHeaders.file2}</td><td>${file2RowCount}</td><td>${only2}</td><td>${diffColumns2Html}</td></tr>
         </table>
     `;
