@@ -773,8 +773,40 @@ class FastTableComparator {
 
     async compareTablesFast(data1, data2, excludeColumns = [], useTolerance = false, customKeyColumns = null) {
         if (this.mode === 'wasm') {
-            return await this.compareTablesWithOriginalLogic(data1, data2, excludeColumns, useTolerance, customKeyColumns);
+            // For WASM mode, use the optimized table comparison if data is already in table format
+            if (typeof data1 === 'string' && typeof data2 === 'string') {
+                // data1 and data2 are table names, use DuckDB comparison
+                logDatabaseOperation('Fast Comparison: Using DuckDB table comparison', {
+                    table1: data1,
+                    table2: data2,
+                    excludeColumns: excludeColumns.length
+                });
+                return await this.compareTablesWithDuckDB(data1, data2, excludeColumns);
+            } else {
+                // data1 and data2 are raw data arrays
+                // Check if data is large enough to benefit from full DuckDB logic
+                if (this.shouldUseFullDuckDBLogic(data1, data2)) {
+                    logDatabaseOperation('Fast Comparison: Using full DuckDB logic for large dataset', {
+                        data1Rows: data1 ? data1.length : 0,
+                        data2Rows: data2 ? data2.length : 0
+                    });
+                    return await this.compareTablesWithOriginalLogic(data1, data2, excludeColumns, useTolerance, customKeyColumns);
+                } else {
+                    // For smaller datasets, use local comparison for speed
+                    logDatabaseOperation('Fast Comparison: Using local comparison for small dataset', {
+                        data1Rows: data1 ? data1.length : 0,
+                        data2Rows: data2 ? data2.length : 0,
+                        useTolerance,
+                        customKeyColumns: customKeyColumns ? customKeyColumns.length : 0
+                    });
+                    return await this.compareTablesLocal(data1, data2, excludeColumns, useTolerance, customKeyColumns);
+                }
+            }
         } else {
+            logDatabaseOperation('Fast Comparison: Using local mode', {
+                data1Type: typeof data1,
+                data2Type: typeof data2
+            });
             return await this.compareTablesLocal(data1, data2, excludeColumns, useTolerance, customKeyColumns);
         }
     }
@@ -783,11 +815,35 @@ class FastTableComparator {
         const startTime = performance.now();
 
         try {
+            logDatabaseOperation('DuckDB Table Comparison Started', {
+                table1Name,
+                table2Name,
+                excludeColumns
+            });
+
             const table1 = this.tables.get(table1Name);
             const table2 = this.tables.get(table2Name);
             
             if (!table1 || !table2) {
-                throw new Error('One or both tables not found');
+                throw new Error(`One or both tables not found: table1=${!!table1}, table2=${!!table2}`);
+            }
+
+            logDatabaseOperation('Creating temporary DuckDB tables', {
+                table1Columns: table1.columns.length,
+                table2Columns: table2.columns.length,
+                table1Rows: table1.rows.length,
+                table2Rows: table2.rows.length
+            });
+
+            // Drop any existing temporary tables first to ensure clean state
+            try {
+                await window.duckdbLoader.query('DROP TABLE IF EXISTS temp_table1');
+                await window.duckdbLoader.query('DROP TABLE IF EXISTS temp_table2');
+                logDatabaseOperation('Cleaned up existing temporary tables');
+            } catch (cleanupError) {
+                logDatabaseOperation('Cleanup warning (tables may not exist)', {
+                    error: cleanupError.message
+                });
             }
 
             await this.createDuckDBTable('temp_table1', table1);
@@ -804,18 +860,53 @@ class FastTableComparator {
                 throw new Error('No common columns found for comparison');
             }
 
+            // Verify columns exist in both created tables
+            try {
+                const table1Desc = await window.duckdbLoader.query('DESCRIBE temp_table1');
+                const table2Desc = await window.duckdbLoader.query('DESCRIBE temp_table2');
+                
+                const table1ActualColumns = table1Desc.toArray().map(row => row.column_name).filter(col => col !== 'rowid');
+                const table2ActualColumns = table2Desc.toArray().map(row => row.column_name).filter(col => col !== 'rowid');
+                
+                // Filter common columns to only include those that actually exist in both DB tables
+                const verifiedCommonColumns = commonColumns.filter(col => 
+                    table1ActualColumns.includes(col) && table2ActualColumns.includes(col)
+                );
+                
+                if (verifiedCommonColumns.length === 0) {
+                    throw new Error('No verified common columns found in created tables');
+                }
+                
+                if (verifiedCommonColumns.length !== commonColumns.length) {
+                    logDatabaseOperation('Column verification warning', {
+                        expectedColumns: commonColumns,
+                        verifiedColumns: verifiedCommonColumns,
+                        table1ActualColumns,
+                        table2ActualColumns
+                    });
+                }
+                
+                // Update commonColumns to use only verified columns
+                commonColumns.length = 0;
+                commonColumns.push(...verifiedCommonColumns);
+                
+            } catch (verifyError) {
+                logDatabaseOperation('Column verification failed', {
+                    error: verifyError.message
+                });
+                // Continue with original commonColumns if verification fails
+            }
+
+            logDatabaseOperation('Common columns identified', {
+                commonColumns: commonColumns.length,
+                columnList: commonColumns
+            });
+
             // Create SELECT for common columns
             const columnList = commonColumns.map(col => `"${col}"`).join(', ');
             
-            // Create WHERE clause for all common columns using proper comparison logic
-            const whereConditions = [];
-            for (let i = 0; i < commonColumns.length; i++) {
-                const col = commonColumns[i];
-                const colIndex = columnInfo1.findIndex(c => c.name === col);
-                const isKeyCol = keyColumns.includes(colIndex);
-                const condition = createComparisonCondition(col, columnInfo1[colIndex].type, isKeyCol);
-                whereConditions.push(condition);
-            }
+            // Create WHERE clause for all common columns using simple equality comparison
+            const whereConditions = commonColumns.map(col => `t1."${col}" = t2."${col}"`);
             const whereClause = whereConditions.join(' AND ');
 
             // SQL for finding identical rows
@@ -841,12 +932,37 @@ class FastTableComparator {
                 WHERE t1.rowid IS NULL
             `;
 
-            // Execute queries in parallel
-            const [identicalResult, onlyTable1Result, onlyTable2Result] = await Promise.all([
-                window.duckdbLoader.query(identicalQuery),
-                window.duckdbLoader.query(onlyInTable1Query),
-                window.duckdbLoader.query(onlyInTable2Query)
-            ]);
+            logDatabaseOperation('Executing DuckDB comparison queries', {
+                query: 'Parallel execution of 3 comparison queries',
+                identicalQuery: identicalQuery.replace(/\s+/g, ' ').trim(),
+                onlyInTable1Query: onlyInTable1Query.replace(/\s+/g, ' ').trim(),
+                onlyInTable2Query: onlyInTable2Query.replace(/\s+/g, ' ').trim()
+            });
+
+            // Execute queries in parallel with individual error handling
+            let identicalResult, onlyTable1Result, onlyTable2Result;
+            
+            try {
+                [identicalResult, onlyTable1Result, onlyTable2Result] = await Promise.all([
+                    window.duckdbLoader.query(identicalQuery).catch(err => {
+                        throw new Error(`Identical query failed: ${err.message}`);
+                    }),
+                    window.duckdbLoader.query(onlyInTable1Query).catch(err => {
+                        throw new Error(`OnlyInTable1 query failed: ${err.message}`);
+                    }),
+                    window.duckdbLoader.query(onlyInTable2Query).catch(err => {
+                        throw new Error(`OnlyInTable2 query failed: ${err.message}`);
+                    })
+                ]);
+            } catch (queryError) {
+                logDatabaseOperation('DuckDB Query Execution Failed', {
+                    error: queryError.message,
+                    identicalQuery,
+                    onlyInTable1Query,
+                    onlyInTable2Query
+                });
+                throw queryError;
+            }
 
             // Convert results
             const identical = identicalResult.toArray().map(row => ({
@@ -869,6 +985,14 @@ class FastTableComparator {
 
             const duration = performance.now() - startTime;
 
+            logDatabaseOperation('DuckDB Table Comparison Completed', {
+                identicalRows: identical.length,
+                onlyInTable1: onlyInTable1.length,
+                onlyInTable2: onlyInTable2.length,
+                commonColumns: commonColumns.length,
+                duration: Math.round(duration)
+            });
+
             return {
                 identical,
                 onlyInTable1,
@@ -881,11 +1005,40 @@ class FastTableComparator {
             };
 
         } catch (error) {
+            const duration = performance.now() - startTime;
+            
+            logDatabaseOperation('DuckDB Table Comparison Failed', {
+                error: error.message,
+                duration: Math.round(duration),
+                tableName: table1Name && table2Name ? `${table1Name} vs ${table2Name}` : 'unknown'
+            });
+            
             console.error('❌ DuckDB comparison failed, falling back to local mode:', error);
             return await this.compareTablesLocal(table1Name, table2Name, excludeColumns);
         }
     }
 
+    // Helper method to determine if full DuckDB logic is needed based on data size
+    shouldUseFullDuckDBLogic(data1, data2) {
+        const threshold = 10000; // Use full logic for datasets larger than 10k rows
+        const rows1 = data1 ? (Array.isArray(data1) ? data1.length - 1 : 0) : 0;
+        const rows2 = data2 ? (Array.isArray(data2) ? data2.length - 1 : 0) : 0;
+        const totalRows = rows1 + rows2;
+        
+        logDatabaseOperation('Data size check for comparison method', {
+            rows1,
+            rows2,
+            totalRows,
+            threshold,
+            useFullLogic: totalRows > threshold
+        });
+        
+        return totalRows > threshold;
+    }
+
+    // Full DuckDB comparison with table creation and complex SQL logic
+    // Use this for thorough comparison when tables need to be created from scratch
+    // For quick comparisons, prefer compareTablesFast() or compareTablesWithDuckDB()
     async compareTablesWithOriginalLogic(data1, data2, excludeColumns = [], useTolerance = false, customKeyColumns = null) {
         const startTime = performance.now();
 
@@ -1109,24 +1262,21 @@ class FastTableComparator {
 
 
                 const insertBatch = async (tableName, data, headers, columnTypes) => {
-                    const BATCH_SIZE = 1000;
-                    for (let i = 1; i < data.length; i += BATCH_SIZE) {
-                        const batchEnd = Math.min(i + BATCH_SIZE, data.length);
-                        const batchData = data.slice(i, batchEnd);
-                        
-                        const values = batchData.map((row, idx) => {
-                            const rowId = i + idx - 1;
-                            const cleanRow = headers.map((_, colIdx) => {
-                                const val = row[colIdx];
-                                return formatValue(val, columnTypes[colIdx]);
-                            }).join(', ');
-                            return `(${rowId}, ${cleanRow})`;
+                    // Подготавливаем все значения одним блоком
+                    const allValues = [];
+                    for (let i = 1; i < data.length; i++) {
+                        const row = data[i];
+                        const rowId = i - 1;
+                        const cleanRow = headers.map((_, colIdx) => {
+                            const val = row[colIdx];
+                            return formatValue(val, columnTypes[colIdx]);
                         }).join(', ');
+                        allValues.push(`(${rowId}, ${cleanRow})`);
+                    }
 
-                        if (values) {
-                            const insertSQL = `INSERT INTO ${tableName} VALUES ${values}`;
-                            await window.duckdbLoader.query(insertSQL);
-                        }
+                    if (allValues.length > 0) {
+                        const insertSQL = `INSERT INTO ${tableName} VALUES ${allValues.join(', ')}`;
+                        await window.duckdbLoader.query(insertSQL);
                     }
                 };
 
@@ -1306,34 +1456,96 @@ class FastTableComparator {
             const minKeyMatchesRequired = Math.max(1, Math.ceil(keyColumns.length * (useTolerance ? 0.8 : 0.8))); // Minimum 80% of key fields
             const minTotalMatchesRequired = Math.max(2, Math.ceil(comparisonColumns.length * (useTolerance ? 0.6 : 0.7))); // Minimum 60-70% of columns for comparison
 
-            const similarLimit = Math.max(1000, Math.min(10000, table1Count + table2Count));
+            const similarLimit = 500;
+
+            // Log debugging information about columns
+            logDatabaseOperation('Preparing similar records SQL', {
+                keyColumns: keyColumns,
+                comparisonColumns: comparisonColumns,
+                sanitizedHeaders1Length: sanitizedHeaders1.length,
+                sanitizedHeaders2Length: sanitizedHeaders2.length,
+                maxKeyColumnIndex: Math.max(...keyColumns),
+                maxComparisonColumnIndex: Math.max(...comparisonColumns)
+            });
+
+            // Filter keyColumns and comparisonColumns to avoid out-of-bounds access
+            const safeKeyColumns = keyColumns.filter(colIdx => 
+                colIdx >= 0 && colIdx < sanitizedHeaders1.length && colIdx < sanitizedHeaders2.length
+            );
+            const safeComparisonColumns = comparisonColumns.filter(colIdx => 
+                colIdx >= 0 && colIdx < sanitizedHeaders1.length && colIdx < sanitizedHeaders2.length
+            );
+
+            if (safeKeyColumns.length === 0) {
+                logDatabaseOperation('Warning: No safe key columns found, using first column as fallback');
+                safeKeyColumns.push(0);
+            }
+
+            if (safeComparisonColumns.length === 0) {
+                throw new Error('No safe comparison columns found after filtering');
+            }
 
             const similarSQL = `
+                -- 1. Создаем индексы на ключевых колонках
+                ${safeKeyColumns.map(colIdx => `
+                CREATE INDEX IF NOT EXISTS idx_t1_${colIdx} ON table1("${sanitizedHeaders1[colIdx]}");
+                CREATE INDEX IF NOT EXISTS idx_t2_${colIdx} ON table2("${sanitizedHeaders2[colIdx]}");
+                `).join('')}
+
+                -- 2. Создаем хеш для группировки похожих записей
+                CREATE OR REPLACE TABLE table1_hashed AS
+                SELECT *, 
+                    ${safeKeyColumns.length > 0 
+                        ? `hash(${safeKeyColumns.map(idx => `COALESCE(UPPER(CAST("${sanitizedHeaders1[idx]}" AS VARCHAR)), '')`).join(' || ')}) as key_hash`
+                        : `hash(${safeComparisonColumns.slice(0, 3).map(idx => `COALESCE(UPPER(CAST("${sanitizedHeaders1[idx]}" AS VARCHAR)), '')`).join(' || ')}) as key_hash`
+                    }
+                FROM table1;
+
+                CREATE OR REPLACE TABLE table2_hashed AS
+                SELECT *, 
+                    ${safeKeyColumns.length > 0 
+                        ? `hash(${safeKeyColumns.map(idx => `COALESCE(UPPER(CAST("${sanitizedHeaders2[idx]}" AS VARCHAR)), '')`).join(' || ')}) as key_hash`
+                        : `hash(${safeComparisonColumns.slice(0, 3).map(idx => `COALESCE(UPPER(CAST("${sanitizedHeaders2[idx]}" AS VARCHAR)), '')`).join(' || ')}) as key_hash`
+                    }
+                FROM table2;
+
+                -- 3. Сопоставляем только записи с одинаковым хешем
                 CREATE OR REPLACE TABLE similar_pairs AS
-                WITH key_matches AS (
+                WITH candidates AS (
                     SELECT 
                         t1.rowid as row1_id,
                         t2.rowid as row2_id,
-                        ${comparisonColumns.map(colIdx => 
-                            `CASE WHEN ${createComparisonCondition(colIdx, useTolerance, keyColumns.includes(colIdx))} THEN 1 ELSE 0 END`
+                        ${safeComparisonColumns.map(colIdx => 
+                            `CASE WHEN ${createComparisonCondition(colIdx, useTolerance, safeKeyColumns.includes(colIdx))} THEN 1 ELSE 0 END`
                         ).join(' + ')} as total_matches,
-                        ${keyColumns.map(colIdx => 
+                        ${safeKeyColumns.length > 0 ? safeKeyColumns.map(colIdx => 
                             `CASE WHEN ${createComparisonCondition(colIdx, useTolerance, true)} THEN 1 ELSE 0 END`
-                        ).join(' + ')} as key_matches
-                    FROM table1 t1
-                    CROSS JOIN table2 t2
+                        ).join(' + ') : '0'} as key_matches
+                    FROM table1_hashed t1
+                    INNER JOIN table2_hashed t2 ON t1.key_hash = t2.key_hash
                     WHERE NOT EXISTS (
                         SELECT 1 FROM identical_pairs ip 
                         WHERE ip.row1_id = t1.rowid AND ip.row2_id = t2.rowid
                     )
+                ),
+                ranked_matches AS (
+                    SELECT 
+                        row1_id, row2_id, total_matches, key_matches,
+                        ROW_NUMBER() OVER (PARTITION BY row1_id ORDER BY total_matches DESC, row2_id) as rn
+                    FROM candidates
+                    WHERE 
+                        ${safeKeyColumns.length > 0 
+                            ? `key_matches = ${safeKeyColumns.length}` // 100% совпадение ключевых колонок
+                            : `total_matches >= ${Math.ceil(safeComparisonColumns.length * 0.5)}` // 50% общих колонок
+                        }
                 )
                 SELECT 
                     row1_id, row2_id, 'SIMILAR' as match_type, total_matches, key_matches
-                FROM key_matches  
-                WHERE key_matches = ${keyColumns.length}
-                  AND total_matches < ${comparisonColumns.length}
-                ORDER BY key_matches DESC, total_matches DESC
-                LIMIT ${similarLimit}  -- Динамический лимит на основе размера данных
+                FROM ranked_matches
+                WHERE rn = 1 -- Берем только лучшее совпадение для каждой строки из table1
+                    AND total_matches < ${comparisonColumns.length}
+                ORDER BY total_matches DESC
+                LIMIT ${similarLimit}
             `;
             
             await window.duckdbLoader.query(similarSQL);
@@ -1341,55 +1553,82 @@ class FastTableComparator {
             const similarCountResult = await window.duckdbLoader.query('SELECT COUNT(*) as count FROM similar_pairs');
             const similarCount = Number(similarCountResult.toArray()[0]?.count || 0);
             
-            const candidatesCountResult = await window.duckdbLoader.query(`
-                SELECT COUNT(*) as count FROM (
-                    SELECT 
-                        t1.rowid as row1_id,
-                        t2.rowid as row2_id,
-                        ${comparisonColumns.map(colIdx => 
-                            `CASE WHEN ${createComparisonCondition(colIdx, useTolerance, keyColumns.includes(colIdx))} THEN 1 ELSE 0 END`
-                        ).join(' + ')} as total_matches,
-                        ${keyColumns.map(colIdx => 
-                            `CASE WHEN ${createComparisonCondition(colIdx, useTolerance, true)} THEN 1 ELSE 0 END`
-                        ).join(' + ')} as key_matches
-                    FROM table1 t1
-                    CROSS JOIN table2 t2
-                    WHERE NOT EXISTS (
-                        SELECT 1 FROM identical_pairs ip 
-                        WHERE ip.row1_id = t1.rowid AND ip.row2_id = t2.rowid
-                    )
-                ) candidates
-            `);
-            const candidatesCount = Number(candidatesCountResult.toArray()[0]?.count || 0);
+            // Для больших файлов пропускаем подсчет кандидатов (избегаем CROSS JOIN)
+            const isLargeDataset = table1Count > 5000 || table2Count > 5000;
+            let candidatesCount = 0;
             
-            const filterStatsResult = await window.duckdbLoader.query(`
-                SELECT 
-                    COUNT(*) as total_candidates,
-                    COUNT(CASE WHEN key_matches = ${keyColumns.length} THEN 1 END) as passed_key_filter,
-                    COUNT(CASE WHEN total_matches < ${comparisonColumns.length} THEN 1 END) as passed_not_identical_filter,
-                    COUNT(CASE WHEN key_matches = ${keyColumns.length} 
-                               AND total_matches < ${comparisonColumns.length} THEN 1 END) as passed_all_filters,
-                    AVG(total_matches) as avg_total_matches,
-                    AVG(key_matches) as avg_key_matches,
-                    MIN(total_matches) as min_total_matches,
-                    MAX(total_matches) as max_total_matches
-                FROM (
-                    SELECT 
-                        ${comparisonColumns.map(colIdx => 
-                            `CASE WHEN ${createComparisonCondition(colIdx, useTolerance, keyColumns.includes(colIdx))} THEN 1 ELSE 0 END`
-                        ).join(' + ')} as total_matches,
-                        ${keyColumns.map(colIdx => 
-                            `CASE WHEN ${createComparisonCondition(colIdx, useTolerance, true)} THEN 1 ELSE 0 END`
-                        ).join(' + ')} as key_matches
-                    FROM table1 t1
-                    CROSS JOIN table2 t2
-                    WHERE NOT EXISTS (
-                        SELECT 1 FROM identical_pairs ip 
-                        WHERE ip.row1_id = t1.rowid AND ip.row2_id = t2.rowid
-                    )
-                ) stats
-            `);
-            const filterStats = filterStatsResult.toArray()[0];
+            if (!isLargeDataset) {
+                try {
+                    const candidatesCountResult = await window.duckdbLoader.query(`
+                        SELECT COUNT(*) as count FROM (
+                            SELECT 
+                                t1.rowid as row1_id,
+                                t2.rowid as row2_id,
+                                ${safeComparisonColumns.map(colIdx => 
+                                    `CASE WHEN ${createComparisonCondition(colIdx, useTolerance, safeKeyColumns.includes(colIdx))} THEN 1 ELSE 0 END`
+                                ).join(' + ')} as total_matches,
+                                ${safeKeyColumns.length > 0 ? safeKeyColumns.map(colIdx => 
+                                    `CASE WHEN ${createComparisonCondition(colIdx, useTolerance, true)} THEN 1 ELSE 0 END`
+                                ).join(' + ') : '0'} as key_matches
+                            FROM table1 t1
+                            CROSS JOIN table2 t2
+                            WHERE NOT EXISTS (
+                                SELECT 1 FROM identical_pairs ip 
+                                WHERE ip.row1_id = t1.rowid AND ip.row2_id = t2.rowid
+                            )
+                            LIMIT 50000  -- Ограничиваем для безопасности
+                        ) candidates
+                    `);
+                    candidatesCount = Number(candidatesCountResult.toArray()[0]?.count || 0);
+                } catch (error) {
+                    console.warn('⚠️ Candidates count query failed for large dataset, skipping:', error.message);
+                    candidatesCount = 0;
+                }
+            } else {
+                console.log('📊 Skipping candidates count for large dataset to avoid CROSS JOIN performance issues');
+            }
+            
+            // Пропускаем детальную статистику для больших файлов (избегаем CROSS JOIN)
+            let filterStats = null;
+            
+            if (!isLargeDataset) {
+                try {
+                    const filterStatsResult = await window.duckdbLoader.query(`
+                        SELECT 
+                            COUNT(*) as total_candidates,
+                            COUNT(CASE WHEN key_matches = ${safeKeyColumns.length} THEN 1 END) as passed_key_filter,
+                            COUNT(CASE WHEN total_matches < ${safeComparisonColumns.length} THEN 1 END) as passed_not_identical_filter,
+                            COUNT(CASE WHEN key_matches = ${safeKeyColumns.length} 
+                                       AND total_matches < ${safeComparisonColumns.length} THEN 1 END) as passed_all_filters,
+                            AVG(total_matches) as avg_total_matches,
+                            AVG(key_matches) as avg_key_matches,
+                            MIN(total_matches) as min_total_matches,
+                            MAX(total_matches) as max_total_matches
+                        FROM (
+                            SELECT 
+                                ${safeComparisonColumns.map(colIdx => 
+                                    `CASE WHEN ${createComparisonCondition(colIdx, useTolerance, safeKeyColumns.includes(colIdx))} THEN 1 ELSE 0 END`
+                                ).join(' + ')} as total_matches,
+                                ${safeKeyColumns.length > 0 ? safeKeyColumns.map(colIdx => 
+                                    `CASE WHEN ${createComparisonCondition(colIdx, useTolerance, true)} THEN 1 ELSE 0 END`
+                                ).join(' + ') : '0'} as key_matches
+                            FROM table1 t1
+                            CROSS JOIN table2 t2
+                            WHERE NOT EXISTS (
+                                SELECT 1 FROM identical_pairs ip 
+                                WHERE ip.row1_id = t1.rowid AND ip.row2_id = t2.rowid
+                            )
+                            LIMIT 100000  -- Ограничиваем для безопасности
+                        ) stats
+                    `);
+                    filterStats = filterStatsResult.toArray()[0];
+                } catch (error) {
+                    console.warn('⚠️ Filter stats query failed for large dataset, skipping:', error.message);
+                    filterStats = null;
+                }
+            } else {
+                console.log('📊 Skipping detailed filter statistics for large dataset to avoid performance issues');
+            }
             
             updateStageProgress('Generating final results', 90);
             
@@ -1715,28 +1954,51 @@ class FastTableComparator {
 
         const columnTypes = tableData.columns.map((_, i) => detectColumnType(tableData.rows, i));
         
+        logDatabaseOperation('Creating DuckDB table schema', {
+            tableName,
+            columns: tableData.columns,
+            columnTypes: columnTypes
+        });
+        
         const columns = tableData.columns.map((col, i) => `"${col}" ${columnTypes[i]}`).join(', ');
         const createTableSQL = `CREATE OR REPLACE TABLE ${tableName} (rowid INTEGER, ${columns})`;
         
+        logDatabaseOperation('Executing CREATE TABLE', {
+            query: createTableSQL.substring(0, 200) + '...'
+        });
+        
         await window.duckdbLoader.query(createTableSQL);
 
-        const BATCH_SIZE = 1000;
-        for (let i = 0; i < tableData.rows.length; i += BATCH_SIZE) {
-            const batch = tableData.rows.slice(i, i + BATCH_SIZE);
-            const values = batch.map(row => {
-                const rowData = row.data.map((cell, colIdx) => formatValue(cell, columnTypes[colIdx])).join(', ');
-                return `(${row.index + 1}, ${rowData})`;
-            }).join(', ');
-            
-            const insertSQL = `INSERT INTO ${tableName} VALUES ${values}`;
+        // Verify table was created correctly
+        try {
+            const verifySQL = `DESCRIBE ${tableName}`;
+            const description = await window.duckdbLoader.query(verifySQL);
+            logDatabaseOperation('Table structure verified', {
+                tableName,
+                structure: description.toArray().map(row => ({ column_name: row.column_name, column_type: row.column_type }))
+            });
+        } catch (verifyError) {
+            logDatabaseOperation('Table verification failed', {
+                tableName,
+                error: verifyError.message
+            });
+        }
+
+        // Загружаем все данные одним запросом
+        const allValues = tableData.rows.map(row => {
+            const rowData = row.data.map((cell, colIdx) => formatValue(cell, columnTypes[colIdx])).join(', ');
+            return `(${row.index + 1}, ${rowData})`;
+        }).join(', ');
+        
+        if (allValues) {
+            const insertSQL = `INSERT INTO ${tableName} VALUES ${allValues}`;
             await window.duckdbLoader.query(insertSQL);
         }
 
         logDatabaseOperation('DuckDB Table Creation Completed', {
             tableName: tableName,
             rowCount: tableData.rows.length,
-            columnCount: tableData.columns.length,
-            batchCount: Math.ceil(tableData.rows.length / BATCH_SIZE)
+            columnCount: tableData.columns.length
         });
     }
 
@@ -2168,32 +2430,25 @@ async function createTableFromPreviewData(tableNumber, data, fileName = null) {
                 columnCount: headers.length
             });
 
-            // Insert data in batches
-            const BATCH_SIZE = 1000;
-            for (let i = 0; i < dataRows.length; i += BATCH_SIZE) {
-                const batchEnd = Math.min(i + BATCH_SIZE, dataRows.length);
-                const batchData = dataRows.slice(i, batchEnd);
-                
-                const values = batchData.map((row, idx) => {
-                    const rowId = i + idx;
-                    const cleanRow = headers.map((_, colIdx) => {
-                        const val = row[colIdx];
-                        return formatValue(val, columnTypes[colIdx]);
-                    }).join(', ');
-                    return `(${rowId}, ${cleanRow})`;
+            // Загружаем все данные одним запросом
+            const allValues = dataRows.map((row, idx) => {
+                const rowId = idx;
+                const cleanRow = headers.map((_, colIdx) => {
+                    const val = row[colIdx];
+                    return formatValue(val, columnTypes[colIdx]);
                 }).join(', ');
+                return `(${rowId}, ${cleanRow})`;
+            }).join(', ');
 
-                if (values) {
-                    const insertSQL = `INSERT INTO ${tableName} VALUES ${values}`;
-                    await window.duckdbLoader.query(insertSQL);
-                }
+            if (allValues) {
+                const insertSQL = `INSERT INTO ${tableName} VALUES ${allValues}`;
+                await window.duckdbLoader.query(insertSQL);
             }
             
             logDatabaseOperation('Preview Table Creation Completed', {
                 tableName: tableName,
                 rowCount: dataRows.length,
-                columnCount: headers.length,
-                batchCount: Math.ceil(dataRows.length / BATCH_SIZE)
+                columnCount: headers.length
             });
             
             console.log(`✅ [CALL-${callId}] Table ${tableNumber} created in DuckDB WASM mode with ${dataRows.length} rows`);

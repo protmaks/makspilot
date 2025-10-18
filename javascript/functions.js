@@ -3584,6 +3584,17 @@ async function performComparison() {
     window.currentFinalHeaders = finalHeaders.slice(); // Store headers
     window.currentFinalAllCols = finalAllCols;
     
+    // ВАЖНО: Не запускать дополнительное сравнение если DuckDB WASM уже обработал данные
+    if (window.MaxPilotDuckDB && window.MaxPilotDuckDB.fastComparator && window.MaxPilotDuckDB.fastComparator.initialized) {
+        console.log('🚫 Skipping performFuzzyMatchingForExport - DuckDB WASM already processed the data');
+        
+        // Убедимся, что экспорт доступен
+        setTimeout(() => {
+            checkAndEnableExportButton();
+        }, 100);
+        return;
+    }
+    
     if (isLargeFile) {
         // For large files, do quick comparison first (only first 100 different rows)
         performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols, true, tableHeaders, true, keyColumnIndexes, userSelectedKeys);
@@ -4306,6 +4317,17 @@ function createFullStatisticsPairs(tableHeaders, body1, body2, finalAllCols, key
 
 function performFuzzyMatchingForExport(body1, body2, finalHeaders, finalAllCols, isLargeFile, tableHeaders, quickModeOnly = false, keyColumnIndexes = [], userSelectedKeys = false) {
     
+    // ВАЖНО: Предотвратить дублирование работы если DuckDB WASM уже активен
+    if (window.MaxPilotDuckDB && window.MaxPilotDuckDB.fastComparator && window.MaxPilotDuckDB.fastComparator.initialized) {
+        console.log('🚫 performFuzzyMatchingForExport skipped - DuckDB WASM is handling comparison');
+        return;
+    }
+    
+    // Также проверяем флаг активного быстрого сравнения
+    if (window.fastComparisonActive) {
+        console.log('🚫 performFuzzyMatchingForExport skipped - fast comparison is active');
+        return;
+    }
     
     const combinedData = [finalHeaders, ...body1, ...body2];
     
