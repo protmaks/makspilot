@@ -1,12 +1,12 @@
 if (typeof window.MaxPilotDuckDB === 'undefined') {
 
 // Database logging configuration
-const DB_LOGGING_ENABLED = true; // Set to false to disable logging
+const DB_LOGGING_ENABLED = false; // Set to false to disable logging
 const DB_LOGGING_LEVELS = {
-    QUERY: true,      // Log individual SQL queries
-    OPERATION: true,  // Log high-level operations (create table, comparison, etc.)
-    TIMING: true,     // Log operation timings
-    RESULTS: true,    // Log query results summary
+    QUERY: false,     // Log individual SQL queries
+    OPERATION: false, // Log high-level operations (create table, comparison, etc.)
+    TIMING: false,    // Log operation timings
+    RESULTS: false,   // Log query results summary
     ZERO_VALUES: false // Log zero value formatting (can create many logs)
 };
 let dbOperationCounter = 0;
