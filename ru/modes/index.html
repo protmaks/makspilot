@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <script src="../../javascript/redirect.js" defer></script>
+
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('consent', 'default', {'ad_storage': 'denied', 'analytics_storage': 'denied'});
+    </script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-C19L2VS3EH"></script>
+    <script>
+        gtag('js', new Date());
+        gtag('config', 'G-C19L2VS3EH');
+    </script>
+    <script src="../../javascript/cookie-consent.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Сравнение режимов MaksPilot: Стандартный режим vs DuckDB WASM. Узнайте различия между режимами обработки файлов и выберите оптимальный для ваших задач.">
+    <meta name="keywords" content="MaksPilot, режимы сравнения, DuckDB WASM, стандартный режим, сравнение файлов, производительность">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="MaxPilot">
+    <meta property="og:title" content="Режимы сравнения MaksPilot - Стандартный vs DuckDB WASM">
+    <meta property="og:description" content="Сравнение режимов MaksPilot: Стандартный режим vs DuckDB WASM. Узнайте различия между режимами обработки файлов и выберите оптимальный для ваших задач.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://makspilot.com/ru/modes/">
+    <meta property="og:image" content="https://makspilot.com/img/main.webp">
+    <link rel="canonical" href="https://makspilot.com/ru/modes/">
+    <link rel="alternate" hreflang="en" href="https://makspilot.com/modes/">
+    <link rel="alternate" hreflang="ru" href="https://makspilot.com/ru/modes/">
+    <link rel="alternate" hreflang="pl" href="https://makspilot.com/pl/modes/">
+    <link rel="alternate" hreflang="zh" href="https://makspilot.com/zh/modes/">
+    <link rel="alternate" hreflang="es" href="https://makspilot.com/es/modes/">
+    <link rel="alternate" hreflang="ar" href="https://makspilot.com/ar/modes/">
+    <link rel="alternate" hreflang="pt" href="https://makspilot.com/pt/modes/">
+    <link rel="alternate" hreflang="ja" href="https://makspilot.com/ja/modes/">
+    <link rel="alternate" hreflang="de" href="https://makspilot.com/de/modes/">
+    <link rel="alternate" hreflang="fr" href="https://makspilot.com/fr/modes/">
+    <title>Режимы сравнения MaksPilot - Стандартный vs DuckDB WASM</title>
+    <link rel="icon" type="image/x-icon" href="../../favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <a href="../" class="logo">
+                <img src="../../img/makspilot.svg" alt="Логотип MaxPilot">
+            </a>
+            <nav>
+                <ul class="nav-menu">
+                    <li><a href="../modes/">Режимы</a></li>
+                    <li><a href="../#security">Безопасность</a></li>
+                    <li><a href="../compare/" class="nav-cta">Сравнить</a></li>
+                    <li><a href="../how_use/">Инструкция</a></li>
+                    <li><a href="https://medium.com/@protmaks" target="_blank">Блог</a></li>
+                    <li><a href="https://www.linkedin.com/in/protmaks/" class="social-link" title="LinkedIn" target="_blank">
+                        <img src="../../img/linkedin.svg" alt="LinkedIn">
+                    </a></li>
+                    <li class="lang-switcher">
+                        <select class="lang-select" onchange="window.location.href=this.value">
+                            <option value="/modes/">English</option>
+                            <option value="/ru/modes/" selected>Русский</option>
+                            <option value="/pl/modes/">Polski</option>
+                            <option value="/zh/modes/">中文</option>
+                            <option value="/es/modes/">Español</option>
+                            <option value="/ar/modes/">العربية</option>
+                            <option value="/pt/modes/">Português</option>
+                            <option value="/ja/modes/">日本語</option>
+                            <option value="/de/modes/">Deutsch</option>
+                            <option value="/fr/modes/">Français</option>
+                        </select>
+                    </li>
+                </ul>
+                <div class="mobile-menu-toggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </nav>
+        </div>
+    </header>
+    <main>
+        <section class="compact-hero">
+            <div class="container">
+                <div class="compact-hero-content">
+                    <h1 class="how-use-title">Режимы сравнения MaksPilot</h1>
+                    
+                    <div class="instruction-container">
+                        <p class="instruction-step-pp">
+                            MaksPilot предлагает два режима обработки данных для сравнения файлов.
+                        </p>
+                        
+                        <div class="comparison-table-wrapper">
+                            <table class="comparison-table">
+                                <thead>
+                                    <tr>
+                                        <th>Характеристики</th>
+                                        <th class="standard-mode">Стандартный режим</th>
+                                        <th class="wasm-mode">DuckDB WASM</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Загрузка данных</strong></td>
+                                        <td>Данные НЕ загружаются на сервер. Сравнение происходит в оперативной памяти браузера</td>
+                                        <td>Данные НЕ загружаются на сервер. Сравнение происходит в виртуальной БД DuckDB WASM, которая хранится в оперативной памяти браузера</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Технология</strong></td>
+                                        <td>JavaScript + Web Workers</td>
+                                        <td>DuckDB WASM</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Максимальный размер файла</strong></td>
+                                        <td>до 15 000 строк и 30 колонок</td>
+                                        <td>более 15 000 строк и 30 колонок</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Скорость сравнения 9 000 строк и 14 колонок</strong></td>
+                                        <td>68 секунд</td>
+                                        <td>2 секунды</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Скорость сравнения 42 000 строк и 14 колонок</strong></td>
+                                        <td>Не поддерживается</td>
+                                        <td>3 секунды</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Скорость обработки</strong></td>
+                                        <td>Быстрая для малых файлов</td>
+                                        <td>Очень быстрая для больших файлов</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Потребление памяти</strong></td>
+                                        <td>Умеренное</td>
+                                        <td>Оптимизированное</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Поддержка форматов</strong></td>
+                                        <td>Excel (.xlsx, .xls), CSV</td>
+                                        <td>Excel (.xlsx, .xls), CSV</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Выбор ключей для сравнения</strong></td>
+                                        <td>Да, запоминает в кеше по имени файла</td>
+                                        <td>Да, запоминает в кеше по имени файла</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Экспорт резкльтата в Эксель</strong></td>
+                                        <td>Да, с раскраской</td>
+                                        <td>Да, с раскраской</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Совместимость браузеров</strong></td>
+                                        <td>Все современные браузеры</td>
+                                        <td>Современные браузеры с WASM</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Статус</strong></td>
+                                        <td>Доступно </td>
+                                        <td>В разработке</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong></strong></td>
+                                        <td><a href="../compare/" class="cta-button">Сравнить</a></td>
+                                        <td><a href="#" class="cta-button">ОСТАВИТЬ ЗАЯВКУ</a></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="compact-footer">
+        <div class="container">
+            <div class="footer-social">
+                <a href="https://www.linkedin.com/in/protmaks/" class="social-link" title="LinkedIn" target="_blank">
+                    <img src="../../img/linkedin.svg" alt="LinkedIn">
+                </a>
+                <a href="https://medium.com/@protmaks" class="social-link" title="Мой блог" target="_blank">
+                    <img src="../../img/blog.svg" alt="Мой блог">
+                </a>
+            </div>
+            <p class="footer-contact">
+                Контакт: <span class="contact-email">moc.liam<!-- nospam -->toh@<!-- nospam -->skamt<!-- nospam -->orp</span>
+            </p>
+            <p class="copyright">© 2025 MaksPilot. Все права защищены.</p>
+        </div>
+    </footer>
+
+    <script src="../../javascript/script.js"></script>
+</body>
+</html>

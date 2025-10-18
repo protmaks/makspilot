@@ -2535,3 +2535,110 @@ button.export-btn:disabled {
     0% { background-position: -200px 0; }
     100% { background-position: calc(200px + 100%) 0; }
 }
+
+/* Comparison modes table styles */
+.comparison-table-wrapper {
+    margin: 30px 0;
+    overflow-x: auto;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #FFFFFF;
+    color: #333;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.comparison-table thead {
+    background: linear-gradient(135deg, #c5c5c5 0%, #c5c5c5 100%);
+    color: white;
+}
+
+.comparison-table th {
+    padding: 16px 20px;
+    font-weight: 600;
+    font-size: 1rem;
+    position: relative;
+}
+
+.comparison-table th:first-child {
+    width: 25%;
+}
+
+.comparison-table th.standard-mode {
+    background: linear-gradient(135deg, #c5c5c5 0%, #c5c5c5 100%);
+}
+
+.comparison-table th.wasm-mode {
+    background: linear-gradient(135deg, #ffb17a 0%, #FFB17A 100%);
+}
+
+.comparison-table td {
+    padding: 14px 20px;
+    border-bottom: 1px solid #E5E7EB;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.comparison-table tr:last-child td {
+    border-bottom: none;
+}
+
+.comparison-table tr:nth-child(even) {
+    background-color: #F9FAFB;
+}
+
+.comparison-table tr:hover {
+    background-color: #F3F4F6;
+    transform: translateY(-1px);
+    transition: all 0.2s ease;
+}
+
+.comparison-table td:first-child {
+    font-weight: 500;
+    color: #1F2937;
+    background-color: #F8FAFC;
+}
+
+.comparison-table tr:nth-child(even) td:first-child {
+    background-color: #F1F5F9;
+}
+
+.comparison-table tr:hover td:first-child {
+    background-color: #E2E8F0;
+}
+
+.mode-selection-info {
+    background: linear-gradient(135deg, #F3F4F6 0%, #E5E7EB 100%);
+    color: #374151;
+    padding: 20px;
+    border-radius: 12px;
+    margin: 30px 0;
+    border-left: 4px solid #6366F1;
+}
+
+@media (max-width: 768px) {
+    .comparison-table-wrapper {
+        margin: 20px -20px;
+        border-radius: 0;
+    }
+    
+    .comparison-table {
+        border-radius: 0;
+        font-size: 0.85rem;
+    }
+    
+    .comparison-table th,
+    .comparison-table td {
+        padding: 12px 10px;
+    }
+    
+    .comparison-table th:first-child,
+    .comparison-table td:first-child {
+        min-width: 120px;
+    }
+}

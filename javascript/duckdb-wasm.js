@@ -613,7 +613,7 @@ class FastTableComparator {
                 return convertedRow;
             });
             
-            console.log(`📊 Aggregation table updated: ${convertedData.length} files loaded`);
+            //console.log(`📊 Aggregation table updated: ${convertedData.length} files loaded`);
             
             return convertedData;
             
@@ -1221,7 +1221,7 @@ class FastTableComparator {
                 // Tables exist and have data
                 if (table1Count > 0 && table2Count > 0) {
                     tablesExist = true;
-                    console.log(`✅ Using existing DuckDB tables from preview (table1: ${table1Count} rows, table2: ${table2Count} rows)`);
+                    //console.log(`✅ Using existing DuckDB tables from preview (table1: ${table1Count} rows, table2: ${table2Count} rows)`);
                     
                     logDatabaseOperation('Using Existing DuckDB Tables', {
                         table1: 'table1',
@@ -1412,7 +1412,7 @@ class FastTableComparator {
                     }
                 }, 100);
             } else {
-                console.log('🚫 Skipping auto-detection UI update because custom key columns are provided');
+                //console.log('🚫 Skipping auto-detection UI update because custom key columns are provided');
             }
             
             const doubleColumns = comparisonColumns.filter(idx => 
@@ -1585,7 +1585,7 @@ class FastTableComparator {
                     candidatesCount = 0;
                 }
             } else {
-                console.log('📊 Skipping candidates count for large dataset to avoid CROSS JOIN performance issues');
+                //console.log('📊 Skipping candidates count for large dataset to avoid CROSS JOIN performance issues');
             }
             
             let filterStats = null;
@@ -1626,7 +1626,7 @@ class FastTableComparator {
                     filterStats = null;
                 }
             } else {
-                console.log('📊 Skipping detailed filter statistics for large dataset to avoid performance issues');
+                //console.log('📊 Skipping detailed filter statistics for large dataset to avoid performance issues');
             }
             
             updateStageProgress('Generating final results', 90);
@@ -2234,14 +2234,14 @@ async function createTableFromPreviewData(tableNumber, data, fileName = null) {
     
     // Check if table creation is already in progress
     if (ongoingTableCreation.has(tableName)) {
-        console.log(`⏭️ [CALL-${callId}] Table ${tableName} creation already in progress, skipping`);
+        //console.log(`⏭️ [CALL-${callId}] Table ${tableName} creation already in progress, skipping`);
         return false;
     }
     
     // Mark table creation as in progress
     ongoingTableCreation.add(tableName);
     
-    console.log(`🚀 [CALL-${callId}] createTableFromPreviewData started for table${tableNumber}`);
+    //console.log(`🚀 [CALL-${callId}] createTableFromPreviewData started for table${tableNumber}`);
     
     try {
         if (!fastComparator || !fastComparator.initialized) {
@@ -2413,7 +2413,7 @@ async function createTableFromPreviewData(tableNumber, data, fileName = null) {
             };
 
             // Always create or replace the table to ensure fresh data on tab switch
-            console.log(`🔄 [CALL-${callId}] Creating/replacing table ${tableName}`);
+            //${callId}] Creating/replacing table ${tableName}`);
             
             const createTableSQL = `CREATE OR REPLACE TABLE ${tableName} (
                 rowid INTEGER,
@@ -2448,11 +2448,11 @@ async function createTableFromPreviewData(tableNumber, data, fileName = null) {
                 columnCount: headers.length
             });
             
-            console.log(`✅ [CALL-${callId}] Table ${tableNumber} created in DuckDB WASM mode with ${dataRows.length} rows`);
+            //console.log(`✅ [CALL-${callId}] Table ${tableNumber} created in DuckDB WASM mode with ${dataRows.length} rows`);
         } else {
             // For local mode, create local tables for preview
             await fastComparator.createTableFromData(tableName, dataRows, headers);
-            console.log(`✅ [CALL-${callId}] Table ${tableNumber} created in local mode with ${dataRows.length} rows`);
+            //console.log(`✅ [CALL-${callId}] Table ${tableNumber} created in local mode with ${dataRows.length} rows`);
         }
         
         // Ensure UI is updated after table creation
@@ -2460,11 +2460,11 @@ async function createTableFromPreviewData(tableNumber, data, fileName = null) {
             await fastComparator.updateAggregationUI();
         }
         
-        console.log(`🏁 [CALL-${callId}] createTableFromPreviewData completed for table${tableNumber}`);
+        //console.log(`🏁 [CALL-${callId}] createTableFromPreviewData completed for table${tableNumber}`);
         return true;
         
     } catch (error) {
-        console.error(`❌ [CALL-${callId}] Failed to create table ${tableNumber}:`, error);
+        //console.error(`❌ [CALL-${callId}] Failed to create table ${tableNumber}:`, error);
         return false;
     } finally {
         // Always clear the ongoing creation flag
