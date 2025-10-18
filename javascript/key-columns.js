@@ -26,8 +26,8 @@ function getColumnType(columnValues, columnHeader = '') {
     for (let value of nonEmptyValues) {
         const strValue = value.toString().trim().toLowerCase();
         
-        // Check for boolean values
-        if (['true', 'false', '1', '0', 'yes', 'no', 'да', 'нет', 'истина', 'ложь'].includes(strValue)) {
+        // Check for boolean values (excluding '1' and '0' since Excel treats them as numbers)
+        if (['true', 'false', 'yes', 'no', 'да', 'нет', 'истина', 'ложь'].includes(strValue)) {
             booleanCount++;
             continue;
         }
