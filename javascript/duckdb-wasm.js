@@ -1461,7 +1461,7 @@ class FastTableComparator {
             const minKeyMatchesRequired = Math.max(1, Math.ceil(keyColumns.length * (useTolerance ? 0.8 : 0.8))); // Minimum 80% of key fields
             const minTotalMatchesRequired = Math.max(2, Math.ceil(comparisonColumns.length * (useTolerance ? 0.6 : 0.7))); // Minimum 60-70% of columns for comparison
 
-            const similarLimit = 500;
+            const similarLimit = 9999999999;
 
             // Log debugging information about columns
             logDatabaseOperation('Preparing similar records SQL', {
@@ -3086,7 +3086,7 @@ async function generateDetailedComparisonTable(fastResult, useTolerance) {
     
     const pairs = [];
     
-    const maxIdenticalToShow = (onlyInTable1?.length || 0) === 0 && (onlyInTable2?.length || 0) === 0 ? 500 : 100;
+    const maxIdenticalToShow = (onlyInTable1?.length || 0) === 0 && (onlyInTable2?.length || 0) === 0 ? 10000 : 1000;
     (identical || []).slice(0, maxIdenticalToShow).forEach(identicalPair => {
         const row1Index = identicalPair.row1;
         const row2Index = identicalPair.row2;
@@ -3427,7 +3427,7 @@ async function createBasicFallbackTable(pairs, headers) {
         ? window.getFileDisplayName(window.fileName2 || 'File 2', window.sheetName2 || '')
         : (window.fileName2 || 'File 2');
     
-    pairs.slice(0, 500).forEach((pair, index) => {
+    pairs.slice(0, 10000).forEach((pair, index) => {
         // Check checkbox filters
         const row1 = pair.row1;
         const row2 = pair.row2;
