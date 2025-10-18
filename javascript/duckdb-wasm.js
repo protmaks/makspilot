@@ -1262,7 +1262,6 @@ class FastTableComparator {
 
 
                 const insertBatch = async (tableName, data, headers, columnTypes) => {
-                    // Подготавливаем все значения одним блоком
                     const allValues = [];
                     for (let i = 1; i < data.length; i++) {
                         const row = data[i];
@@ -1491,13 +1490,11 @@ class FastTableComparator {
             }
 
             const similarSQL = `
-                -- 1. Создаем индексы на ключевых колонках
                 ${safeKeyColumns.map(colIdx => `
                 CREATE INDEX IF NOT EXISTS idx_t1_${colIdx} ON table1("${sanitizedHeaders1[colIdx]}");
                 CREATE INDEX IF NOT EXISTS idx_t2_${colIdx} ON table2("${sanitizedHeaders2[colIdx]}");
                 `).join('')}
 
-                -- 2. Создаем хеш для группировки похожих записей
                 CREATE OR REPLACE TABLE table1_hashed AS
                 SELECT *, 
                     ${safeKeyColumns.length > 0 
@@ -1514,7 +1511,6 @@ class FastTableComparator {
                     }
                 FROM table2;
 
-                -- 3. Сопоставляем только записи с одинаковым хешем
                 CREATE OR REPLACE TABLE similar_pairs AS
                 WITH candidates AS (
                     SELECT 
@@ -1540,14 +1536,14 @@ class FastTableComparator {
                     FROM candidates
                     WHERE 
                         ${safeKeyColumns.length > 0 
-                            ? `key_matches = ${safeKeyColumns.length}` // 100% совпадение ключевых колонок
-                            : `total_matches >= ${Math.ceil(safeComparisonColumns.length * 0.5)}` // 50% общих колонок
+                            ? `key_matches = ${safeKeyColumns.length}`
+                            : `total_matches >= ${Math.ceil(safeComparisonColumns.length * 0.5)}`
                         }
                 )
                 SELECT 
                     row1_id, row2_id, 'SIMILAR' as match_type, total_matches, key_matches
                 FROM ranked_matches
-                WHERE rn = 1 -- Берем только лучшее совпадение для каждой строки из table1
+                WHERE rn = 1
                     AND total_matches < ${comparisonColumns.length}
                 ORDER BY total_matches DESC
                 LIMIT ${similarLimit}
@@ -1558,7 +1554,6 @@ class FastTableComparator {
             const similarCountResult = await window.duckdbLoader.query('SELECT COUNT(*) as count FROM similar_pairs');
             const similarCount = Number(similarCountResult.toArray()[0]?.count || 0);
             
-            // Для больших файлов пропускаем подсчет кандидатов (избегаем CROSS JOIN)
             const isLargeDataset = table1Count > 5000 || table2Count > 5000;
             let candidatesCount = 0;
             
@@ -1581,7 +1576,7 @@ class FastTableComparator {
                                 SELECT 1 FROM identical_pairs ip 
                                 WHERE ip.row1_id = t1.rowid AND ip.row2_id = t2.rowid
                             )
-                            LIMIT 50000  -- Ограничиваем для безопасности
+                            LIMIT 500000
                         ) candidates
                     `);
                     candidatesCount = Number(candidatesCountResult.toArray()[0]?.count || 0);
@@ -1593,7 +1588,6 @@ class FastTableComparator {
                 console.log('📊 Skipping candidates count for large dataset to avoid CROSS JOIN performance issues');
             }
             
-            // Пропускаем детальную статистику для больших файлов (избегаем CROSS JOIN)
             let filterStats = null;
             
             if (!isLargeDataset) {
@@ -1623,7 +1617,7 @@ class FastTableComparator {
                                 SELECT 1 FROM identical_pairs ip 
                                 WHERE ip.row1_id = t1.rowid AND ip.row2_id = t2.rowid
                             )
-                            LIMIT 100000  -- Ограничиваем для безопасности
+                            LIMIT 100000 
                         ) stats
                     `);
                     filterStats = filterStatsResult.toArray()[0];
@@ -1989,7 +1983,6 @@ class FastTableComparator {
             });
         }
 
-        // Загружаем все данные одним запросом
         const allValues = tableData.rows.map(row => {
             const rowData = row.data.map((cell, colIdx) => formatValue(cell, columnTypes[colIdx])).join(', ');
             return `(${row.index + 1}, ${rowData})`;
@@ -2435,7 +2428,6 @@ async function createTableFromPreviewData(tableNumber, data, fileName = null) {
                 columnCount: headers.length
             });
 
-            // Загружаем все данные одним запросом
             const allValues = dataRows.map((row, idx) => {
                 const rowId = idx;
                 const cleanRow = headers.map((_, colIdx) => {
