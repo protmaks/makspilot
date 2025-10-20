@@ -19,6 +19,11 @@ defaults:
     values:
       layout: null
 
+# 404 page configuration
+plugins:
+  - jekyll-redirect-from
+  - jekyll-seo-tag
+
 # Exclude files from processing
 exclude:
   - README.md
