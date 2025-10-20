@@ -1,3 +1,40 @@
+// Function to generate appropriate worksheet name based on file types and names
+function getWorksheetName() {
+    try {
+        // Check if we're comparing two CSV files
+        const file1IsCsv = fileName1 && fileName1.toLowerCase().endsWith('.csv');
+        const file2IsCsv = fileName2 && fileName2.toLowerCase().endsWith('.csv');
+        
+        if (file1IsCsv && file2IsCsv) {
+            return 'Sheet1';
+        }
+        
+        // If only one file has a sheet name, use it
+        if (window.sheetName1 && !window.sheetName2) {
+            return window.sheetName1;
+        }
+        if (window.sheetName2 && !window.sheetName1) {
+            return window.sheetName2;
+        }
+        
+        // If both files have the same sheet name, use it
+        if (window.sheetName1 && window.sheetName2 && window.sheetName1 === window.sheetName2) {
+            return window.sheetName1;
+        }
+        
+        // If both files have different sheet names or both Excel files with Sheet1, use Sheet1
+        if (window.sheetName1 && window.sheetName2) {
+            return 'Sheet1';
+        }
+        
+        // Default fallback
+        return 'Sheet1';
+    } catch (error) {
+        console.error('Error generating worksheet name:', error);
+        return 'Sheet1';
+    }
+}
+
 async function exportToExcel() {
     // Check if we have data to export - either from standard comparison or fast comparison
     const hasStandardData = currentPairs && currentPairs.length > 0;
@@ -191,6 +228,9 @@ async function createStyledHTMLTable(exportData) {
     const startTime = performance.now();
     console.log('⚡ Generating HTML for Excel export...', { rows: exportData.data.length, columns: exportData.data[0]?.length || 0 });
     
+    // Get the worksheet name
+    const worksheetName = getWorksheetName();
+    
     // Pre-build HTML parts for better performance
     const htmlParts = [];
     
@@ -206,7 +246,7 @@ async function createStyledHTMLTable(exportData) {
             td { mso-number-format:"@"; white-space: pre; mso-data-type: string; }
             table td { mso-number-format: "@"; mso-data-type: string; }
         </style>
-        <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Comparison Results</x:Name><x:WorksheetOptions><x:DisplayGridlines/><x:Selected/><x:DefaultRowHeight>255</x:DefaultRowHeight><x:Panes><x:Pane><x:Number>0</x:Number><x:ActiveRow>0</x:ActiveRow><x:ActiveCol>0</x:ActiveCol></x:Pane></x:Panes></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+        <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>${worksheetName}</x:Name><x:WorksheetOptions><x:DisplayGridlines/><x:Selected/><x:DefaultRowHeight>255</x:DefaultRowHeight><x:Panes><x:Pane><x:Number>0</x:Number><x:ActiveRow>0</x:ActiveRow><x:ActiveCol>0</x:ActiveCol></x:Pane></x:Panes></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
     </head>
     <body>
         <table border="0" style="border-collapse: collapse;" x:publishsource="Excel">
