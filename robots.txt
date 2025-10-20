@@ -13,10 +13,11 @@ Allow: /ru/
 Allow: /pl/
 Allow: /zh/
 Allow: /es/
-Allow: /ar/
 Allow: /pt/
 Allow: /ja/
 Allow: /de/
+Allow: /fr/
+
 
 # Allow CSS and JS files for proper rendering
 Allow: /style.css
