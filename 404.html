@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Page not found - 404. Return to MaksPilot homepage for Excel and CSV file comparison online.">
+    <meta name="robots" content="noindex, follow">
+    <title>Page Not Found - 404 | MaksPilot</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <section class="error-404">
+        <div class="error-content">
+            <div class="error-number">404</div>
+            <h1 class="error-title" id="error-title">Page Not Found</h1>
+            <p class="error-description" id="error-description">
+                Sorry, the requested page doesn't exist. It may have been moved or deleted. 
+                Don't worry though — you can return to the homepage or start comparing files right away.
+            </p>
+            <div class="error-actions">
+                <a href="/" class="home-button" id="home-button">Go Home</a>
+                <a href="/compare/" class="compare-button" id="compare-button">Compare Files</a>
+            </div>
+        </div>
+    </section>
+
+    <script src="javascript/script.js"></script>
+    <script>
+        // Multi-language 404 page handler for GitHub Pages
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get current URL path
+            const path = window.location.pathname;
+            
+            // Language translations
+            const translations = {
+                'ru': {
+                    title: 'Страница не найдена',
+                    description: 'Извините, запрашиваемая страница не существует. Возможно, она была перемещена или удалена. Но не волнуйтесь — вы можете вернуться на главную страницу или сразу начать сравнивать файлы.',
+                    homeButton: 'На главную',
+                    compareButton: 'Сравнить файлы',
+                    homeUrl: '/ru/',
+                    compareUrl: '/ru/compare/'
+                },
+                'pl': {
+                    title: 'Strona nie została znaleziona',
+                    description: 'Przepraszamy, żądana strona nie istnieje. Mogła zostać przeniesiona lub usunięta. Nie martw się jednak — możesz wrócić na stronę główną lub od razu rozpocząć porównywanie plików.',
+                    homeButton: 'Strona główna',
+                    compareButton: 'Porównaj pliki',
+                    homeUrl: '/pl/',
+                    compareUrl: '/pl/compare/'
+                },
+                'zh': {
+                    title: '页面未找到',
+                    description: '抱歉，请求的页面不存在。它可能已被移动或删除。不过不要担心——您可以返回主页或立即开始比较文件。',
+                    homeButton: '返回主页',
+                    compareButton: '比较文件',
+                    homeUrl: '/zh/',
+                    compareUrl: '/zh/compare/'
+                },
+                'es': {
+                    title: 'Página no encontrada',
+                    description: 'Lo siento, la página solicitada no existe. Puede que haya sido movida o eliminada. No te preocupes: puedes volver a la página principal o empezar a comparar archivos de inmediato.',
+                    homeButton: 'Ir al inicio',
+                    compareButton: 'Comparar archivos',
+                    homeUrl: '/es/',
+                    compareUrl: '/es/compare/'
+                },
+                'pt': {
+                    title: 'Página não encontrada',
+                    description: 'Desculpe, a página solicitada não existe. Ela pode ter sido movida ou excluída. Não se preocupe — você pode voltar à página inicial ou começar a comparar arquivos imediatamente.',
+                    homeButton: 'Ir para o início',
+                    compareButton: 'Comparar arquivos',
+                    homeUrl: '/pt/',
+                    compareUrl: '/pt/compare/'
+                },
+                'ja': {
+                    title: 'ページが見つかりません',
+                    description: '申し訳ございませんが、リクエストされたページは存在しません。移動または削除された可能性があります。心配は要りません。ホームページに戻るか、すぐにファイル比較を開始できます。',
+                    homeButton: 'ホームに戻る',
+                    compareButton: 'ファイルを比較',
+                    homeUrl: '/ja/',
+                    compareUrl: '/ja/compare/'
+                },
+                'de': {
+                    title: 'Seite nicht gefunden',
+                    description: 'Entschuldigung, die angeforderte Seite existiert nicht. Sie wurde möglicherweise verschoben oder gelöscht. Keine Sorge — Sie können zur Startseite zurückkehren oder sofort mit dem Vergleichen von Dateien beginnen.',
+                    homeButton: 'Zur Startseite',
+                    compareButton: 'Dateien vergleichen',
+                    homeUrl: '/de/',
+                    compareUrl: '/de/compare/'
+                },
+                'fr': {
+                    title: 'Page non trouvée',
+                    description: 'Désolé, la page demandée n\'existe pas. Elle a peut-être été déplacée ou supprimée. Ne vous inquiétez pas — vous pouvez retourner à la page d\'accueil ou commencer à comparer des fichiers immédiatement.',
+                    homeButton: 'Aller à l\'accueil',
+                    compareButton: 'Comparer les fichiers',
+                    homeUrl: '/fr/',
+                    compareUrl: '/fr/compare/'
+                },
+                'ar': {
+                    title: 'الصفحة غير موجودة',
+                    description: 'عذراً، الصفحة المطلوبة غير موجودة. ربما تم نقلها أو حذفها. لا تقلق — يمكنك العودة إلى الصفحة الرئيسية أو البدء في مقارنة الملفات فوراً.',
+                    homeButton: 'الصفحة الرئيسية',
+                    compareButton: 'مقارنة الملفات',
+                    homeUrl: '/ar/',
+                    compareUrl: '/ar/compare/'
+                }
+            };
+            
+            // Detect language from URL or hash
+            const langMatch = path.match(/^\/([a-z]{2})\//);
+            const hashLang = window.location.hash.substring(1);
+            const detectedLang = langMatch ? langMatch[1] : (hashLang && translations[hashLang] ? hashLang : null);
+            
+            // Apply translation if language is detected and supported
+            if (detectedLang && translations[detectedLang]) {
+                const trans = translations[detectedLang];
+                
+                // Update page content
+                document.getElementById('error-title').textContent = trans.title;
+                document.getElementById('error-description').textContent = trans.description;
+                document.getElementById('home-button').textContent = trans.homeButton;
+                document.getElementById('compare-button').textContent = trans.compareButton;
+                
+                // Update links
+                document.getElementById('home-button').href = trans.homeUrl;
+                document.getElementById('compare-button').href = trans.compareUrl;
+                
+                // Update HTML lang attribute
+                document.documentElement.lang = detectedLang;
+                
+                // Handle RTL languages
+                if (detectedLang === 'ar') {
+                    document.documentElement.dir = 'rtl';
+                    document.body.style.textAlign = 'right';
+                } else {
+                    document.documentElement.dir = 'ltr';
+                    document.body.style.textAlign = 'left';
+                }
+                
+                // Update page title
+                document.title = trans.title + ' - 404 | MaksPilot';
+            }
+        });
+    </script>
+</body>
+</html>
