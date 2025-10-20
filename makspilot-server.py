@@ -47,6 +47,10 @@ class MaksPilotHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_response(404)
                 self.send_header('Content-type', 'text/html; charset=utf-8')
                 self.send_header('Content-length', str(len(content)))
+                # Add cache-busting headers for 404 pages
+                self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                self.send_header('Pragma', 'no-cache')
+                self.send_header('Expires', '0')
                 self.end_headers()
                 self.wfile.write(content)
             else:
