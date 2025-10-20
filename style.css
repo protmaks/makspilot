@@ -337,6 +337,24 @@ header {
     background-color: #FFCF7A;
 }
 
+.cta-button-review {
+    display: inline-block;
+    background-color: #f1f5f9;
+    color: #111827;
+    padding: 5px 15px;
+    margin: 5px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.cta-button-review:hover {
+    transform: translateY(-2px);
+    background-color: #f8fafc
+}
+
 .content-section {
     padding: 80px 0;
     border-top: 1px solid rgba(249, 250, 251, 0.1);
