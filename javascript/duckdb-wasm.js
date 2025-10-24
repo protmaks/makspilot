@@ -1,13 +1,13 @@
 if (typeof window.MaxPilotDuckDB === 'undefined') {
 
 // Database logging configuration
-const DB_LOGGING_ENABLED = false; // Set to false to disable logging
+const DB_LOGGING_ENABLED = true; // Set to false to disable logging
 const DB_LOGGING_LEVELS = {
-    QUERY: false,     // Log individual SQL queries
-    OPERATION: false, // Log high-level operations (create table, comparison, etc.)
-    TIMING: false,    // Log operation timings
-    RESULTS: false,   // Log query results summary
-    ZERO_VALUES: false // Log zero value formatting (can create many logs)
+    QUERY: true,     // Log individual SQL queries
+    OPERATION: true, // Log high-level operations (create table, comparison, etc.)
+    TIMING: true,    // Log operation timings
+    RESULTS: true,   // Log query results summary
+    ZERO_VALUES: true // Log zero value formatting (can create many logs)
 };
 let dbOperationCounter = 0;
 
@@ -1112,11 +1112,40 @@ class FastTableComparator {
                         totalNonEmpty++;
                         const strValue = value.toString().trim();
                         
-                        if (!isNaN(strValue) && !isNaN(parseFloat(strValue)) && isFinite(strValue)) {
+                        // Check for numeric values including comma as decimal separator
+                        let isNumeric = false;
+                        let numValue = null;
+                        
+                        // First try standard format (dot as decimal separator)
+                        // Exclude values that look like dates (YYYY-MM-DD format or contain colons for time)
+                        if (!isNaN(strValue) && !isNaN(parseFloat(strValue)) && isFinite(strValue) && 
+                            !strValue.match(/^\d{4}-\d{2}-\d{2}/) && !strValue.includes(':')) {
+                            isNumeric = true;
+                            numValue = parseFloat(strValue);
+                        }
+                        // Then try comma as decimal separator (European format)
+                        else if (strValue.match(/^-?\d+,\d+$/) || strValue.match(/^-?\d{1,3}(\.\d{3})*,\d+$/)) {
+                            // Handle both simple comma format (123,45) and thousands+comma format (1.234,56)
+                            let normalizedValue = strValue.replace(/\./g, '').replace(',', '.');
+                            if (!isNaN(normalizedValue) && !isNaN(parseFloat(normalizedValue)) && isFinite(normalizedValue)) {
+                                isNumeric = true;
+                                numValue = parseFloat(normalizedValue);
+                                hasDecimals = true; // Comma format always implies decimals
+                            }
+                        }
+                        // Check for integers with thousands separators
+                        else if (strValue.match(/^-?\d{1,3}(\.\d{3})*$/) || strValue.match(/^-?\d{1,3}(\s\d{3})*$/)) {
+                            const normalizedValue = strValue.replace(/[.\s]/g, '');
+                            if (!isNaN(normalizedValue) && !isNaN(parseFloat(normalizedValue)) && isFinite(normalizedValue)) {
+                                isNumeric = true;
+                                numValue = parseFloat(normalizedValue);
+                            }
+                        }
+                        
+                        if (isNumeric && numValue !== null) {
                             numericCount++;
-                            const numValue = parseFloat(strValue);
                             
-                            if (Number.isInteger(numValue)) {
+                            if (Number.isInteger(numValue) && !strValue.includes(',') && !strValue.includes('.')) {
                                 integerCount++;
                             } else {
                                 hasDecimals = true;
@@ -1141,16 +1170,19 @@ class FastTableComparator {
                 const dateRatio = dateCount / totalNonEmpty;
                 const timestampRatio = timestampCount / totalNonEmpty;
 
-                if (timestampRatio >= 0.8) return 'TIMESTAMP';
-                if (dateRatio >= 0.8) { return 'DATE'; }
-                
-                if (numericRatio >= 0.9) {
+                // Priority: Numeric types first - if column has significant numeric data, treat as numeric
+                // even if some values look like dates
+                if (numericRatio >= 0.7) {  // Lowered threshold for mixed columns
                     if (hasDecimals) {
                         return 'DOUBLE';
                     } else {
                         return 'BIGINT';
                     }
                 }
+                
+                // Only consider date/timestamp if no significant numeric data
+                if (timestampRatio >= 0.8) return 'TIMESTAMP';
+                if (dateRatio >= 0.8) return 'DATE';
                 
                 return 'VARCHAR';
             };
@@ -1159,11 +1191,24 @@ class FastTableComparator {
             const sanitizedHeaders2 = headers2.map((h, i) => sanitizeColumnName(h, i));
 
             updateStageProgress('Detecting column types', 20);
-
+            
             const columnTypes1 = sanitizedHeaders1.map((_, i) => detectColumnType(data1, i));
             const columnTypes2 = sanitizedHeaders2.map((_, i) => detectColumnType(data2, i));
-
-            const harmonizeColumnTypes = (types1, types2) => {
+            
+            // Log detected column types for debugging
+            console.log('🔍 Detected column types:', {
+                table1: sanitizedHeaders1.map((header, i) => `${header}: ${columnTypes1[i]}`),
+                table2: sanitizedHeaders2.map((header, i) => `${header}: ${columnTypes2[i]}`)
+            });
+            
+            // Additional logging for mixed data columns
+            sanitizedHeaders1.forEach((header, i) => {
+                if (columnTypes1[i] === 'DOUBLE') {
+                    console.log(`🔢 Column "${header}" detected as DOUBLE - checking sample values`);
+                } else if (columnTypes1[i] === 'VARCHAR') {
+                    console.log(`📝 Column "${header}" detected as VARCHAR - may contain mixed data`);
+                }
+            });            const harmonizeColumnTypes = (types1, types2) => {
                 const harmonized1 = [...types1];
                 const harmonized2 = [...types2];
                 
@@ -1356,7 +1401,8 @@ class FastTableComparator {
                 }
                 
                 if (col1Type === 'VARCHAR' && col2Type === 'VARCHAR') {
-                    return `UPPER(TRIM(t1."${col1Name}")) = UPPER(TRIM(t2."${col2Name}"))`;
+                    // Safe approach: explicitly cast to VARCHAR before TRIM to handle any type inconsistencies
+                    return `UPPER(TRIM(CAST(t1."${col1Name}" AS VARCHAR))) = UPPER(TRIM(CAST(t2."${col2Name}" AS VARCHAR)))`;
                 }
                 
                 return `t1."${col1Name}" = t2."${col2Name}"`;
@@ -1867,14 +1913,42 @@ class FastTableComparator {
                     totalNonEmpty++;
                     const strValue = value.toString().trim();
                     
-                    if (!isNaN(strValue) && !isNaN(parseFloat(strValue)) && isFinite(strValue)) {
+                    // Check for numeric values including comma as decimal separator
+                    let isNumeric = false;
+                    let numValue = null;
+                    
+                    // First try standard format (dot as decimal separator)
+                    // Exclude values that look like dates (YYYY-MM-DD format or contain colons for time)
+                    if (!isNaN(strValue) && !isNaN(parseFloat(strValue)) && isFinite(strValue) && 
+                        !strValue.match(/^\d{4}-\d{2}-\d{2}/) && !strValue.includes(':')) {
+                        isNumeric = true;
+                        numValue = parseFloat(strValue);
+                    }
+                    // Then try comma as decimal separator (European format)
+                    else if (strValue.match(/^-?\d+,\d+$/)) {
+                        const normalizedValue = strValue.replace(',', '.');
+                        if (!isNaN(normalizedValue) && !isNaN(parseFloat(normalizedValue)) && isFinite(normalizedValue)) {
+                            isNumeric = true;
+                            numValue = parseFloat(normalizedValue);
+                            hasDecimals = true; // Comma format always implies decimals
+                        }
+                    }
+                    // Check for integers with thousands separators
+                    else if (strValue.match(/^-?\d{1,3}(\.\d{3})*$/) || strValue.match(/^-?\d{1,3}(\s\d{3})*$/)) {
+                        const normalizedValue = strValue.replace(/[.\s]/g, '');
+                        if (!isNaN(normalizedValue) && !isNaN(parseFloat(normalizedValue)) && isFinite(normalizedValue)) {
+                            isNumeric = true;
+                            numValue = parseFloat(normalizedValue);
+                        }
+                    }
+                    
+                    if (isNumeric && numValue !== null) {
                         numericCount++;
-                        const numValue = parseFloat(strValue);
                         
-                        if (Number.isInteger(numValue)) {
+                        if (Number.isInteger(numValue) && !strValue.includes(',') && !strValue.includes('.')) {
                             integerCount++;
                         } else {
-                            hasDecimals = true; 
+                            hasDecimals = true;
                         }
                     }
                     
@@ -1896,12 +1970,15 @@ class FastTableComparator {
             const dateRatio = dateCount / totalNonEmpty;
             const timestampRatio = timestampCount / totalNonEmpty;
 
-            if (timestampRatio >= 0.8) return 'TIMESTAMP';
-            if (dateRatio >= 0.8) return 'DATE';
-            if (numericRatio >= 0.9) {
+            // Priority: Numeric types first - if column has significant numeric data, treat as numeric
+            if (numericRatio >= 0.7) {  // Lowered threshold for mixed columns
                 // If there's at least one decimal number, the entire column should be DOUBLE
                 return hasDecimals ? 'DOUBLE' : 'BIGINT';
             }
+            
+            // Only consider date/timestamp if no significant numeric data
+            if (timestampRatio >= 0.8) return 'TIMESTAMP';
+            if (dateRatio >= 0.8) return 'DATE';
             return 'VARCHAR';
         };
 
@@ -1921,11 +1998,24 @@ class FastTableComparator {
                 
                 case 'DOUBLE':
                 case 'FLOAT':
-                    const floatValue = parseFloat(strValue);
+                    let floatValue = parseFloat(strValue);
+                    
+                    // If standard parsing fails, try comma as decimal separator
+                    if (isNaN(floatValue) && (strValue.match(/^-?\d+,\d+$/) || strValue.match(/^-?\d{1,3}(\.\d{3})*,\d+$/))) {
+                        // Handle both simple comma format (123,45) and thousands+comma format (1.234,56)
+                        const normalizedValue = strValue.replace(/\./g, '').replace(',', '.');
+                        floatValue = parseFloat(normalizedValue);
+                    }
+                    
+                    // If still not a number, but looks like a date, treat as string in DOUBLE column
                     if (isNaN(floatValue)) {
+                        if (strValue.match(/^\d{4}-\d{2}-\d{2}/) || strValue.includes(':')) {
+                            console.log(`⚠️ Non-numeric value "${strValue}" in DOUBLE column - treating as NULL`);
+                            return 'NULL';
+                        }
                         return 'NULL';
                     } else {
-                        // Round DOUBLE values to 2 decimal places
+                        // Round DOUBLE values to 2 decimal places for consistency
                         return columnType === 'DOUBLE' ? 
                             Math.round(floatValue * 100) / 100 : 
                             floatValue.toString();
@@ -2311,11 +2401,39 @@ async function createTableFromPreviewData(tableNumber, data, fileName = null) {
                         totalNonEmpty++;
                         const strValue = value.toString().trim();
                         
-                        if (!isNaN(strValue) && !isNaN(parseFloat(strValue)) && isFinite(strValue)) {
+                        // Check for numeric values including comma as decimal separator
+                        let isNumeric = false;
+                        let numValue = null;
+                        
+                        // First try standard format (dot as decimal separator)
+                        // Exclude values that look like dates (YYYY-MM-DD format or contain colons for time)
+                        if (!isNaN(strValue) && !isNaN(parseFloat(strValue)) && isFinite(strValue) && 
+                            !strValue.match(/^\d{4}-\d{2}-\d{2}/) && !strValue.includes(':')) {
+                            isNumeric = true;
+                            numValue = parseFloat(strValue);
+                        }
+                        // Then try comma as decimal separator (European format)
+                        else if (strValue.match(/^-?\d+,\d+$/)) {
+                            const normalizedValue = strValue.replace(',', '.');
+                            if (!isNaN(normalizedValue) && !isNaN(parseFloat(normalizedValue)) && isFinite(normalizedValue)) {
+                                isNumeric = true;
+                                numValue = parseFloat(normalizedValue);
+                                hasDecimals = true; // Comma format always implies decimals
+                            }
+                        }
+                        // Check for integers with thousands separators
+                        else if (strValue.match(/^-?\d{1,3}(\.\d{3})*$/) || strValue.match(/^-?\d{1,3}(\s\d{3})*$/)) {
+                            const normalizedValue = strValue.replace(/[.\s]/g, '');
+                            if (!isNaN(normalizedValue) && !isNaN(parseFloat(normalizedValue)) && isFinite(normalizedValue)) {
+                                isNumeric = true;
+                                numValue = parseFloat(normalizedValue);
+                            }
+                        }
+                        
+                        if (isNumeric && numValue !== null) {
                             numericCount++;
-                            const numValue = parseFloat(strValue);
                             
-                            if (Number.isInteger(numValue)) {
+                            if (Number.isInteger(numValue) && !strValue.includes(',') && !strValue.includes('.')) {
                                 integerCount++;
                             } else {
                                 hasDecimals = true;
@@ -2339,11 +2457,14 @@ async function createTableFromPreviewData(tableNumber, data, fileName = null) {
                 const dateRatio = dateCount / totalNonEmpty;
                 const timestampRatio = timestampCount / totalNonEmpty;
 
-                if (timestampRatio >= 0.8) return 'TIMESTAMP';
-                if (dateRatio >= 0.8) return 'DATE';
-                if (numericRatio >= 0.9) {
+                // Priority: Numeric types first - if column has significant numeric data, treat as numeric
+                if (numericRatio >= 0.7) {  // Lowered threshold for mixed columns
                     return hasDecimals ? 'DOUBLE' : 'BIGINT';
                 }
+                
+                // Only consider date/timestamp if no significant numeric data
+                if (timestampRatio >= 0.8) return 'TIMESTAMP';
+                if (dateRatio >= 0.8) return 'DATE';
                 return 'VARCHAR';
             };
 
@@ -2383,8 +2504,19 @@ async function createTableFromPreviewData(tableNumber, data, fileName = null) {
                     
                     case 'DOUBLE':
                     case 'FLOAT':
-                        const floatValue = parseFloat(strValue);
+                        let floatValue = parseFloat(strValue);
+                        
+                        // If standard parsing fails, try comma as decimal separator
+                        if (isNaN(floatValue) && (strValue.match(/^-?\d+,\d+$/) || strValue.match(/^-?\d{1,3}(\.\d{3})*,\d+$/))) {
+                            const normalizedValue = strValue.replace(/\./g, '').replace(',', '.');
+                            floatValue = parseFloat(normalizedValue);
+                        }
+                        
+                        // If still not a number, but looks like a date, treat as NULL in DOUBLE column
                         if (isNaN(floatValue)) {
+                            if (strValue.match(/^\d{4}-\d{2}-\d{2}/) || strValue.includes(':')) {
+                                return 'NULL';
+                            }
                             return 'NULL';
                         } else {
                             return columnType === 'DOUBLE' ? 
@@ -3857,14 +3989,30 @@ window.testExportPerformance = async function() {
 
 async function prepareDataForExportFast(fastResult, useTolerance = false) {
     if (!fastResult || !fastComparator || !fastComparator.initialized) {
+        console.warn('⚠️ prepareDataForExportFast returning null:', {
+            fastResult: !!fastResult,
+            fastComparator: !!fastComparator,
+            initialized: fastComparator?.initialized
+        });
         return null;
     }
 
     const startTime = performance.now();
     const { identical, similar, onlyInTable1, onlyInTable2, commonColumns, alignedData1, alignedData2 } = fastResult;
     
-    const workingData1 = alignedData1 || data1;
-    const workingData2 = alignedData2 || data2;
+    // Ensure we have data to work with
+    if (!alignedData1 || !alignedData2 || !Array.isArray(alignedData1) || !Array.isArray(alignedData2)) {
+        console.warn('⚠️ prepareDataForExportFast: Missing aligned data', {
+            alignedData1: !!alignedData1,
+            alignedData2: !!alignedData2,
+            alignedData1Length: alignedData1?.length,
+            alignedData2Length: alignedData2?.length
+        });
+        return null;
+    }
+    
+    const workingData1 = alignedData1;
+    const workingData2 = alignedData2;
     
     const headers = ['Source'];
     const realHeaders = workingData1[0] || commonColumns;
@@ -4203,6 +4351,13 @@ async function prepareDataForExportFast(fastResult, useTolerance = false) {
     
     const duration = performance.now() - startTime;
     console.log(`⚡ Fast export completed in ${duration.toFixed(2)}ms - prepared ${data.length - 1} rows for export (1 header + ${rowIndex - 1} data rows)`);
+    
+    // Validate output before returning
+    if (!data || !Array.isArray(data) || data.length === 0) {
+        console.error('⚠️ prepareDataForExportFast: Invalid data array', { data: !!data, isArray: Array.isArray(data), length: data?.length });
+        return null;
+    }
+    
     return { data, formatting, colWidths };
 }
 
