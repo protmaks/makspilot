@@ -2574,7 +2574,7 @@ function filterExcludeColumns(data, excludeColumns) {
     headers.forEach((header, index) => {
         const shouldExclude = excludeColumns.some(excCol => {
             if (typeof excCol === 'string') {
-                return header.toLowerCase().includes(excCol.toLowerCase());
+                return header.toLowerCase().trim() === excCol.toLowerCase().trim();
             } else if (typeof excCol === 'number') {
                 return index === excCol;
             }

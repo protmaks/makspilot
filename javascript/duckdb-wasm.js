@@ -121,6 +121,59 @@ window.disableZeroValueLogging = function() {
     console.log('🚫 Zero value logging disabled to reduce log spam');
 };
 
+// Global console warning filter to suppress WebAssembly deprecation warnings
+(function() {
+    const originalWarn = console.warn;
+    console.warn = function(...args) {
+        const message = args.join(' ');
+        
+        // Suppress WebAssembly exception handling deprecation warnings
+        if (message.includes('WebAssembly exception handling') ||
+            message.includes('try\' instruction is deprecated') ||
+            message.includes('try_table\' instruction') ||
+            message.includes('recompile')) {
+            return; // Silently ignore these warnings
+        }
+        
+        // Allow all other warnings
+        originalWarn.apply(console, args);
+    };
+})();
+
+// Diagnostic function for WebAssembly issues
+window.diagnoseDuckDB = function() {
+    console.group('🔍 DuckDB Diagnostic Information');
+    
+    // Browser information
+    console.log('Browser:', navigator.userAgent);
+    console.log('WebAssembly support:', typeof WebAssembly !== 'undefined');
+    
+    // DuckDB status
+    console.log('MaxPilotDuckDB initialized:', 
+        window.MaxPilotDuckDB && window.MaxPilotDuckDB.initialized);
+    
+    if (window.MaxPilotDuckDB) {
+        console.log('DuckDB mode:', window.MaxPilotDuckDB.mode);
+        console.log('DuckDB version:', window.MaxPilotDuckDB.version || 'Unknown');
+    }
+    
+    // Check for common issues
+    if (typeof SharedArrayBuffer === 'undefined') {
+        console.warn('⚠️ SharedArrayBuffer not available - this may impact performance');
+        console.info('💡 Try enabling "Experimental Web Platform features" in Chrome flags');
+    }
+    
+    console.groupEnd();
+};
+
+// Function to clean up browser warnings
+window.cleanBrowserWarnings = function() {
+    console.clear();
+    console.log('🧹 Browser console cleared');
+    console.log('💡 If you see WebAssembly warnings, they are expected and can be ignored');
+    console.log('💡 Use window.diagnoseDuckDB() to check system status');
+};
+
 // Global functions for aggregation table management
 window.getAggregationData = async function() {
     if (window.MaxPilotDuckDB && window.MaxPilotDuckDB.initialized) {
@@ -642,7 +695,7 @@ class FastTableComparator {
                 // Create a temporary function for aggregation data
                 if (!window.updateAggregationTable) {
                     window.updateAggregationTable = function(data) {
-                        console.log('� Aggregation UI updated:', data.length > 0 ? `${data.length} files` : 'no data');
+                        //console.log('� Aggregation UI updated:', data.length > 0 ? `${data.length} files` : 'no data');
                     };
                 }
                 window.updateAggregationTable(aggregationData);
@@ -852,7 +905,7 @@ class FastTableComparator {
             const commonColumns = table1.columns.filter(col => 
                 table2.columns.includes(col) && 
                 !excludeColumns.some(excCol => 
-                    col.toLowerCase().includes(excCol.toLowerCase())
+                    col.toLowerCase().trim() === excCol.toLowerCase().trim()
                 )
             );
 
@@ -1117,9 +1170,12 @@ class FastTableComparator {
                         let numValue = null;
                         
                         // First try standard format (dot as decimal separator)
-                        // Exclude values that look like dates (YYYY-MM-DD format or contain colons for time)
+                        // Exclude values that look like dates or timestamps
                         if (!isNaN(strValue) && !isNaN(parseFloat(strValue)) && isFinite(strValue) && 
-                            !strValue.match(/^\d{4}-\d{2}-\d{2}/) && !strValue.includes(':')) {
+                            !strValue.match(/^\d{4}-\d{2}-\d{2}/) && 
+                            !strValue.includes(':') && 
+                            !strValue.match(/^\d{2}\/\d{2}\/\d{4}/) && 
+                            !strValue.match(/^\d{2}\.\d{2}\.\d{4}/)) {
                             isNumeric = true;
                             numValue = parseFloat(strValue);
                         }
@@ -1170,9 +1226,9 @@ class FastTableComparator {
                 const dateRatio = dateCount / totalNonEmpty;
                 const timestampRatio = timestampCount / totalNonEmpty;
 
-                // Priority: Numeric types first - if column has significant numeric data, treat as numeric
-                // even if some values look like dates
-                if (numericRatio >= 0.7) {  // Lowered threshold for mixed columns
+                // Priority: If ANY numeric data exists, treat entire column as numeric
+                // This ensures mixed columns with numbers and dates are treated as numeric
+                if (numericCount > 0) {  // Even a single numeric value makes the whole column numeric
                     if (hasDecimals) {
                         return 'DOUBLE';
                     } else {
@@ -1180,7 +1236,7 @@ class FastTableComparator {
                     }
                 }
                 
-                // Only consider date/timestamp if no significant numeric data
+                // Only consider date/timestamp if NO numeric data at all
                 if (timestampRatio >= 0.8) return 'TIMESTAMP';
                 if (dateRatio >= 0.8) return 'DATE';
                 
@@ -1195,18 +1251,13 @@ class FastTableComparator {
             const columnTypes1 = sanitizedHeaders1.map((_, i) => detectColumnType(data1, i));
             const columnTypes2 = sanitizedHeaders2.map((_, i) => detectColumnType(data2, i));
             
-            // Log detected column types for debugging
-            console.log('🔍 Detected column types:', {
-                table1: sanitizedHeaders1.map((header, i) => `${header}: ${columnTypes1[i]}`),
-                table2: sanitizedHeaders2.map((header, i) => `${header}: ${columnTypes2[i]}`)
-            });
             
             // Additional logging for mixed data columns
             sanitizedHeaders1.forEach((header, i) => {
                 if (columnTypes1[i] === 'DOUBLE') {
-                    console.log(`🔢 Column "${header}" detected as DOUBLE - checking sample values`);
+                    //console.log(`🔢 Column "${header}" detected as DOUBLE - checking sample values`);
                 } else if (columnTypes1[i] === 'VARCHAR') {
-                    console.log(`📝 Column "${header}" detected as VARCHAR - may contain mixed data`);
+                    //console.log(`📝 Column "${header}" detected as VARCHAR - may contain mixed data`);
                 }
             });            const harmonizeColumnTypes = (types1, types2) => {
                 const harmonized1 = [...types1];
@@ -1412,7 +1463,7 @@ class FastTableComparator {
             headers1.forEach((header, index) => {
                 const shouldExclude = excludeColumns.some(excCol => {
                     if (typeof excCol === 'string') {
-                        return header.toLowerCase().includes(excCol.toLowerCase());
+                        return header.toLowerCase().trim() === excCol.toLowerCase().trim();
                     } else if (typeof excCol === 'number') {
                         return index === excCol;
                     }
@@ -1918,11 +1969,18 @@ class FastTableComparator {
                     let numValue = null;
                     
                     // First try standard format (dot as decimal separator)
-                    // Exclude values that look like dates (YYYY-MM-DD format or contain colons for time)
+                    // Exclude values that look like dates or timestamps
                     if (!isNaN(strValue) && !isNaN(parseFloat(strValue)) && isFinite(strValue) && 
-                        !strValue.match(/^\d{4}-\d{2}-\d{2}/) && !strValue.includes(':')) {
+                        !strValue.match(/^\d{4}-\d{2}-\d{2}/) && 
+                        !strValue.includes(':') && 
+                        !strValue.match(/^\d{2}\/\d{2}\/\d{4}/) && 
+                        !strValue.match(/^\d{2}\.\d{2}\.\d{4}/)) {
                         isNumeric = true;
                         numValue = parseFloat(strValue);
+                        // Check if it has decimal point
+                        if (strValue.includes('.') && !Number.isInteger(numValue)) {
+                            hasDecimals = true;
+                        }
                     }
                     // Then try comma as decimal separator (European format)
                     else if (strValue.match(/^-?\d+,\d+$/)) {
@@ -1970,13 +2028,13 @@ class FastTableComparator {
             const dateRatio = dateCount / totalNonEmpty;
             const timestampRatio = timestampCount / totalNonEmpty;
 
-            // Priority: Numeric types first - if column has significant numeric data, treat as numeric
-            if (numericRatio >= 0.7) {  // Lowered threshold for mixed columns
+            // Priority: If ANY numeric data exists, treat entire column as numeric
+            if (numericCount > 0) {  // Even a single numeric value makes the whole column numeric
                 // If there's at least one decimal number, the entire column should be DOUBLE
                 return hasDecimals ? 'DOUBLE' : 'BIGINT';
             }
             
-            // Only consider date/timestamp if no significant numeric data
+            // Only consider date/timestamp if NO numeric data at all
             if (timestampRatio >= 0.8) return 'TIMESTAMP';
             if (dateRatio >= 0.8) return 'DATE';
             return 'VARCHAR';
@@ -1998,6 +2056,18 @@ class FastTableComparator {
                 
                 case 'DOUBLE':
                 case 'FLOAT':
+                    // First check if value looks like a date or time - if so, force NULL
+                    if (strValue.match(/^\d{4}-\d{2}-\d{2}/) || 
+                        strValue.includes(':') || 
+                        strValue.match(/^\d{2}\/\d{2}\/\d{4}/) || 
+                        strValue.match(/^\d{2}\.\d{2}\.\d{4}/)) {
+                        if (DB_LOGGING_LEVELS.ZERO_VALUES && zeroValueFormattingCount < MAX_ZERO_VALUE_LOGS) {
+                            console.log(`⚠️ Date/time value "${strValue}" in DOUBLE column - forcing NULL`);
+                            zeroValueFormattingCount++;
+                        }
+                        return 'NULL';
+                    }
+                    
                     let floatValue = parseFloat(strValue);
                     
                     // If standard parsing fails, try comma as decimal separator
@@ -2007,11 +2077,11 @@ class FastTableComparator {
                         floatValue = parseFloat(normalizedValue);
                     }
                     
-                    // If still not a number, but looks like a date, treat as string in DOUBLE column
-                    if (isNaN(floatValue)) {
-                        if (strValue.match(/^\d{4}-\d{2}-\d{2}/) || strValue.includes(':')) {
+                    // If still not a number, return NULL
+                    if (isNaN(floatValue) || !isFinite(floatValue)) {
+                        if (DB_LOGGING_LEVELS.ZERO_VALUES && zeroValueFormattingCount < MAX_ZERO_VALUE_LOGS) {
                             console.log(`⚠️ Non-numeric value "${strValue}" in DOUBLE column - treating as NULL`);
-                            return 'NULL';
+                            zeroValueFormattingCount++;
                         }
                         return 'NULL';
                     } else {
@@ -2115,7 +2185,7 @@ class FastTableComparator {
         const commonColumns = table1.columns.filter(col => 
             table2.columns.includes(col) && 
             !excludeColumns.some(excCol => 
-                col.toLowerCase().includes(excCol.toLowerCase())
+                col.toLowerCase().trim() === excCol.toLowerCase().trim()
             )
         );
 
@@ -2406,11 +2476,18 @@ async function createTableFromPreviewData(tableNumber, data, fileName = null) {
                         let numValue = null;
                         
                         // First try standard format (dot as decimal separator)
-                        // Exclude values that look like dates (YYYY-MM-DD format or contain colons for time)
+                        // Exclude values that look like dates or timestamps
                         if (!isNaN(strValue) && !isNaN(parseFloat(strValue)) && isFinite(strValue) && 
-                            !strValue.match(/^\d{4}-\d{2}-\d{2}/) && !strValue.includes(':')) {
+                            !strValue.match(/^\d{4}-\d{2}-\d{2}/) && 
+                            !strValue.includes(':') && 
+                            !strValue.match(/^\d{2}\/\d{2}\/\d{4}/) && 
+                            !strValue.match(/^\d{2}\.\d{2}\.\d{4}/)) {
                             isNumeric = true;
                             numValue = parseFloat(strValue);
+                            // Check if it has decimal point
+                            if (strValue.includes('.') && !Number.isInteger(numValue)) {
+                                hasDecimals = true;
+                            }
                         }
                         // Then try comma as decimal separator (European format)
                         else if (strValue.match(/^-?\d+,\d+$/)) {
@@ -2457,8 +2534,8 @@ async function createTableFromPreviewData(tableNumber, data, fileName = null) {
                 const dateRatio = dateCount / totalNonEmpty;
                 const timestampRatio = timestampCount / totalNonEmpty;
 
-                // Priority: Numeric types first - if column has significant numeric data, treat as numeric
-                if (numericRatio >= 0.7) {  // Lowered threshold for mixed columns
+                // Priority: If ANY numeric data exists, treat entire column as numeric
+                if (numericCount > 0) {  // Even a single numeric value makes the whole column numeric
                     return hasDecimals ? 'DOUBLE' : 'BIGINT';
                 }
                 
@@ -2504,6 +2581,14 @@ async function createTableFromPreviewData(tableNumber, data, fileName = null) {
                     
                     case 'DOUBLE':
                     case 'FLOAT':
+                        // First check if value looks like a date or time - if so, force NULL
+                        if (strValue.match(/^\d{4}-\d{2}-\d{2}/) || 
+                            strValue.includes(':') || 
+                            strValue.match(/^\d{2}\/\d{2}\/\d{4}/) || 
+                            strValue.match(/^\d{2}\.\d{2}\.\d{4}/)) {
+                            return 'NULL';
+                        }
+                        
                         let floatValue = parseFloat(strValue);
                         
                         // If standard parsing fails, try comma as decimal separator
@@ -2512,11 +2597,8 @@ async function createTableFromPreviewData(tableNumber, data, fileName = null) {
                             floatValue = parseFloat(normalizedValue);
                         }
                         
-                        // If still not a number, but looks like a date, treat as NULL in DOUBLE column
-                        if (isNaN(floatValue)) {
-                            if (strValue.match(/^\d{4}-\d{2}-\d{2}/) || strValue.includes(':')) {
-                                return 'NULL';
-                            }
+                        // If still not a number, return NULL
+                        if (isNaN(floatValue) || !isFinite(floatValue)) {
                             return 'NULL';
                         } else {
                             return columnType === 'DOUBLE' ? 
@@ -2628,10 +2710,39 @@ async function createPreviewFromTable(tableNumber, elementId) {
                         // Get column names (excluding rowid)
                         const columns = Object.keys(rows[0]).filter(col => col !== 'rowid');
                         
-                        // Reconstruct data format for renderPreview
+                        // Get column types from DuckDB
+                        let columnTypes = {};
+                        try {
+                            const descResult = await window.duckdbLoader.query(`DESCRIBE ${tableName}`);
+                            const schema = descResult.toArray();
+                            schema.forEach(col => {
+                                if (col.column_name !== 'rowid') {
+                                    columnTypes[col.column_name] = col.column_type;
+                                }
+                            });
+                        } catch (error) {
+                            console.log('Could not get column types:', error.message);
+                        }
+                        
+                        // Reconstruct data format for renderPreview with proper formatting
                         const fullData = [columns]; // Headers
                         rows.forEach(row => {
-                            const dataRow = columns.map(col => row[col]);
+                            const dataRow = columns.map(col => {
+                                let value = row[col];
+                                // Check if this is a DOUBLE column and value looks like a date
+                                if (columnTypes[col] === 'DOUBLE' && value != null) {
+                                    const strValue = value.toString();
+                                    if (strValue.match(/^\d{4}-\d{2}-\d{2}/) || 
+                                        strValue.includes(':') ||
+                                        strValue.match(/^\d{2}\/\d{2}\/\d{4}/) ||
+                                        strValue.match(/^\d{2}\.\d{2}\.\d{4}/)) {
+                                        // This looks like a date in a DOUBLE column, return NULL instead
+                                        console.log(`⚠️ Date value "${strValue}" found in DOUBLE column "${col}" - showing as NULL`);
+                                        return null;
+                                    }
+                                }
+                                return value;
+                            });
                             fullData.push(dataRow);
                         });
                         
@@ -2738,7 +2849,6 @@ async function compareTablesWithFastComparator(data1, data2, excludeColumns = []
             
             // Prepare data for comparison to get column information
             const { data1: alignedData1, data2: alignedData2, columnInfo } = prepareDataForComparison(filteredData1, filteredData2);
-            
 
             const result = await fastComparator.compareTablesFast(alignedData1, alignedData2, [], useTolerance, customKeyColumns);
             

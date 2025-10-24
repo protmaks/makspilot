@@ -14,7 +14,7 @@ class DuckDBWASMLoader {
         try {
             //console.log('🔧 Loading DuckDB WASM from ESM CDN...');
             
-            // Intercept console.log to suppress DuckDB logs
+            // Intercept console methods to suppress DuckDB logs and WASM warnings
             console.log = function(...args) {
                 // Filter messages from DuckDB
                 const message = args.join(' ');
@@ -28,9 +28,16 @@ class DuckDBWASMLoader {
             
             console.warn = function(...args) {
                 const message = args.join(' ');
+                // Filter structured logging objects from DuckDB
                 if (message && typeof args[0] === 'object' && 
                     args[0].timestamp && args[0].level !== undefined) {
                     return;
+                }
+                // Filter WebAssembly exception handling warnings
+                if (message.includes('WebAssembly exception handling') ||
+                    message.includes('try\' instruction is deprecated') ||
+                    message.includes('try_table\' instruction')) {
+                    return; // Suppress these specific warnings
                 }
                 originalConsoleWarn.apply(console, args);
             };
