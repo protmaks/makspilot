@@ -225,7 +225,7 @@ function createProgressIndicator(type = 'normal') {
     return `
         <div style="text-align: center; padding: 20px; font-family: Arial, sans-serif;">
             <div style="font-size: 16px; color: #333; margin-bottom: 15px;">
-                ⚡ ${isLarge ? 'Processing large dataset' : 'Fast comparison mode'}
+                <i data-lucide="zap"></i> ${isLarge ? 'Processing large dataset' : 'Fast comparison mode'}
             </div>
             <div style="width: 100%; max-width: 400px; margin: 0 auto; background: #f0f0f0; border-radius: 10px; padding: 3px;">
                 <div id="progress-bar" style="width: 0%; height: 20px; background: linear-gradient(90deg, #4CAF50, #45a049); border-radius: 8px; transition: width 0.3s ease;"></div>
@@ -2340,7 +2340,7 @@ function showFastModeStatus(available, mode = 'local') {
     if (statusElement) {
         if (available) {
             const modeText = mode === 'wasm' ? 'DuckDB WASM' : 'Optimized Fast';
-            statusElement.innerHTML = `⚡ ${modeText} mode enabled - Enhanced performance!`;
+            statusElement.innerHTML = `<i data-lucide="zap"></i> ${modeText} mode enabled - Enhanced performance!`;
             statusElement.className = 'duckdb-status duckdb-available show';
             
             const fastIndicators = document.querySelectorAll('.fast-mode-indicator');
@@ -2352,18 +2352,18 @@ function showFastModeStatus(available, mode = 'local') {
             // Update export button if available
             const exportBtn = document.getElementById('exportExcelBtn');
             if (exportBtn) {
-                exportBtn.title = `⚡ Fast export enabled - powered by ${modeText} engine`;
+                exportBtn.title = `<i data-lucide="zap"></i> Fast export enabled - powered by ${modeText} engine`;
             }
             
             setTimeout(() => {
                 if (statusElement.classList.contains('duckdb-available')) {
                     statusElement.style.opacity = '0.8';
-                    statusElement.innerHTML = `⚡ ${modeText} active`;
+                    statusElement.innerHTML = `<i data-lucide="zap"></i> ${modeText} active`;
                 }
             }, 5000);
             
         } else {
-            statusElement.innerHTML = '🔄 Standard comparison mode';
+            statusElement.innerHTML = '<i data-lucide="refresh-cw"></i> Standard comparison mode';
             statusElement.className = 'duckdb-status duckdb-unavailable show';
             
             const fastIndicators = document.querySelectorAll('.fast-mode-indicator');
@@ -3027,7 +3027,7 @@ async function compareTablesEnhanced(useTolerance = false) {
     try {
 
         if (fastComparator && fastComparator.initialized) {
-            resultDiv.innerHTML = '<div class="comparison-loading-enhanced">⚡ Using fast comparison engine...</div>';
+            resultDiv.innerHTML = '<div class="comparison-loading-enhanced"><i data-lucide="zap"></i> Using fast comparison engine...</div>';
             summaryDiv.innerHTML = '<div style="text-align: center; padding: 10px;">Processing large dataset with enhanced performance...</div>';
             
             setTimeout(async () => {
@@ -3110,14 +3110,14 @@ async function compareTablesEnhanced(useTolerance = false) {
             return;
         }
 
-        resultDiv.innerHTML = '<div style="text-align: center; padding: 20px; font-size: 16px;">🔄 Using standard comparison...</div>';
+        resultDiv.innerHTML = '<div style="text-align: center; padding: 20px; font-size: 16px;"><i data-lucide="refresh-cw"></i> Using standard comparison...</div>';
         
         setTimeout(async () => {
             await performComparison();
         }, 10);
         
     } catch (error) {
-        resultDiv.innerHTML = '<div style="text-align: center; padding: 20px; font-size: 16px;">🔄 Using standard comparison...</div>';
+        resultDiv.innerHTML = '<div style="text-align: center; padding: 20px; font-size: 16px;"><i data-lucide="refresh-cw"></i> Using standard comparison...</div>';
         setTimeout(async () => {
             await performComparison();
         }, 10);
@@ -3170,7 +3170,7 @@ async function processFastComparisonResults(fastResult, useTolerance) {
         infoDiv.className = 'column-alignment-info';
         infoDiv.style.cssText = 'background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; padding: 12px; margin: 15px 0; border-radius: 6px; font-size: 14px;';
         infoDiv.innerHTML = `
-            <strong>📊 Column Alignment:</strong> Columns have been automatically aligned by name for accurate comparison. 
+            <strong><i data-lucide="bar-chart-2"></i> Column Alignment:</strong> Columns have been automatically aligned by name for accurate comparison. 
             ${columnInfo.commonCount} common columns found.
             ${columnInfo.onlyInFile1.length > 0 ? `<br><strong>Only in File 1:</strong> ${columnInfo.onlyInFile1.join(', ')}` : ''}
             ${columnInfo.onlyInFile2.length > 0 ? `<br><strong>Only in File 2:</strong> ${columnInfo.onlyInFile2.join(', ')}` : ''}
@@ -3187,7 +3187,7 @@ async function processFastComparisonResults(fastResult, useTolerance) {
         warningDiv.className = 'column-warning-info';
         warningDiv.style.cssText = 'background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 12px; margin: 15px 0; border-radius: 6px; font-size: 14px;';
         warningDiv.innerHTML = `
-            <strong>⚠️ Warning:</strong> No common column names found between files. 
+            <strong><i data-lucide="alert-triangle"></i> Warning:</strong> No common column names found between files. 
             Comparison will be done by column position. For more accurate results, ensure both files have matching column headers.
         `;
         
@@ -3277,7 +3277,7 @@ async function processFastComparisonResults(fastResult, useTolerance) {
     } catch (error) {
         const resultDiv = document.getElementById('result');
         if (resultDiv) {
-            resultDiv.innerHTML = '<div style="text-align: center; padding: 10px; color: #dc3545;">❌ Error generating comparison table. Check console for details.</div>';
+            resultDiv.innerHTML = '<div style="text-align: center; padding: 10px; color: #dc3545;"><i data-lucide="x-circle"></i> Error generating comparison table. Check console for details.</div>';
         }
     }
     
@@ -3618,10 +3618,10 @@ async function createBasicFallbackTable(pairs, headers) {
         if (isDiffColumn) {
             headerClass += ` diff-column ${diffColumnType}`;
             if (diffColumnType === 'only-in-file1') {
-                diffColumnIcon = '<span class="diff-column-indicator file1-only" title="Column only in File 1">📍</span>';
+                diffColumnIcon = '<span class="diff-column-indicator file1-only" title="Column only in File 1"><i data-lucide="map-pin"></i></span>';
                 headerTitle += ' (Only in File 1)';
             } else if (diffColumnType === 'only-in-file2') {
-                diffColumnIcon = '<span class="diff-column-indicator file2-only" title="Column only in File 2">📍</span>';
+                diffColumnIcon = '<span class="diff-column-indicator file2-only" title="Column only in File 2"><i data-lucide="map-pin"></i></span>';
                 headerTitle += ' (Only in File 2)';
             }
         }

@@ -73,6 +73,41 @@ document.addEventListener('DOMContentLoaded', function() {
         section.style.transition = 'opacity 0.8s ease-out, transform 0.8s ease-out';
         observer.observe(section);
     });
+
+    if (window.lucide) {
+        lucide.createIcons();
+
+        let updateTimeout;
+        const mutationObserver = new MutationObserver((mutations) => {
+            let shouldUpdate = false;
+            for (const mutation of mutations) {
+                if (mutation.addedNodes.length > 0) {
+                    // Quick check if any added node is a DOM element
+                    for (const node of mutation.addedNodes) {
+                        if (node.nodeType === 1) { // ELEMENT_NODE
+                            shouldUpdate = true;
+                            break;
+                        }
+                    }
+                }
+                if (shouldUpdate) break;
+            }
+            
+            if (shouldUpdate) {
+                clearTimeout(updateTimeout);
+                updateTimeout = setTimeout(() => {
+                    if (window.lucide && document.querySelectorAll('i[data-lucide]').length > 0) {
+                        lucide.createIcons();
+                    }
+                }, 100); // Debounce to avoid freezing on large DOM updates
+            }
+        });
+
+        mutationObserver.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
 });
 
 function switchLanguage(url) {

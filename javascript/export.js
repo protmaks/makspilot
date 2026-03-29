@@ -64,7 +64,7 @@ async function exportToExcel() {
         const originalText = exportBtn ? exportBtn.innerHTML : '';
         
         if (exportBtn) {
-            exportBtn.innerHTML = '⚡ Performing full comparison...';
+            exportBtn.innerHTML = '<i data-lucide="zap"></i> Performing full comparison...';
             exportBtn.disabled = true;
         }
         
@@ -85,7 +85,7 @@ async function exportToExcel() {
         window.isQuickMode = false;
         
         if (exportBtn) {
-            exportBtn.innerHTML = '📊 Exporting to Excel...';
+            exportBtn.innerHTML = '<i data-lucide="bar-chart-2"></i> Exporting to Excel...';
         }
     }
     
@@ -112,7 +112,7 @@ async function exportToExcel() {
             // Reset button state after standard export
             const exportBtn = document.getElementById('exportExcelBtn');
             if (exportBtn) {
-                exportBtn.innerHTML = '📊 Export to Excel';
+                exportBtn.innerHTML = '<i data-lucide="bar-chart-2"></i> Export to Excel';
                 exportBtn.disabled = false;
             }
             
@@ -125,7 +125,7 @@ async function exportToExcel() {
         // Reset button state on error
         const exportBtn = document.getElementById('exportExcelBtn');
         if (exportBtn) {
-            exportBtn.innerHTML = '📊 Export to Excel';
+            exportBtn.innerHTML = '<i data-lucide="bar-chart-2"></i> Export to Excel';
             exportBtn.disabled = false;
         }
     }
@@ -138,7 +138,7 @@ async function exportWithFastEngine() {
         const startTime = performance.now();
         
         if (exportBtn) {
-            exportBtn.innerHTML = '⚡ Fast export processing...';
+            exportBtn.innerHTML = '<i data-lucide="zap"></i> Fast export processing...';
             exportBtn.disabled = true;
         }
         
@@ -149,7 +149,7 @@ async function exportWithFastEngine() {
         console.log(`⚡ Fast export starting for ${totalRows.toLocaleString()} total rows`);
         
         if (totalRows > 10000 && exportBtn) {
-            exportBtn.innerHTML = `⚡ Fast export - processing ${totalRows.toLocaleString()} rows...`;
+            exportBtn.innerHTML = `<i data-lucide="zap"></i> Fast export - processing ${totalRows.toLocaleString()} rows...`;
         }
         
         const fastExportData = await window.MaxPilotDuckDB.prepareDataForExportFast(window.currentFastResult, window.toleranceMode || false);
@@ -159,7 +159,7 @@ async function exportWithFastEngine() {
             console.log(`⚡ Data processing completed in ${dataProcessingTime.toFixed(2)}ms`);
             
             if (exportBtn) {
-                exportBtn.innerHTML = '⚡ Generating Excel file...';
+                exportBtn.innerHTML = '<i data-lucide="zap"></i> Generating Excel file...';
             }
             
             const htmlContent = await createStyledHTMLTable(fastExportData);
@@ -185,7 +185,7 @@ async function exportWithFastEngine() {
         
         const exportBtn = document.getElementById('exportExcelBtn');
         if (exportBtn) {
-            exportBtn.innerHTML = '🔄 Using standard export...';
+            exportBtn.innerHTML = '<i data-lucide="refresh-cw"></i> Using standard export...';
         }
         
         // Fallback to old method
@@ -201,7 +201,7 @@ async function exportWithFastEngine() {
             }
             
             if (exportBtn) {
-                exportBtn.innerHTML = '📊 Export to Excel';
+                exportBtn.innerHTML = '<i data-lucide="bar-chart-2"></i> Export to Excel';
                 exportBtn.disabled = false;
             }
         }, 100);
@@ -212,7 +212,7 @@ function showFastExportSuccess(rowCount, totalTime = null) {
     const successDiv = document.createElement('div');
     successDiv.style.cssText = 'position:fixed;top:20px;right:20px;background:#d4edda;color:#155724;padding:15px 25px;border:1px solid #c3e6cb;border-radius:8px;box-shadow:0 4px 15px rgba(0,0,0,0.15);z-index:10000;font-size:14px;font-weight:500;max-width:350px;line-height:1.4;';
     
-    let message = `⚡ <strong>Fast Excel export completed!</strong><br>Processed ${rowCount.toLocaleString()} rows with enhanced performance.`;
+    let message = `<i data-lucide="zap"></i> <strong>Fast Excel export completed!</strong><br>Processed ${rowCount.toLocaleString()} rows with enhanced performance.`;
     
     if (totalTime) {
         const timeText = totalTime < 1000 ? `${totalTime.toFixed(0)}ms` : `${(totalTime/1000).toFixed(1)}s`;
@@ -605,7 +605,7 @@ function prepareDataFromRawData() {
 function showExportSuccess() {
     const successDiv = document.createElement('div');
     successDiv.style.cssText = 'position:fixed;top:20px;right:20px;background:#d4edda;color:#155724;padding:15px 25px;border:1px solid #c3e6cb;border-radius:8px;box-shadow:0 4px 15px rgba(0,0,0,0.15);z-index:10000;font-size:14px;font-weight:500;max-width:350px;line-height:1.4;';
-    successDiv.innerHTML = '✅ <strong>Excel exported!</strong>';
+    successDiv.innerHTML = '<i data-lucide="check-circle-2"></i> <strong>Excel exported!</strong>';
     document.body.appendChild(successDiv);
     setTimeout(() => { successDiv.parentNode && successDiv.parentNode.removeChild(successDiv); }, 5000);
 }
@@ -630,7 +630,7 @@ async function performFullComparisonForExport() {
             const quickModeInfoDiv = document.getElementById('quick-mode-info');
             if (quickModeInfoDiv) {
                 quickModeInfoDiv.innerHTML = `
-                    <strong>⚡ Full Comparison in Progress:</strong> Processing all <strong>${Math.max(body1.length, body2.length).toLocaleString()}</strong> rows for complete analysis...
+                    <strong><i data-lucide="zap"></i> Full Comparison in Progress:</strong> Processing all <strong>${Math.max(body1.length, body2.length).toLocaleString()}</strong> rows for complete analysis...
                     <br><div style="margin-top: 5px; background-color: #e9ecef; height: 4px; border-radius: 2px;"><div id="full-comparison-progress" style="background-color: #28a745; height: 100%; width: 0%; border-radius: 2px; transition: width 0.3s;"></div></div>
                 `;
             }
@@ -644,7 +644,7 @@ async function performFullComparisonForExport() {
                 // Update the info message
                 if (quickModeInfoDiv) {
                     quickModeInfoDiv.innerHTML = `
-                        <strong>✅ Full Comparison Complete:</strong> Analyzed all <strong>${Math.max(body1.length, body2.length).toLocaleString()}</strong> rows. 
+                        <strong><i data-lucide="check-circle-2"></i> Full Comparison Complete:</strong> Analyzed all <strong>${Math.max(body1.length, body2.length).toLocaleString()}</strong> rows. 
                         Ready for complete Excel export with all comparison data.
                     `;
                 }

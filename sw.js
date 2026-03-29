@@ -1,7 +1,8 @@
-const CACHE_NAME = 'makspilot_v0.6.67';
+const CACHE_NAME = 'makspilot_v0.6.68';
 
 const urlsToCache = [
   '/style.css',
+  '/javascript/lucide.min.js',
   '/javascript/script.js',
   '/javascript/functions.js',
   '/javascript/redirect.js',

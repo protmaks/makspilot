@@ -41,6 +41,15 @@ body {
     line-height: 1.6;
 }
 
+/* Lucide Icons Base Styles */
+.lucide {
+    width: 1.2em;
+    height: 1.2em;
+    vertical-align: text-bottom;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
 .container {
     max-width: 1200px;
     margin: 0 auto;
@@ -784,8 +793,10 @@ input[type="file"]:active {
 }
 
 input[type="file"]::before {
-    content: "📊 Choose file";
-    display: inline-block;
+    content: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>') " Choose file";
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     margin-right: 8px;
 }
 
@@ -1687,8 +1698,9 @@ button.export-btn:disabled {
 }
 
 .column-type-date::before {
-    content: "📅";
-    font-size: 10px;
+    content: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="grey" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>');
+    display: inline-block;
+    vertical-align: text-bottom;
 }
 
 .column-type-boolean::before {

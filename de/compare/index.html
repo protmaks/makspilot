@@ -2,6 +2,7 @@
 <html lang="de" data-placeholder-text="Wählen Sie Dateien auf Ihrem Computer aus und klicken Sie auf Vergleichen">
 <head>
     <script src="../../javascript/redirect.js" defer></script>
+    <script src="../../javascript/lucide.min.js" defer></script>
 
     <script>
         window.dataLayer = window.dataLayer || [];
@@ -49,7 +50,7 @@
     <!-- Mobile Warning -->
     <div class="mobile-warning" id="mobileWarning">
         <div class="mobile-warning-content">
-            <span class="mobile-warning-icon">💻</span>
+            <span class="mobile-warning-icon"><i data-lucide="monitor"></i></span>
             <h2 class="mobile-warning-title">Desktop Erforderlich</h2>
             <p class="mobile-warning-text">
                 Die Dateivergleichsfunktion ist für Desktop-Computer optimiert. 
@@ -100,7 +101,7 @@
     <div class="main-content" class="main-content-padded">
         <h1>Tabellenkalkulation Datenabgleich online</h1>
         <div id="duckdb-status" class="duckdb-status">
-            🔄 Initializing fast comparison engine...
+            <i data-lucide="refresh-cw"></i> Initializing fast comparison engine...
         </div>
         <div id="summary"></div>
         <div class="comparison-container">
@@ -131,7 +132,7 @@
                         </div>
                         <div class="button-half" class="button-half">
                             <button id="exportExcelBtn" onclick="exportToExcel()" class="export-btn" class="export-btn-hidden">
-                                📊 Nach Excel exportieren
+                                <i data-lucide="bar-chart-2"></i> Nach Excel exportieren
                             </button>
                         </div>
                     </div>
