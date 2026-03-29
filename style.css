@@ -297,7 +297,7 @@ header {
     font-size: clamp(1.1rem, 2.5vw, 1.5rem);
     margin-bottom: 40px;
     opacity: 0.9;
-    max-width: 600px;
+    max-width: 750px;
     margin-left: auto;
     margin-right: auto;
     color: #F9FAFB;
@@ -321,7 +321,7 @@ header {
     font-size: clamp(1.1rem, 2.5vw, 1.5rem);
     margin-bottom: 40px;
     opacity: 0.9;
-    max-width: 600px;
+    max-width: 750px;
     margin-left: auto;
     margin-right: auto;
     color: #e2e3e6;
@@ -1770,9 +1770,18 @@ button.export-btn:disabled {
     max-width: 1200px;
 }
 
+.compact-hero:has(.how-use-title) .container {
+    flex-direction: column;
+}
+
 .compact-hero-content {
     flex: 1;
     text-align: center;
+}
+
+.compact-hero:has(.how-use-title) .compact-hero-content {
+    flex: none;
+    width: 100%;
 }
 
 .compact-hero-image {
@@ -1780,10 +1789,21 @@ button.export-btn:disabled {
     text-align: center;
 }
 
-.compact-hero-image img {
+.compact-hero:has(.how-use-title) .compact-hero-image {
+    flex: none;
     width: 100%;
-    max-width: 600px;
+    margin-top: 20px;
+}
+
+.compact-hero-image img,
+.compact-hero-image iframe {
+    width: 100%;
+    max-width: 750px;
     height: auto;
+    aspect-ratio: 16 / 9;
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
 .features-grid {
@@ -2684,7 +2704,7 @@ button.export-btn:disabled {
 }
 
 .error-content {
-    max-width: 600px;
+    max-width: 750px;
     margin: 0 auto;
 }
 
