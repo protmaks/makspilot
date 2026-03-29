@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en" data-placeholder-text="Choose files on your computer and click Compare">
+<head>
+    <script src="../javascript/redirect.js" defer></script>
+
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('consent', 'default', {'ad_storage': 'denied', 'analytics_storage': 'denied'});
+    </script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-C19L2VS3EH"></script>
+    <script>
+        gtag('js', new Date());
+        gtag('config', 'G-C19L2VS3EH');
+    </script>
+    <script src="../javascript/cookie-consent.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Advanced Excel CSV file diff checker online. Compare spreadsheets, detect differences, highlight changes. Free, secure, instant results.">
+    <meta name="keywords" content="Excel comparison, CSV comparison, file comparison, online tool, Excel diff, CSV diff, XLS comparison, XLSX comparison, free tool, secure comparison">
+    <meta name="robots" content="index, follow">
+    <meta name="author" content="MaxPilot">
+    <meta property="og:title" content="Excel CSV file diff checker Online">
+    <meta property="og:description" content="Advanced Excel CSV file diff checker online. Compare spreadsheets, detect differences, highlight changes. Free, secure, instant results.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://makspilot.com/compare/">
+    <meta property="og:image" content="https://makspilot.com/img/main.webp">
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml">
+    <link rel="canonical" href="https://makspilot.com/compare/">
+    <link rel="alternate" hreflang="en" href="https://makspilot.com/compare/">
+    <link rel="alternate" hreflang="ru" href="https://makspilot.com/ru/compare/">
+    <link rel="alternate" hreflang="pl" href="https://makspilot.com/pl/compare/">
+    <link rel="alternate" hreflang="es" href="https://makspilot.com/es/compare/">
+    <link rel="alternate" hreflang="zh" href="https://makspilot.com/zh/compare/">
+    <link rel="alternate" hreflang="pt" href="https://makspilot.com/pt/compare/">
+    <link rel="alternate" hreflang="ja" href="https://makspilot.com/ja/compare/">
+    <link rel="alternate" hreflang="de" href="https://makspilot.com/de/compare/">
+    <link rel="alternate" hreflang="fr" href="https://makspilot.com/fr/compare/">
+    <title>Excel CSV file diff checker Online</title>
+    <link rel="icon" type="image/x-icon" href="../favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="../style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+    <!-- Mobile Warning -->
+    <div class="mobile-warning" id="mobileWarning">
+        <div class="mobile-warning-content">
+            <span class="mobile-warning-icon">💻</span>
+            <h2 class="mobile-warning-title">Desktop Required</h2>
+            <p class="mobile-warning-text">
+                File comparison functionality is optimized for desktop computers. 
+                Please use a PC or laptop with a larger screen for the best experience.
+            </p>
+            <a href="../" class="mobile-warning-button">Back to Home</a>
+        </div>
+    </div>
+
+    <!-- Header will be loaded here -->
+    <header>
+    <div class="header-container">
+        <a href="../" class="logo">
+            <img src="../img/makspilot.svg" alt="MaxPilot Logo">
+        </a>
+        <nav>
+            <ul class="nav-menu">
+                <li><a href="../modes/">Modes</a></li>
+                <li><a href="../#block-4">Security</a></li>
+                <li><a href="./" class="nav-cta">Start Comparison</a></li>
+                <li><a href="../how_use/">How Use</a></li>
+                <li><a href="https://medium.com/@protmaks" target="_blank">My Blog</a></li>
+                <li><a href="https://www.linkedin.com/in/protmaks/" class="social-link" title="linkedin" target="_blank">
+                    <img src="../img/linkedin.svg" alt="linkedin">
+                </a></li>
+                <li class="lang-switcher">
+                    <select class="lang-select" onchange="window.location.href=this.value">
+                        <option value="/compare/" selected>English</option>
+                        <option value="../ru/compare/">Русский</option>
+                        <option value="../pl/compare/">Polski</option>
+                        <option value="../zh/compare/">中文</option>
+                        <option value="../es/compare/">Español</option>
+                        <option value="../pt/compare/">Português</option>
+                        <option value="../ja/compare/">日本語</option>
+                        <option value="../de/compare/">Deutsch</option>
+                    </select>
+                </li>
+            </ul>
+            <div class="mobile-menu-toggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </nav>
+    </div>
+</header>
+    
+    <div class="main-content main-content-padded"><!-- Account for fixed header -->
+        <h1>Excel CSV file diff checker Online</h1>
+        <div id="summary"></div>
+        <div class="comparison-container">
+            <div class="table-container">
+                <input type="file" id="file1" accept=".xlsx,.xls,.csv"><br>
+                <div class="sheet-selector sheet-selector-hidden" id="sheetSelector1">
+                    <label for="sheetSelect1">Select sheet:</label>
+                    <select id="sheetSelect1"></select>
+                </div>
+                <div id="table1"></div>
+            </div>
+            <div class="table-container">
+                <input type="file" id="file2" accept=".xlsx,.xls,.csv"><br>
+                <div class="sheet-selector sheet-selector-hidden" id="sheetSelector2">
+                    <label for="sheetSelect2">Select sheet:</label>
+                    <select id="sheetSelect2"></select>
+                </div>
+                <div id="table2"></div>
+            </div>
+            <div class="controls-container">
+                <div class="exclude-compare-row">
+                    <div class="buttons-container">
+                        <div class="button-half">
+                            <button class="compare-btn button-full-width" onclick="compareTables(false)">Compare</button>
+                        </div>
+                        <div class="button-half">
+                            <button class="compare-btn tolerance-btn button-full-width" onclick="compareTables(true)">Compare with 1.5% tolerance</button>
+                        </div>
+                        <div class="button-half">
+                            <button id="exportExcelBtn" onclick="exportToExcel()" class="export-btn export-btn-hidden">
+                                📊 Export to Excel
+                            </button>
+                        </div>
+                    </div>
+                    <div class="exclude-columns-container">
+                        <label for="excludeColumns" class="exclude-label">Exclude columns:</label>
+                        <input type="text" id="excludeColumns" placeholder="e.g., ID, Timestamp, CreatedDate" class="exclude-input">
+                    </div>
+                    <div class="key-columns-container">
+                        <label class="key-columns-label">Key columns:</label>
+                        <div class="key-columns-dropdown">
+                            <div class="key-columns-dropdown-button" id="keyColumnsDropdownButton">
+                                <span class="dropdown-text">Select key columns...</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </div>
+                            <div class="key-columns-dropdown-content" id="keyColumnsDropdownContent">
+                                <div class="key-columns-placeholder">Load files to see available columns</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="filter-controls filter-controls-hidden">
+            <div class="filter-options">
+                <label><input type="checkbox" id="hideSameRows"> Hide COMMA rows</label>
+                <label><input type="checkbox" id="hideDiffColumns"> Hide DIFF rows</label>
+                <label><input type="checkbox" id="hideNewRows1"> Hide rows only in file 1</label>
+                <label><input type="checkbox" id="hideNewRows2"> Hide rows only in file 2</label>
+            </div>
+        </div>
+    </div>
+    
+    <div id="result"></div>
+    <div id="diffTable">
+        <div class="table-header-fixed">
+            <table class="diff-table-header">
+                <thead></thead>
+                <tbody class="filter-row"></tbody>
+            </table>
+        </div>
+        <div class="table-body-scrollable">
+            <table class="diff-table-body">
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Load the comparison functions -->
+    <script src="../javascript/functions.js"></script>
+    
+    <!-- Load the export functions -->
+    <script src="../javascript/export.js"></script>
+    
+    <!-- Load the key columns functionality -->
+    <script src="../javascript/key-columns.js"></script>
+    
+    <!-- Load the shared header -->
+    <script src="../javascript/script.js"></script>
+    
+    <!-- Mobile device detection and warning -->
+    <script>
+        // Function to detect mobile devices
+        function isMobileDevice() {
+            const userAgent = navigator.userAgent;
+            const mobileKeywords = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+            const screenWidth = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+            
+            return mobileKeywords.test(userAgent) || screenWidth < 768;
+        }
+        
+        // Show/hide mobile warning based on device type
+        function checkDeviceType() {
+            const mobileWarning = document.getElementById('mobileWarning');
+            const mainContent = document.querySelector('.main-content');
+            const result = document.getElementById('result');
+            const diffTable = document.getElementById('diffTable');
+            const header = document.querySelector('header');
+            
+            if (isMobileDevice()) {
+                if (mobileWarning) mobileWarning.style.display = 'flex';
+                if (mainContent) mainContent.style.display = 'none';
+                if (result) result.style.display = 'none';
+                if (diffTable) diffTable.style.display = 'none';
+                // Ensure header stays visible on mobile
+                if (header) {
+                    header.style.display = 'block';
+                    header.style.position = 'fixed';
+                    header.style.top = '0';
+                    header.style.zIndex = '10001';
+                }
+            } else {
+                if (mobileWarning) mobileWarning.style.display = 'none';
+                if (mainContent) mainContent.style.display = 'block';
+                if (result) result.style.display = 'block';
+                if (diffTable) diffTable.style.display = 'block';
+                // Reset header styles for desktop
+                if (header) {
+                    header.style.display = 'block';
+                    header.style.position = 'fixed';
+                    header.style.top = '0';
+                    header.style.zIndex = '1000';
+                }
+            }
+        }
+        
+        // Check device type on page load
+        document.addEventListener('DOMContentLoaded', checkDeviceType);
+        
+        // Check device type on window resize (in case user rotates device or resizes window)
+        window.addEventListener('resize', checkDeviceType);
+    </script>
+</body>
+</html>

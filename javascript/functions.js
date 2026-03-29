@@ -5585,6 +5585,23 @@ function showQuickModeInfo(displayedDifferentRows, maxDisplayRows, totalRows) {
     }
 }
 
+// Export for tests
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        normalizeDateTime,
+        convertExcelDate,
+        convertExcelDateNormalized,
+        roundDecimalNumbers,
+        compareValuesWithTolerance,
+        isWithinTolerance,
+        isDateString,
+        isNumericString,
+        extractDateOnly,
+        parseNumber,
+        parseCSVValue
+    };
+}
+
 function showLimitedDisplayInfo(displayedDifferentRows, maxDisplayRows, totalRows) {
     const resultDiv = document.getElementById('result');
     if (resultDiv) {
