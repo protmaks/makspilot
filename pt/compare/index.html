@@ -97,6 +97,9 @@
     
     <div class="main-content" class="main-content-padded">
         <h1>Planilhas eletrônicas destacar diferenças</h1>
+        <div id="duckdb-status" class="duckdb-status">
+            🔄 Initializing fast comparison engine...
+        </div>
         <div id="summary"></div>
         <div class="comparison-container">
             <div class="table-container">
@@ -177,6 +180,7 @@
     <script src="../../javascript/export.js"></script>
     <script src="../../javascript/key-columns.js"></script>
     <script src="../../javascript/script.js"></script>
+    <script src="../../javascript/duckdb-wasm.js"></script>
     
     <script>
         function isMobileDevice() {

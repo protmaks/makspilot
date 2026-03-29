@@ -99,6 +99,9 @@
     
     <div class="main-content" class="main-content-padded">
         <h1>Tabellenkalkulation Datenabgleich online</h1>
+        <div id="duckdb-status" class="duckdb-status">
+            🔄 Initializing fast comparison engine...
+        </div>
         <div id="summary"></div>
         <div class="comparison-container">
             <div class="table-container">
@@ -186,6 +189,7 @@
     
     <!-- Load the shared header -->
     <script src="../../javascript/script.js"></script>
+    <script src="../../javascript/duckdb-wasm.js"></script>
     
     <!-- Mobile device detection and warning -->
     <script>
