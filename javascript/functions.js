@@ -5598,7 +5598,9 @@ if (typeof module !== 'undefined' && module.exports) {
         isNumericString,
         extractDateOnly,
         parseNumber,
-        parseCSVValue
+        parseCSVValue,
+        createColumnMapping,
+        prepareDataForComparison
     };
 }
 
