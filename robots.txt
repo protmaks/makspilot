@@ -34,6 +34,8 @@ Disallow: /*.md$
 Disallow: /*.xlsx
 Disallow: /*.csv
 Disallow: /*.xls
+Disallow: /test_wasm/
+Disallow: /test_javascript/
 
 # Crawl-delay to be respectful
 Crawl-delay: 1
