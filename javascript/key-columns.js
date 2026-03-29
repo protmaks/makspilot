@@ -393,7 +393,7 @@ function updateKeyColumnsOptionsInternal(forceUpdate = false) {
                 Load files to see available columns
                 <br><br>
                 <button onclick="window.debouncedUpdateKeyColumnsOptions(true)" style="padding: 4px 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 3px; background: #f8f9fa; cursor: pointer;">
-                    🔄 Refresh
+                    <i data-lucide="refresh-cw"></i> Refresh
                 </button>
             </div>
         `;

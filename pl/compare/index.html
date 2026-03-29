@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="pl" data-placeholder-text="Wybierz pliki na komputerze i kliknij Porównaj">
 <head>
-    <script src="../../javascript/redirect.js" defer></script>    <script async src="https://www.googletagmanager.com/gtag/js?id=G-C19L2VS3EH"></script>
+    <script src="../../javascript/redirect.js" defer></script>
+    <script src="../../javascript/lucide.min.js" defer></script>    <script async src="https://www.googletagmanager.com/gtag/js?id=G-C19L2VS3EH"></script>
 
     <script>
         window.dataLayer = window.dataLayer || [];
@@ -49,7 +50,7 @@
     <!-- Mobile Warning -->
     <div class="mobile-warning" id="mobileWarning">
         <div class="mobile-warning-content">
-            <span class="mobile-warning-icon">💻</span>
+            <span class="mobile-warning-icon"><i data-lucide="monitor"></i></span>
             <h2 class="mobile-warning-title">Wymagany Komputer</h2>
             <p class="mobile-warning-text">
                 Funkcja porównywania plików jest zoptymalizowana dla komputerów stacjonarnych. 
@@ -100,6 +101,9 @@
     
     <div class="main-content main-content-padded"><!-- Account for fixed header -->
         <h1>Porównaj dwa skoroszyty Excel online</h1>
+        <div id="duckdb-status" class="duckdb-status">
+            <i data-lucide="refresh-cw"></i> Initializing fast comparison engine...
+        </div>
         <div id="summary"></div>
         <div class="comparison-container">
             <div class="table-container">
@@ -129,7 +133,7 @@
                         </div>
                         <div class="button-half">
                             <button id="exportExcelBtn" onclick="exportToExcel()" class="export-btn export-btn-hidden">
-                                📊 Eksportuj do Excel
+                                <i data-lucide="bar-chart-2"></i> Eksportuj do Excel
                             </button>
                         </div>
                     </div>
@@ -187,6 +191,7 @@
     
     <!-- Load the shared header -->
     <script src="../../javascript/script.js"></script>
+    <script src="../../javascript/duckdb-wasm.js"></script>
     
     <!-- Mobile device detection and warning -->
     <script>

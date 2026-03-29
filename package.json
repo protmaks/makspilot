@@ -1,0 +1,19 @@
+{
+  "name": "makspilot",
+  "version": "1.0.0",
+  "main": "sw.js",
+  "directories": {
+    "example": "examples"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "jsdom": "^29.0.1",
+    "vitest": "^4.1.2"
+  }
+}

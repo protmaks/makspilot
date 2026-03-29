@@ -170,15 +170,15 @@ function getProgressMessages() {
                        
     const translations = {
         'ru': {
-            loadingFile: '📊 Загружается файл... Пожалуйста, подождите',
-            startingComparison: '🔄 Начинается сравнение... Пожалуйста, подождите',
-            processingLargeFiles: '🔄 Обработка больших файлов',
+            loadingFile: '<i data-lucide="bar-chart-2"></i> Загружается файл... Пожалуйста, подождите',
+            startingComparison: '<i data-lucide="refresh-cw"></i> Начинается сравнение... Пожалуйста, подождите',
+            processingLargeFiles: '<i data-lucide="refresh-cw"></i> Обработка больших файлов',
             summaryMode: '- Режим сводки... Пожалуйста, подождите',
-            comparingFiles: '🔄 Сравнение файлов',
+            comparingFiles: '<i data-lucide="refresh-cw"></i> Сравнение файлов',
             pleaseWait: '... Пожалуйста, подождите',
-            quickComparison: '🔄 Быстрое сравнение...',
+            quickComparison: '<i data-lucide="refresh-cw"></i> Быстрое сравнение...',
             differentRowsFound: 'найдено различающихся строк',
-            processingForExport: '🔄 Обработка больших файлов для экспорта...',
+            processingForExport: '<i data-lucide="refresh-cw"></i> Обработка больших файлов для экспорта...',
             complete: '% завершено',
             noDataToDisplay: 'Нет данных для отображения',
             initializing: 'Инициализация...',
@@ -195,25 +195,25 @@ function getProgressMessages() {
             forBetterPerformance: 'различающихся строк для лучшей производительности.',
             completeFileContains: 'Полный файл содержит',
             exportExcelAllRows: 'Экспорт в Excel будет включать ВСЕ строки.',
-            exportExcelFullComparison: '📊 Экспорт в Excel (Полное Сравнение)',
+            exportExcelFullComparison: '<i data-lucide="bar-chart-2"></i> Экспорт в Excel (Полное Сравнение)',
             largeFileModeTitle: 'Режим Больших Файлов - Ограниченное Отображение',
             yourFilesContain: 'Ваши файлы содержат',
             displayingFirstRows: 'Отображаются первые',
             differentRowsOut: 'различающихся строк из',
             maximum: 'максимум.',
             fullComparisonCompleted: 'Полное сравнение выполнено успешно!',
-            viewSummaryTable: '✅ Просмотрите итоговую таблицу выше для полной статистики',
-            useExportButton: '✅ Используйте кнопку Экспорт в Excel для загрузки ВСЕХ результатов',
-            exportContainsComplete: '✅ Экспорт содержит полное сравнение всех строк',
-            performanceTip: '💡 Совет по производительности:',
+            viewSummaryTable: '<i data-lucide="check-circle-2"></i> Просмотрите итоговую таблицу выше для полной статистики',
+            useExportButton: '<i data-lucide="check-circle-2"></i> Используйте кнопку Экспорт в Excel для загрузки ВСЕХ результатов',
+            exportContainsComplete: '<i data-lucide="check-circle-2"></i> Экспорт содержит полное сравнение всех строк',
+            performanceTip: '<i data-lucide="lightbulb"></i> Совет по производительности:',
             filesWithFewer: 'Файлы с менее чем',
             rowsAndColumns: 'строк и',
             largeFileMode: 'Режим Больших Файлов',
             optimalPerformance: 'Для оптимальной производительности детальная таблица построчного сравнения скрыта.',
             comparisonCompleted: 'Сравнение было выполнено успешно!',
-            viewSummaryStats: '✅ Просмотрите итоговую таблицу выше для статистики',
-            useExportDetailed: '✅ Используйте кнопку Экспорт в Excel для загрузки детальных результатов',
-            allComparisonData: '✅ Все данные сравнения доступны в экспорте',
+            viewSummaryStats: '<i data-lucide="check-circle-2"></i> Просмотрите итоговую таблицу выше для статистики',
+            useExportDetailed: '<i data-lucide="check-circle-2"></i> Используйте кнопку Экспорт в Excel для загрузки детальных результатов',
+            allComparisonData: '<i data-lucide="check-circle-2"></i> Все данные сравнения доступны в экспорте',
             interactiveBrowsing: 'столбцов покажут детальную таблицу сравнения для интерактивного просмотра.',
             columnsWillShow: 'столбцов покажут полную детальную таблицу сравнения.',
             rows: 'строк',
@@ -229,15 +229,15 @@ function getProgressMessages() {
             considerFilters: 'Рассмотрите возможность использования фильтров для уменьшения объема отображаемых данных.'
         },
         'pl': {
-            loadingFile: '📊 Ładowanie pliku... Proszę czekać',
-            startingComparison: '🔄 Rozpoczynanie porównania... Proszę czekać',
-            processingLargeFiles: '🔄 Przetwarzanie dużych plików',
+            loadingFile: '<i data-lucide="bar-chart-2"></i> Ładowanie pliku... Proszę czekać',
+            startingComparison: '<i data-lucide="refresh-cw"></i> Rozpoczynanie porównania... Proszę czekać',
+            processingLargeFiles: '<i data-lucide="refresh-cw"></i> Przetwarzanie dużych plików',
             summaryMode: '- Tryb podsumowania... Proszę czekać',
-            comparingFiles: '🔄 Porównywanie plików',
+            comparingFiles: '<i data-lucide="refresh-cw"></i> Porównywanie plików',
             pleaseWait: '... Proszę czekać',
-            quickComparison: '🔄 Szybkie porównanie...',
+            quickComparison: '<i data-lucide="refresh-cw"></i> Szybkie porównanie...',
             differentRowsFound: 'znalezionych różnych wierszy',
-            processingForExport: '🔄 Przetwarzanie dużych plików do eksportu...',
+            processingForExport: '<i data-lucide="refresh-cw"></i> Przetwarzanie dużych plików do eksportu...',
             complete: '% ukończone',
             noDataToDisplay: 'Brak danych do wyświetlenia',
             initializing: 'Inicjalizacja...',
@@ -254,24 +254,24 @@ function getProgressMessages() {
             forBetterPerformance: 'różnych wierszy dla lepszej wydajności.',
             completeFileContains: 'Kompletny plik zawiera',
             exportExcelAllRows: 'Eksport do Excel będzie zawierał WSZYSTKIE wiersze.',
-            exportExcelFullComparison: '📊 Eksport do Excel (Pełne Porównanie)',
+            exportExcelFullComparison: '<i data-lucide="bar-chart-2"></i> Eksport do Excel (Pełne Porównanie)',
             largeFileModeTitle: 'Tryb Dużych Plików - Ograniczony Wyświetlacz',
             yourFilesContain: 'Twoje pliki zawierają',
             displayingFirstRows: 'Wyświetlanie pierwszych',
             differentRowsOut: 'różnych wierszy z',
             maximum: 'maksimum.',
             fullComparisonCompleted: 'Pełne porównanie zakończone pomyślnie!',
-            viewSummaryTable: '✅ Zobacz powyższą tabelę podsumowania dla pełnych statystyk',
-            useExportButton: '✅ Użyj przycisku Eksport do Excel aby pobrać WSZYSTKIE wyniki',
-            exportContainsComplete: '✅ Eksport zawiera pełne porównanie wszystkich wierszy',
-            performanceTip: '💡 Wskazówka dotycząca wydajności:',
+            viewSummaryTable: '<i data-lucide="check-circle-2"></i> Zobacz powyższą tabelę podsumowania dla pełnych statystyk',
+            useExportButton: '<i data-lucide="check-circle-2"></i> Użyj przycisku Eksport do Excel aby pobrać WSZYSTKIE wyniki',
+            exportContainsComplete: '<i data-lucide="check-circle-2"></i> Eksport zawiera pełne porównanie wszystkich wierszy',
+            performanceTip: '<i data-lucide="lightbulb"></i> Wskazówka dotycząca wydajności:',
             filesWithFewer: 'Pliki z mniej niż',
             largeFileMode: 'Tryb Dużych Plików',
             optimalPerformance: 'Dla optymalnej wydajności szczegółowa tabela porównania wiersz po wierszu jest ukryta.',
             comparisonCompleted: 'Porównanie zostało ukończone pomyślnie!',
-            viewSummaryStats: '✅ Zobacz powyższą tabelę podsumowania dla statystyk',
-            useExportDetailed: '✅ Użyj przycisku Eksport do Excel aby pobrać szczegółowe wyniki',
-            allComparisonData: '✅ Wszystkie dane porównania są dostępne w eksporcie',
+            viewSummaryStats: '<i data-lucide="check-circle-2"></i> Zobacz powyższą tabelę podsumowania dla statystyk',
+            useExportDetailed: '<i data-lucide="check-circle-2"></i> Użyj przycisku Eksport do Excel aby pobrać szczegółowe wyniki',
+            allComparisonData: '<i data-lucide="check-circle-2"></i> Wszystkie dane porównania są dostępne w eksporcie',
             interactiveBrowsing: 'kolumn pokaże szczegółową tabelę porównania do interaktywnego przeglądania.',
             rowsAndColumns: 'wierszy i',
             columnsWillShow: 'kolumn pokażą pełną szczegółową tabelę porównania.',
@@ -288,15 +288,15 @@ function getProgressMessages() {
             considerFilters: 'Rozważ użycie filtrów, aby zmniejszyć ilość wyświetlanych danych.'
         },
         'es': {
-            loadingFile: '📊 Cargando archivo... Por favor espere',
-            startingComparison: '🔄 Iniciando comparación... Por favor espere',
-            processingLargeFiles: '🔄 Procesando archivos grandes',
+            loadingFile: '<i data-lucide="bar-chart-2"></i> Cargando archivo... Por favor espere',
+            startingComparison: '<i data-lucide="refresh-cw"></i> Iniciando comparación... Por favor espere',
+            processingLargeFiles: '<i data-lucide="refresh-cw"></i> Procesando archivos grandes',
             summaryMode: '- Modo resumen... Por favor espere',
-            comparingFiles: '🔄 Comparando archivos',
+            comparingFiles: '<i data-lucide="refresh-cw"></i> Comparando archivos',
             pleaseWait: '... Por favor espere',
-            quickComparison: '🔄 Comparación rápida...',
+            quickComparison: '<i data-lucide="refresh-cw"></i> Comparación rápida...',
             differentRowsFound: 'filas diferentes encontradas',
-            processingForExport: '🔄 Procesando archivos grandes para exportar...',
+            processingForExport: '<i data-lucide="refresh-cw"></i> Procesando archivos grandes para exportar...',
             complete: '% completado',
             noDataToDisplay: 'No hay datos para mostrar',
             initializing: 'Inicializando...',
@@ -313,7 +313,7 @@ function getProgressMessages() {
             forBetterPerformance: 'filas diferentes para mejor rendimiento.',
             completeFileContains: 'El archivo completo contiene',
             exportExcelAllRows: 'Exportar a Excel incluirá TODAS las filas.',
-            exportExcelFullComparison: '📊 Exportar a Excel (Comparación Completa)',
+            exportExcelFullComparison: '<i data-lucide="bar-chart-2"></i> Exportar a Excel (Comparación Completa)',
             largeFileModeTitle: 'Modo de Archivos Grandes - Visualización Limitada',
             yourFilesContain: 'Sus archivos contienen',
             displayingFirstRows: 'Mostrando las primeras',
@@ -322,15 +322,15 @@ function getProgressMessages() {
             largeFileMode: 'Modo de Archivos Grandes',
             optimalPerformance: 'Para un rendimiento óptimo, la tabla de comparación detallada fila por fila está oculta.',
             comparisonCompleted: '¡La comparación se ha completado con éxito!',
-            viewSummaryStats: '✅ Ver la tabla resumen arriba para estadísticas',
-            useExportDetailed: '✅ Usar el botón Exportar a Excel para descargar resultados detallados',
-            allComparisonData: '✅ Todos los datos de comparación están disponibles en la exportación',
+            viewSummaryStats: '<i data-lucide="check-circle-2"></i> Ver la tabla resumen arriba para estadísticas',
+            useExportDetailed: '<i data-lucide="check-circle-2"></i> Usar el botón Exportar a Excel para descargar resultados detallados',
+            allComparisonData: '<i data-lucide="check-circle-2"></i> Todos los datos de comparación están disponibles en la exportación',
             interactiveBrowsing: 'columnas mostrarán la tabla de comparación detallada para navegación interactiva.',
             fullComparisonCompleted: '¡Comparación completa realizada con éxito!',
-            viewSummaryTable: '✅ Ver la tabla resumen arriba para estadísticas completas',
-            useExportButton: '✅ Usar el botón Exportar a Excel para descargar TODOS los resultados',
-            exportContainsComplete: '✅ La exportación contiene la comparación completa de todas las filas',
-            performanceTip: '💡 Consejo de rendimiento:',
+            viewSummaryTable: '<i data-lucide="check-circle-2"></i> Ver la tabla resumen arriba para estadísticas completas',
+            useExportButton: '<i data-lucide="check-circle-2"></i> Usar el botón Exportar a Excel para descargar TODOS los resultados',
+            exportContainsComplete: '<i data-lucide="check-circle-2"></i> La exportación contiene la comparación completa de todas las filas',
+            performanceTip: '<i data-lucide="lightbulb"></i> Consejo de rendimiento:',
             filesWithFewer: 'Archivos con menos de',
             rowsAndColumns: 'filas y',
             columnsWillShow: 'columnas mostrarán la tabla de comparación detallada completa.',
@@ -347,15 +347,15 @@ function getProgressMessages() {
             considerFilters: 'Considere usar filtros para reducir la cantidad de datos mostrados.'
         },
         'de': {
-            loadingFile: '📊 Datei wird geladen... Bitte warten',
-            startingComparison: '🔄 Vergleich wird gestartet... Bitte warten',
-            processingLargeFiles: '🔄 Verarbeitung großer Dateien',
+            loadingFile: '<i data-lucide="bar-chart-2"></i> Datei wird geladen... Bitte warten',
+            startingComparison: '<i data-lucide="refresh-cw"></i> Vergleich wird gestartet... Bitte warten',
+            processingLargeFiles: '<i data-lucide="refresh-cw"></i> Verarbeitung großer Dateien',
             summaryMode: '- Zusammenfassungsmodus... Bitte warten',
-            comparingFiles: '🔄 Dateien vergleichen',
+            comparingFiles: '<i data-lucide="refresh-cw"></i> Dateien vergleichen',
             pleaseWait: '... Bitte warten',
-            quickComparison: '🔄 Schnellvergleich...',
+            quickComparison: '<i data-lucide="refresh-cw"></i> Schnellvergleich...',
             differentRowsFound: 'verschiedene Zeilen gefunden',
-            processingForExport: '🔄 Verarbeitung großer Dateien für Export...',
+            processingForExport: '<i data-lucide="refresh-cw"></i> Verarbeitung großer Dateien für Export...',
             complete: '% abgeschlossen',
             noDataToDisplay: 'Keine Daten zum Anzeigen',
             initializing: 'Initialisierung...',
@@ -375,21 +375,21 @@ function getProgressMessages() {
             largeFileMode: 'Große Dateien Modus',
             optimalPerformance: 'Für optimale Leistung ist die detaillierte zeilenweise Vergleichstabelle ausgeblendet.',
             comparisonCompleted: 'Der Vergleich wurde erfolgreich abgeschlossen!',
-            viewSummaryStats: '✅ Siehe obige Zusammenfassungstabelle für Statistiken',
-            useExportDetailed: '✅ Verwenden Sie den Excel-Export-Button für detaillierte Ergebnisse',
-            allComparisonData: '✅ Alle Vergleichsdaten sind im Export verfügbar',
+            viewSummaryStats: '<i data-lucide="check-circle-2"></i> Siehe obige Zusammenfassungstabelle für Statistiken',
+            useExportDetailed: '<i data-lucide="check-circle-2"></i> Verwenden Sie den Excel-Export-Button für detaillierte Ergebnisse',
+            allComparisonData: '<i data-lucide="check-circle-2"></i> Alle Vergleichsdaten sind im Export verfügbar',
             interactiveBrowsing: 'Spalten zeigen die detaillierte Vergleichstabelle für interaktives Browsen.',
-            exportExcelFullComparison: '📊 Nach Excel exportieren (Vollständiger Vergleich)',
+            exportExcelFullComparison: '<i data-lucide="bar-chart-2"></i> Nach Excel exportieren (Vollständiger Vergleich)',
             largeFileModeTitle: 'Große Dateien Modus - Begrenzte Anzeige',
             yourFilesContain: 'Ihre Dateien enthalten',
             displayingFirstRows: 'Zeige erste',
             differentRowsOut: 'verschiedene Zeilen von',
             maximum: 'Maximum.',
             fullComparisonCompleted: 'Vollständiger Vergleich erfolgreich abgeschlossen!',
-            viewSummaryTable: '✅ Siehe obige Zusammenfassungstabelle für vollständige Statistiken',
-            useExportButton: '✅ Verwenden Sie den Excel-Export-Button um ALLE Ergebnisse herunterzuladen',
-            exportContainsComplete: '✅ Export enthält den vollständigen Vergleich aller Zeilen',
-            performanceTip: '💡 Leistungstipp:',
+            viewSummaryTable: '<i data-lucide="check-circle-2"></i> Siehe obige Zusammenfassungstabelle für vollständige Statistiken',
+            useExportButton: '<i data-lucide="check-circle-2"></i> Verwenden Sie den Excel-Export-Button um ALLE Ergebnisse herunterzuladen',
+            exportContainsComplete: '<i data-lucide="check-circle-2"></i> Export enthält den vollständigen Vergleich aller Zeilen',
+            performanceTip: '<i data-lucide="lightbulb"></i> Leistungstipp:',
             filesWithFewer: 'Dateien mit weniger als',
             rowsAndColumns: 'Zeilen und',
             columnsWillShow: 'Spalten zeigen die vollständige detaillierte Vergleichstabelle.',
@@ -406,15 +406,15 @@ function getProgressMessages() {
             considerFilters: 'Erwägen Sie die Verwendung von Filtern, um die Anzahl der angezeigten Daten zu reduzieren.'
         },
         'ja': {
-            loadingFile: '📊 ファイルを読み込み中... お待ちください',
-            startingComparison: '🔄 比較を開始しています... お待ちください',
-            processingLargeFiles: '🔄 大きなファイルの処理中',
+            loadingFile: '<i data-lucide="bar-chart-2"></i> ファイルを読み込み中... お待ちください',
+            startingComparison: '<i data-lucide="refresh-cw"></i> 比較を開始しています... お待ちください',
+            processingLargeFiles: '<i data-lucide="refresh-cw"></i> 大きなファイルの処理中',
             summaryMode: '- サマリーモード... お待ちください',
-            comparingFiles: '🔄 ファイルを比較中',
+            comparingFiles: '<i data-lucide="refresh-cw"></i> ファイルを比較中',
             pleaseWait: '... お待ちください',
-            quickComparison: '🔄 クイック比較...',
+            quickComparison: '<i data-lucide="refresh-cw"></i> クイック比較...',
             differentRowsFound: '異なる行が見つかりました',
-            processingForExport: '🔄 エクスポート用の大きなファイルの処理中...',
+            processingForExport: '<i data-lucide="refresh-cw"></i> エクスポート用の大きなファイルの処理中...',
             complete: '% 完了',
             noDataToDisplay: '表示するデータがありません',
             initializing: '初期化中...',
@@ -428,9 +428,9 @@ function getProgressMessages() {
             largeFileMode: '大容量ファイルモード',
             optimalPerformance: 'パフォーマンス最適化のため、詳細な行ごとの比較テーブルは非表示になっています。',
             comparisonCompleted: '比較が正常に完了しました！',
-            viewSummaryStats: '✅ 統計については上記の概要表をご覧ください',
-            useExportDetailed: '✅ Excelエクスポートボタンを使用して詳細結果をダウンロード',
-            allComparisonData: '✅ すべての比較データがエクスポートで利用可能です',
+            viewSummaryStats: '<i data-lucide="check-circle-2"></i> 統計については上記の概要表をご覧ください',
+            useExportDetailed: '<i data-lucide="check-circle-2"></i> Excelエクスポートボタンを使用して詳細結果をダウンロード',
+            allComparisonData: '<i data-lucide="check-circle-2"></i> すべての比較データがエクスポートで利用可能です',
             interactiveBrowsing: '列の場合、詳細比較テーブルがインタラクティブに表示されます。',
             savesTime: 'これにより、結果をすぐに表示し、エクスポート時に完全な分析のオプションを保持することで時間を節約します。',
             performanceMode: 'パフォーマンスモード:',
@@ -438,17 +438,17 @@ function getProgressMessages() {
             forBetterPerformance: '異なる行をより良いパフォーマンスのために表示しています。',
             completeFileContains: '完全なファイルには',
             exportExcelAllRows: 'Excelへのエクスポートにはすべての行が含まれます。',
-            exportExcelFullComparison: '📊 Excelにエクスポート（完全比較）',
+            exportExcelFullComparison: '<i data-lucide="bar-chart-2"></i> Excelにエクスポート（完全比較）',
             largeFileModeTitle: '大容量ファイルモード - 限定表示',
             yourFilesContain: 'あなたのファイルには',
             displayingFirstRows: '最初の',
             differentRowsOut: '個の異なる行を',
             maximum: '個の最大値から表示しています。',
             fullComparisonCompleted: '完全比較が正常に完了しました！',
-            viewSummaryTable: '✅ 完全な統計については上記の概要表をご覧ください',
-            useExportButton: '✅ Excelエクスポートボタンを使用してすべての結果をダウンロード',
-            exportContainsComplete: '✅ エクスポートにはすべての行の完全な比較が含まれています',
-            performanceTip: '💡 パフォーマンスのヒント:',
+            viewSummaryTable: '<i data-lucide="check-circle-2"></i> 完全な統計については上記の概要表をご覧ください',
+            useExportButton: '<i data-lucide="check-circle-2"></i> Excelエクスポートボタンを使用してすべての結果をダウンロード',
+            exportContainsComplete: '<i data-lucide="check-circle-2"></i> エクスポートにはすべての行の完全な比較が含まれています',
+            performanceTip: '<i data-lucide="lightbulb"></i> パフォーマンスのヒント:',
             filesWithFewer: 'ファイル数が',
             rowsAndColumns: '行未満で',
             columnsWillShow: '列の場合、完全な詳細比較テーブルが表示されます。',
@@ -465,15 +465,15 @@ function getProgressMessages() {
             considerFilters: 'フィルターを使用して表示データ量を減らすことを検討してください。'
         },
         'pt': {
-            loadingFile: '📊 Carregando arquivo... Aguarde',
-            startingComparison: '🔄 Iniciando comparação... Aguarde',
-            processingLargeFiles: '🔄 Processando arquivos grandes',
+            loadingFile: '<i data-lucide="bar-chart-2"></i> Carregando arquivo... Aguarde',
+            startingComparison: '<i data-lucide="refresh-cw"></i> Iniciando comparação... Aguarde',
+            processingLargeFiles: '<i data-lucide="refresh-cw"></i> Processando arquivos grandes',
             summaryMode: '- Modo resumo... Aguarde',
-            comparingFiles: '🔄 Comparando arquivos',
+            comparingFiles: '<i data-lucide="refresh-cw"></i> Comparando arquivos',
             pleaseWait: '... Aguarde',
-            quickComparison: '🔄 Comparação rápida...',
+            quickComparison: '<i data-lucide="refresh-cw"></i> Comparação rápida...',
             differentRowsFound: 'linhas diferentes encontradas',
-            processingForExport: '🔄 Processando arquivos grandes para exportação...',
+            processingForExport: '<i data-lucide="refresh-cw"></i> Processando arquivos grandes para exportação...',
             complete: '% completo',
             noDataToDisplay: 'Nenhum dado para exibir',
             initializing: 'Inicializando...',
@@ -482,9 +482,9 @@ function getProgressMessages() {
             largeFileMode: 'Modo de Arquivos Grandes',
             optimalPerformance: 'Para desempenho ideal, a tabela de comparação detalhada linha por linha está oculta.',
             comparisonCompleted: 'A comparação foi concluída com sucesso!',
-            viewSummaryStats: '✅ Veja a tabela de resumo acima para estatísticas',
-            useExportDetailed: '✅ Use o botão Exportar para Excel para baixar resultados detalhados',
-            allComparisonData: '✅ Todos os dados de comparação estão disponíveis na exportação',
+            viewSummaryStats: '<i data-lucide="check-circle-2"></i> Veja a tabela de resumo acima para estatísticas',
+            useExportDetailed: '<i data-lucide="check-circle-2"></i> Use o botão Exportar para Excel para baixar resultados detalhados',
+            allComparisonData: '<i data-lucide="check-circle-2"></i> Todos os dados de comparação estão disponíveis na exportação',
             interactiveBrowsing: 'colunas mostrarão a tabela de comparação detalhada para navegação interativa.',
             foundFirst: 'Encontradas as primeiras',
             differentRowsForPreview: 'linhas diferentes para visualização.',
@@ -497,17 +497,17 @@ function getProgressMessages() {
             forBetterPerformance: 'linhas diferentes para melhor desempenho.',
             completeFileContains: 'O arquivo completo contém',
             exportExcelAllRows: 'Exportar para Excel incluirá TODAS as linhas.',
-            exportExcelFullComparison: '📊 Exportar para Excel (Comparação Completa)',
+            exportExcelFullComparison: '<i data-lucide="bar-chart-2"></i> Exportar para Excel (Comparação Completa)',
             largeFileModeTitle: 'Modo de Arquivos Grandes - Exibição Limitada',
             yourFilesContain: 'Seus arquivos contêm',
             displayingFirstRows: 'Exibindo as primeiras',
             differentRowsOut: 'linhas diferentes de',
             maximum: 'máximo.',
             fullComparisonCompleted: 'Comparação completa concluída com sucesso!',
-            viewSummaryTable: '✅ Veja a tabela de resumo acima para estatísticas completas',
-            useExportButton: '✅ Use o botão Exportar para Excel para baixar TODOS os resultados',
-            exportContainsComplete: '✅ A exportação contém a comparação completa de todas as linhas',
-            performanceTip: '💡 Dica de desempenho:',
+            viewSummaryTable: '<i data-lucide="check-circle-2"></i> Veja a tabela de resumo acima para estatísticas completas',
+            useExportButton: '<i data-lucide="check-circle-2"></i> Use o botão Exportar para Excel para baixar TODOS os resultados',
+            exportContainsComplete: '<i data-lucide="check-circle-2"></i> A exportação contém a comparação completa de todas as linhas',
+            performanceTip: '<i data-lucide="lightbulb"></i> Dica de desempenho:',
             filesWithFewer: 'Arquivos com menos de',
             rowsAndColumns: 'linhas e',
             columnsWillShow: 'colunas mostrarão a tabela de comparação detalhada completa.',
@@ -524,22 +524,22 @@ function getProgressMessages() {
             considerFilters: 'Considere usar filtros para reduzir a quantidade de dados exibidos.'
         },
         'zh': {
-            loadingFile: '📊 正在加载文件... 请稍候',
-            startingComparison: '🔄 开始比较... 请稍候',
-            processingLargeFiles: '🔄 正在处理大文件',
+            loadingFile: '<i data-lucide="bar-chart-2"></i> 正在加载文件... 请稍候',
+            startingComparison: '<i data-lucide="refresh-cw"></i> 开始比较... 请稍候',
+            processingLargeFiles: '<i data-lucide="refresh-cw"></i> 正在处理大文件',
             summaryMode: '- 汇总模式... 请稍候',
-            comparingFiles: '🔄 正在比较文件',
+            comparingFiles: '<i data-lucide="refresh-cw"></i> 正在比较文件',
             pleaseWait: '... 请稍候',
-            quickComparison: '🔄 快速比较...',
+            quickComparison: '<i data-lucide="refresh-cw"></i> 快速比较...',
             differentRowsFound: '找到不同行',
             largeFileMode: '大文件模式',
             optimalPerformance: '为了获得最佳性能，隐藏了详细的逐行比较表。',
             comparisonCompleted: '比较已成功完成！',
-            viewSummaryStats: '✅ 查看上方摘要表获取统计信息',
-            useExportDetailed: '✅ 使用导出到Excel按钮下载详细结果',
-            allComparisonData: '✅ 所有比较数据都可在导出中获得',
+            viewSummaryStats: '<i data-lucide="check-circle-2"></i> 查看上方摘要表获取统计信息',
+            useExportDetailed: '<i data-lucide="check-circle-2"></i> 使用导出到Excel按钮下载详细结果',
+            allComparisonData: '<i data-lucide="check-circle-2"></i> 所有比较数据都可在导出中获得',
             interactiveBrowsing: '列将显示详细比较表供交互浏览。',
-            processingForExport: '🔄 正在处理大文件以供导出...',
+            processingForExport: '<i data-lucide="refresh-cw"></i> 正在处理大文件以供导出...',
             complete: '% 完成',
             noDataToDisplay: '没有数据可显示',
             initializing: '正在初始化...',
@@ -556,26 +556,26 @@ function getProgressMessages() {
             forBetterPerformance: '个不同行以获得更好的性能。',
             completeFileContains: '完整文件包含',
             exportExcelAllRows: '导出到Excel将包含所有行。',
-            exportExcelFullComparison: '📊 导出到Excel（完整比较）',
+            exportExcelFullComparison: '<i data-lucide="bar-chart-2"></i> 导出到Excel（完整比较）',
             largeFileModeTitle: '大文件模式 - 有限显示',
             yourFilesContain: '您的文件包含',
             displayingFirstRows: '显示前',
             differentRowsOut: '个不同行，最大',
             maximum: '行。',
             fullComparisonCompleted: '完整比较成功完成！',
-            viewSummaryTable: '✅ 查看上方摘要表获取完整统计信息',
-            useExportButton: '✅ 使用导出到Excel按钮下载所有结果',
-            exportContainsComplete: '✅ 导出包含所有行的完整比较',
-            performanceTip: '💡 性能提示：',
+            viewSummaryTable: '<i data-lucide="check-circle-2"></i> 查看上方摘要表获取完整统计信息',
+            useExportButton: '<i data-lucide="check-circle-2"></i> 使用导出到Excel按钮下载所有结果',
+            exportContainsComplete: '<i data-lucide="check-circle-2"></i> 导出包含所有行的完整比较',
+            performanceTip: '<i data-lucide="lightbulb"></i> 性能提示：',
             filesWithFewer: '少于',
             rowsAndColumns: '行和',
             columnsWillShow: '列的文件将显示完整的详细比较表。',
             largeFileMode: '大文件模式',
             optimalPerformance: '为了获得最佳性能，隐藏了详细的逐行比较表。',
             comparisonCompleted: '比较已成功完成！',
-            viewSummaryStats: '✅ 查看上方摘要表获取统计信息',
-            useExportDetailed: '✅ 使用导出到Excel按钮下载详细结果',
-            allComparisonData: '✅ 所有比较数据都可在导出中获得',
+            viewSummaryStats: '<i data-lucide="check-circle-2"></i> 查看上方摘要表获取统计信息',
+            useExportDetailed: '<i data-lucide="check-circle-2"></i> 使用导出到Excel按钮下载详细结果',
+            allComparisonData: '<i data-lucide="check-circle-2"></i> 所有比较数据都可在导出中获得',
             interactiveBrowsing: '列将显示详细比较表供交互浏览。',
             rows: '行',
             noRowsMatchFilters: '没有行与当前过滤器匹配',
@@ -590,15 +590,15 @@ function getProgressMessages() {
             considerFilters: '考虑使用过滤器来减少显示的数据量。'
         },
         'ar': {
-            loadingFile: '📊 جاري تحميل الملف... يرجى الانتظار',
-            startingComparison: '🔄 بدء المقارنة... يرجى الانتظار',
-            processingLargeFiles: '🔄 معالجة الملفات الكبيرة',
+            loadingFile: '<i data-lucide="bar-chart-2"></i> جاري تحميل الملف... يرجى الانتظار',
+            startingComparison: '<i data-lucide="refresh-cw"></i> بدء المقارنة... يرجى الانتظار',
+            processingLargeFiles: '<i data-lucide="refresh-cw"></i> معالجة الملفات الكبيرة',
             summaryMode: '- وضع الملخص... يرجى الانتظار',
-            comparingFiles: '🔄 مقارنة الملفات',
+            comparingFiles: '<i data-lucide="refresh-cw"></i> مقارنة الملفات',
             pleaseWait: '... يرجى الانتظار',
-            quickComparison: '🔄 مقارنة سريعة...',
+            quickComparison: '<i data-lucide="refresh-cw"></i> مقارنة سريعة...',
             differentRowsFound: 'تم العثور على صفوف مختلفة',
-            processingForExport: '🔄 معالجة الملفات الكبيرة للتصدير...',
+            processingForExport: '<i data-lucide="refresh-cw"></i> معالجة الملفات الكبيرة للتصدير...',
             complete: '% مكتمل',
             noDataToDisplay: 'لا توجد بيانات للعرض',
             initializing: 'جاري التهيئة...',
@@ -608,9 +608,9 @@ function getProgressMessages() {
             largeFileMode: 'وضع الملفات الكبيرة',
             optimalPerformance: 'لتحقيق الأداء الأمثل، جدول المقارنة المفصل صف بصف مخفي.',
             comparisonCompleted: 'تمت المقارنة بنجاح!',
-            viewSummaryStats: '✅ اعرض جدول الملخص أعلاه للإحصائيات',
-            useExportDetailed: '✅ استخدم زر التصدير إلى Excel لتنزيل النتائج المفصلة',
-            allComparisonData: '✅ جميع بيانات المقارنة متاحة في التصدير',
+            viewSummaryStats: '<i data-lucide="check-circle-2"></i> اعرض جدول الملخص أعلاه للإحصائيات',
+            useExportDetailed: '<i data-lucide="check-circle-2"></i> استخدم زر التصدير إلى Excel لتنزيل النتائج المفصلة',
+            allComparisonData: '<i data-lucide="check-circle-2"></i> جميع بيانات المقارنة متاحة في التصدير',
             interactiveBrowsing: 'عمود ستظهر جدول المقارنة المفصل للتصفح التفاعلي.',
             differentRowsForPreview: 'صفوف مختلفة للمعاينة.',
             fileContains: 'يحتوي الملف على',
@@ -622,17 +622,17 @@ function getProgressMessages() {
             forBetterPerformance: 'صفوف مختلفة لأداء أفضل.',
             completeFileContains: 'يحتوي الملف الكامل على',
             exportExcelAllRows: 'سيتضمن التصدير إلى Excel جميع الصفوف.',
-            exportExcelFullComparison: '📊 تصدير إلى Excel (مقارنة كاملة)',
+            exportExcelFullComparison: '<i data-lucide="bar-chart-2"></i> تصدير إلى Excel (مقارنة كاملة)',
             largeFileModeTitle: 'وضع الملفات الكبيرة - عرض محدود',
             yourFilesContain: 'تحتوي ملفاتك على',
             displayingFirstRows: 'عرض أول',
             differentRowsOut: 'صف مختلف من',
             maximum: 'كحد أقصى.',
             fullComparisonCompleted: 'تمت المقارنة الكاملة بنجاح!',
-            viewSummaryTable: '✅ اعرض جدول الملخص أعلاه للإحصائيات الكاملة',
-            useExportButton: '✅ استخدم زر التصدير إلى Excel لتنزيل جميع النتائج',
-            exportContainsComplete: '✅ يحتوي التصدير على المقارنة الكاملة لجميع الصفوف',
-            performanceTip: '💡 نصيحة للأداء:',
+            viewSummaryTable: '<i data-lucide="check-circle-2"></i> اعرض جدول الملخص أعلاه للإحصائيات الكاملة',
+            useExportButton: '<i data-lucide="check-circle-2"></i> استخدم زر التصدير إلى Excel لتنزيل جميع النتائج',
+            exportContainsComplete: '<i data-lucide="check-circle-2"></i> يحتوي التصدير على المقارنة الكاملة لجميع الصفوف',
+            performanceTip: '<i data-lucide="lightbulb"></i> نصيحة للأداء:',
             filesWithFewer: 'الملفات التي تحتوي على أقل من',
             rowsAndColumns: 'صف و',
             columnsWillShow: 'عمود ستظهر جدول المقارنة المفصل الكامل.',
@@ -649,15 +649,15 @@ function getProgressMessages() {
             considerFilters: 'فكر في استخدام المرشحات لتقليل كمية البيانات المعروضة.'
         },
         'en': {
-            loadingFile: '📊 Loading file... Please wait',
-            startingComparison: '🔄 Starting comparison... Please wait',
-            processingLargeFiles: '🔄 Processing large files',
+            loadingFile: '<i data-lucide="bar-chart-2"></i> Loading file... Please wait',
+            startingComparison: '<i data-lucide="refresh-cw"></i> Starting comparison... Please wait',
+            processingLargeFiles: '<i data-lucide="refresh-cw"></i> Processing large files',
             summaryMode: '- Summary mode... Please wait',
-            comparingFiles: '🔄 Comparing files',
+            comparingFiles: '<i data-lucide="refresh-cw"></i> Comparing files',
             pleaseWait: '... Please wait',
-            quickComparison: '🔄 Quick comparison...',
+            quickComparison: '<i data-lucide="refresh-cw"></i> Quick comparison...',
             differentRowsFound: 'different rows found',
-            processingForExport: '🔄 Processing large files for export...',
+            processingForExport: '<i data-lucide="refresh-cw"></i> Processing large files for export...',
             complete: '% complete',
             noDataToDisplay: 'No data to display',
             initializing: 'Initializing...',
@@ -665,9 +665,9 @@ function getProgressMessages() {
             largeFileMode: 'Large File Mode',
             optimalPerformance: 'For optimal performance, the detailed row-by-row comparison table is hidden.',
             comparisonCompleted: 'The comparison has been completed successfully!',
-            viewSummaryStats: '✅ View the summary table above for statistics',
-            useExportDetailed: '✅ Use the Export to Excel button to download detailed results',
-            allComparisonData: '✅ All comparison data is available in the export',
+            viewSummaryStats: '<i data-lucide="check-circle-2"></i> View the summary table above for statistics',
+            useExportDetailed: '<i data-lucide="check-circle-2"></i> Use the Export to Excel button to download detailed results',
+            allComparisonData: '<i data-lucide="check-circle-2"></i> All comparison data is available in the export',
             interactiveBrowsing: 'columns will show the detailed comparison table for interactive browsing.',
             quickMode: 'Quick Mode:',
             foundFirst: 'Found first',
@@ -681,17 +681,17 @@ function getProgressMessages() {
             forBetterPerformance: 'different rows for better performance.',
             completeFileContains: 'Complete file contains',
             exportExcelAllRows: 'Export to Excel will include ALL rows.',
-            exportExcelFullComparison: '📊 Export to Excel (Full Comparison)',
+            exportExcelFullComparison: '<i data-lucide="bar-chart-2"></i> Export to Excel (Full Comparison)',
             largeFileModeTitle: 'Large File Mode - Limited Display',
             yourFilesContain: 'Your files contain',
             displayingFirstRows: 'Displaying first',
             differentRowsOut: 'different rows out of',
             maximum: 'maximum.',
             fullComparisonCompleted: 'Full comparison completed successfully!',
-            viewSummaryTable: '✅ View the summary table above for complete statistics',
-            useExportButton: '✅ Use the Export to Excel button to download ALL results',
-            exportContainsComplete: '✅ Export contains the complete comparison of all rows',
-            performanceTip: '💡 Performance Tip:',
+            viewSummaryTable: '<i data-lucide="check-circle-2"></i> View the summary table above for complete statistics',
+            useExportButton: '<i data-lucide="check-circle-2"></i> Use the Export to Excel button to download ALL results',
+            exportContainsComplete: '<i data-lucide="check-circle-2"></i> Export contains the complete comparison of all rows',
+            performanceTip: '<i data-lucide="lightbulb"></i> Performance Tip:',
             filesWithFewer: 'Files with fewer than',
             rowsAndColumns: 'rows and',
             columnsWillShow: 'columns will show the complete detailed comparison table.',
@@ -2336,7 +2336,7 @@ function handleFile(file, num) {
                 
                 
                 if (json.length > 1000) {
-                    tableElement.innerHTML = '<div style="text-align: center; padding: 20px; font-size: 16px;">⚙️ Processing large CSV file... Please wait</div>';
+                    tableElement.innerHTML = '<div style="text-align: center; padding: 20px; font-size: 16px;"><i data-lucide="settings"></i> Processing large CSV file... Please wait</div>';
                 }
                 
                 
@@ -2459,7 +2459,7 @@ function handleFile(file, num) {
                     
                     
                     if (json.length > 1000) {
-                        tableElement.innerHTML = '<div style="text-align: center; padding: 20px; font-size: 16px;">⚙️ Processing large Excel file... Please wait</div>';
+                        tableElement.innerHTML = '<div style="text-align: center; padding: 20px; font-size: 16px;"><i data-lucide="settings"></i> Processing large Excel file... Please wait</div>';
                     }
                     
                     setTimeout(() => {
@@ -2527,7 +2527,7 @@ function generateLimitErrorMessage(type, current, limit, additionalInfo = '', se
         
         return `
             <div style="text-align: center; padding: 40px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; margin: 20px 0;">
-                <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+                <div style="font-size: 48px; margin-bottom: 16px;"><i data-lucide="alert-triangle"></i></div>
                 <div style="font-size: 18px; font-weight: 600; color: #856404; margin-bottom: 10px;">${title}</div>
                 <div style="color: #856404; margin-bottom: 15px;">
                     ${additionalInfo ? additionalInfo + ' contains' : 'This file contains'}:<br>
@@ -2551,7 +2551,7 @@ function generateLimitErrorMessage(type, current, limit, additionalInfo = '', se
     
     return `
         <div style="text-align: center; padding: 40px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; margin: 20px 0;">
-            <div style="font-size: 28px; margin-bottom: 16px;">⚠️</div>
+            <div style="font-size: 28px; margin-bottom: 16px;"><i data-lucide="alert-triangle"></i></div>
             <div style="font-size: 18px; font-weight: 600; color: #856404; margin-bottom: 10px;">${title}</div>
             <div style="color: #856404; margin-bottom: 15px;">
                 ${additionalInfo ? additionalInfo + ' contains' : 'This file contains'} <strong>${currentText}</strong>, but the limit is <strong>${limitText}</strong>.
@@ -2574,7 +2574,7 @@ function filterExcludeColumns(data, excludeColumns) {
     headers.forEach((header, index) => {
         const shouldExclude = excludeColumns.some(excCol => {
             if (typeof excCol === 'string') {
-                return header.toLowerCase().includes(excCol.toLowerCase());
+                return header.toLowerCase().trim() === excCol.toLowerCase().trim();
             } else if (typeof excCol === 'number') {
                 return index === excCol;
             }
@@ -2868,7 +2868,7 @@ function showPlaceholderMessage() {
     
     document.getElementById('diffTable').innerHTML = `
         <div class="placeholder-message">
-            <div class="placeholder-icon">📊</div>
+            <div class="placeholder-icon"><i data-lucide="bar-chart-2"></i></div>
             <div class="placeholder-text">${placeholderText}</div>
         </div>
     `;
@@ -2951,7 +2951,7 @@ function checkAndEnableExportButton() {
         
         // Reset button text if it's in a processing state
         if (exportBtn.innerHTML.includes('processing') || exportBtn.innerHTML.includes('Performing')) {
-            exportBtn.innerHTML = '📊 Export to Excel';
+            exportBtn.innerHTML = '<i data-lucide="bar-chart-2"></i> Export to Excel';
         }
         
         if (exportButtonHalf) {
@@ -3088,7 +3088,7 @@ function compareTables(useTolerance = false) {
     if (totalRows > MAX_ROWS_LIMIT) {
         document.getElementById('result').innerHTML = `
             <div style="text-align: center; padding: 40px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; margin: 20px 0;">
-                <div style="font-size: 28px; margin-bottom: 16px;">⚠️</div>
+                <div style="font-size: 28px; margin-bottom: 16px;"><i data-lucide="alert-triangle"></i></div>
                 <div style="font-size: 18px; font-weight: 600; color: #856404; margin-bottom: 10px;">File Size Limit Exceeded</div>
                 <div style="color: #856404; margin-bottom: 15px;">
                     Cannot compare files with more than <strong>${MAX_ROWS_LIMIT.toLocaleString()}</strong> rows.<br>
@@ -3120,7 +3120,7 @@ function compareTables(useTolerance = false) {
     if (totalCols > MAX_COLS_LIMIT) {
         document.getElementById('result').innerHTML = `
             <div style="text-align: center; padding: 40px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; margin: 20px 0;">
-                <div style="font-size: 28px; margin-bottom: 16px;">⚠️</div>
+                <div style="font-size: 28px; margin-bottom: 16px;"><i data-lucide="alert-triangle"></i></div>
                 <div style="font-size: 18px; font-weight: 600; color: #856404; margin-bottom: 10px;">Too Many Columns</div>
                 <div style="color: #856404; margin-bottom: 15px;">
                     Cannot compare files with more than <strong>${MAX_COLS_LIMIT}</strong> columns.<br>
@@ -3250,7 +3250,7 @@ async function performComparison() {
         infoDiv.className = 'column-alignment-info';
         infoDiv.style.cssText = 'background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; padding: 12px; margin: 15px 0; border-radius: 6px; font-size: 14px;';
         infoDiv.innerHTML = `
-            <strong>📊 Column Alignment:</strong> Columns have been automatically aligned by name for accurate comparison. 
+            <strong><i data-lucide="bar-chart-2"></i> Column Alignment:</strong> Columns have been automatically aligned by name for accurate comparison. 
             ${columnInfo.commonCount} common columns found.
             ${columnInfo.onlyInFile1.length > 0 ? `<br><strong>Only in File 1:</strong> ${columnInfo.onlyInFile1.join(', ')}` : ''}
             ${columnInfo.onlyInFile2.length > 0 ? `<br><strong>Only in File 2:</strong> ${columnInfo.onlyInFile2.join(', ')}` : ''}
@@ -3267,7 +3267,7 @@ async function performComparison() {
         warningDiv.className = 'column-warning-info';
         warningDiv.style.cssText = 'background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 12px; margin: 15px 0; border-radius: 6px; font-size: 14px;';
         warningDiv.innerHTML = `
-            <strong>⚠️ Warning:</strong> No common column names found between files. 
+            <strong><i data-lucide="alert-triangle"></i> Warning:</strong> No common column names found between files. 
             Comparison will be done by column position. For more accurate results, ensure both files have matching column headers.
         `;
         
@@ -3539,7 +3539,7 @@ async function performComparison() {
         };
         
         toleranceInfo = `<div style="background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 12px; margin: 15px 0; border-radius: 6px; font-size: 14px;">
-            <strong>🔄 ${toleranceMessages[currentLang]}</strong> <span style="background: #ffeaa7; padding: 2px 4px; border-radius: 3px;">${currentLang === 'ru' ? 'оранжевым' : currentLang === 'pl' ? 'na pomarańczowo' : currentLang === 'es' ? 'en naranja' : currentLang === 'de' ? 'in Orange' : currentLang === 'ja' ? 'オレンジ色で' : currentLang === 'pt' ? 'em laranja' : currentLang === 'zh' ? '橙色' : currentLang === 'ar' ? 'باللون البرتقالي' : 'in orange'}</span> ${currentLang === 'ru' ? 'вместо красного' : currentLang === 'pl' ? 'zamiast na czerwono' : currentLang === 'es' ? 'en lugar de rojo' : currentLang === 'de' ? 'statt in Rot' : currentLang === 'ja' ? '赤の代わりに' : currentLang === 'pt' ? 'em vez de vermelho' : currentLang === 'zh' ? '而不是红色' : currentLang === 'ar' ? 'بدلاً من الأحمر' : 'instead of red'}.
+            <strong><i data-lucide="refresh-cw"></i> ${toleranceMessages[currentLang]}</strong> <span style="background: #ffeaa7; padding: 2px 4px; border-radius: 3px;">${currentLang === 'ru' ? 'оранжевым' : currentLang === 'pl' ? 'na pomarańczowo' : currentLang === 'es' ? 'en naranja' : currentLang === 'de' ? 'in Orange' : currentLang === 'ja' ? 'オレンジ色で' : currentLang === 'pt' ? 'em laranja' : currentLang === 'zh' ? '橙色' : currentLang === 'ar' ? 'باللون البرتقالي' : 'in orange'}</span> ${currentLang === 'ru' ? 'вместо красного' : currentLang === 'pl' ? 'zamiast na czerwono' : currentLang === 'es' ? 'en lugar de rojo' : currentLang === 'de' ? 'statt in Rot' : currentLang === 'ja' ? '赤の代わりに' : currentLang === 'pt' ? 'em vez de vermelho' : currentLang === 'zh' ? '而不是红色' : currentLang === 'ar' ? 'بدلاً من الأحمر' : 'instead of red'}.
         </div>`;
     }
     
@@ -5316,7 +5316,7 @@ function showMemoryWarning() {
         const warningDiv = document.createElement('div');
         warningDiv.innerHTML = `
             <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; margin: 10px 0; border-radius: 5px;">
-                <strong>⚠️ ${progressMessages.highMemoryUsage}:</strong> ${progressMessages.browserUsing} ${memory.used}${progressMessages.ofAvailableMemory} ${memory.limit}${progressMessages.availableMemory}
+                <strong><i data-lucide="alert-triangle"></i> ${progressMessages.highMemoryUsage}:</strong> ${progressMessages.browserUsing} ${memory.used}${progressMessages.ofAvailableMemory} ${memory.limit}${progressMessages.availableMemory}
                 <br><small>${progressMessages.considerFilters}</small>
             </div>
         `;
@@ -5556,9 +5556,9 @@ function showQuickModeInfo(displayedDifferentRows, maxDisplayRows, totalRows) {
     
     const progressMessages = getProgressMessages();
     infoDiv.innerHTML = `
-        <strong>⚡ ${progressMessages.quickMode}</strong> ${progressMessages.foundFirst} <strong>${displayedDifferentRows.toLocaleString()}</strong> ${progressMessages.differentRowsForPreview} 
+        <strong><i data-lucide="zap"></i> ${progressMessages.quickMode}</strong> ${progressMessages.foundFirst} <strong>${displayedDifferentRows.toLocaleString()}</strong> ${progressMessages.differentRowsForPreview} 
         ${progressMessages.fileContains} <strong>${totalRows.toLocaleString()}</strong> ${progressMessages.rowsTotal} 
-        <br><strong>📊 ${progressMessages.fullComparisonExport}</strong>
+        <br><strong><i data-lucide="bar-chart-2"></i> ${progressMessages.fullComparisonExport}</strong>
         <br>${progressMessages.savesTime}
     `;
     
@@ -5585,6 +5585,23 @@ function showQuickModeInfo(displayedDifferentRows, maxDisplayRows, totalRows) {
     }
 }
 
+// Export for tests
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        normalizeDateTime,
+        convertExcelDate,
+        convertExcelDateNormalized,
+        roundDecimalNumbers,
+        compareValuesWithTolerance,
+        isWithinTolerance,
+        isDateString,
+        isNumericString,
+        extractDateOnly,
+        parseNumber,
+        parseCSVValue
+    };
+}
+
 function showLimitedDisplayInfo(displayedDifferentRows, maxDisplayRows, totalRows) {
     const resultDiv = document.getElementById('result');
     if (resultDiv) {
@@ -5603,7 +5620,7 @@ function showLimitedDisplayInfo(displayedDifferentRows, maxDisplayRows, totalRow
     
     const progressMessages = getProgressMessages();
     infoDiv.innerHTML = `
-        <strong>⚡ ${progressMessages.performanceMode}</strong> ${progressMessages.displayingFirst} <strong>${displayedDifferentRows.toLocaleString()}</strong> ${progressMessages.forBetterPerformance} 
+        <strong><i data-lucide="zap"></i> ${progressMessages.performanceMode}</strong> ${progressMessages.displayingFirst} <strong>${displayedDifferentRows.toLocaleString()}</strong> ${progressMessages.forBetterPerformance} 
         ${progressMessages.completeFileContains} <strong>${totalRows.toLocaleString()}</strong> ${progressMessages.rows}. 
         <strong>${progressMessages.exportExcelAllRows}</strong>
     `;
@@ -5634,7 +5651,7 @@ function showLargeFileMessageWithLimit(totalRows, displayedDifferentRows, maxDis
     
     document.getElementById('diffTable').innerHTML = `
         <div style="text-align: center; padding: 40px; background-color: #e7f3ff; border: 1px solid #bee5eb; border-radius: 8px; margin: 20px 0;">
-            <div style="font-size: 24px; margin-bottom: 16px;">📊</div>
+            <div style="font-size: 24px; margin-bottom: 16px;"><i data-lucide="bar-chart-2"></i></div>
             <div style="font-size: 18px; font-weight: 600; color: #0c5460; margin-bottom: 10px;">${progressMessages.largeFileModeTitle}</div>
             <div style="color: #0c5460; margin-bottom: 15px; line-height: 1.5;">
                 ${progressMessages.yourFilesContain} <strong>${totalRows.toLocaleString()}</strong> ${progressMessages.rows}.<br>
@@ -5683,7 +5700,7 @@ function showLargeFileMessage(totalRows) {
     
     document.getElementById('diffTable').innerHTML = `
         <div style="text-align: center; padding: 40px; background-color: #e7f3ff; border: 1px solid #bee5eb; border-radius: 8px; margin: 20px 0;">
-            <div style="font-size: 24px; margin-bottom: 16px;">📊</div>
+            <div style="font-size: 24px; margin-bottom: 16px;"><i data-lucide="bar-chart-2"></i></div>
             <div style="font-size: 18px; font-weight: 600; color: #0c5460; margin-bottom: 10px;">${progressMessages.largeFileMode}</div>
             <div style="color: #0c5460; margin-bottom: 15px; line-height: 1.5;">
                 ${progressMessages.yourFilesContain} <strong>${totalRows.toLocaleString()}</strong> ${progressMessages.rows}.<br>

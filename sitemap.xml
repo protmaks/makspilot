@@ -23,6 +23,13 @@
     <priority>0.8</priority>
   </url>
 
+  <url>
+    <loc>https://makspilot.com/modes/</loc>
+    <lastmod>2025-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
   <!-- Russian Pages -->
   <url>
     <loc>https://makspilot.com/ru/</loc>
@@ -40,6 +47,13 @@
 
   <url>
     <loc>https://makspilot.com/ru/how_use/</loc>
+    <lastmod>2025-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <url>
+    <loc>https://makspilot.com/ru/modes/</loc>
     <lastmod>2025-07-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -67,6 +81,13 @@
     <priority>0.7</priority>
   </url>
 
+  <url>
+    <loc>https://makspilot.com/pl/modes/</loc>
+    <lastmod>2025-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
   <!-- Chinese Pages -->
   <url>
     <loc>https://makspilot.com/zh/</loc>
@@ -84,6 +105,13 @@
 
   <url>
     <loc>https://makspilot.com/zh/how_use/</loc>
+    <lastmod>2025-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <url>
+    <loc>https://makspilot.com/zh/modes/</loc>
     <lastmod>2025-07-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -111,6 +139,13 @@
     <priority>0.7</priority>
   </url>
 
+  <url>
+    <loc>https://makspilot.com/es/modes/</loc>
+    <lastmod>2025-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
   <!-- Portuguese Pages -->
   <url>
     <loc>https://makspilot.com/pt/</loc>
@@ -128,6 +163,13 @@
 
   <url>
     <loc>https://makspilot.com/pt/how_use/</loc>
+    <lastmod>2025-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <url>
+    <loc>https://makspilot.com/pt/modes/</loc>
     <lastmod>2025-07-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -155,6 +197,13 @@
     <priority>0.7</priority>
   </url>
 
+  <url>
+    <loc>https://makspilot.com/ja/modes/</loc>
+    <lastmod>2025-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
   <!-- German Pages -->
   <url>
     <loc>https://makspilot.com/de/</loc>
@@ -177,6 +226,13 @@
     <priority>0.7</priority>
   </url>
 
+  <url>
+    <loc>https://makspilot.com/de/modes/</loc>
+    <lastmod>2025-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
   <!-- French Pages -->
   <url>
     <loc>https://makspilot.com/fr/</loc>
@@ -194,6 +250,13 @@
 
   <url>
     <loc>https://makspilot.com/fr/how_use/</loc>
+    <lastmod>2025-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <url>
+    <loc>https://makspilot.com/fr/modes/</loc>
     <lastmod>2025-07-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
