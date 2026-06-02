@@ -36,3 +36,5 @@ coverage/
 
 # Cline
 .clinerules
+.claude
+.DS_Store
